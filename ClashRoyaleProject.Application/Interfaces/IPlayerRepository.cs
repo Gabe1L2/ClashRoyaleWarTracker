@@ -1,6 +1,6 @@
-using ClashRoyaleProject.Shared.Models;
+using ClashRoyaleProject.Application.Models;
 
-namespace ClashRoyaleWarProject.Data
+namespace ClashRoyaleProject.Application.Interfaces
 {
     public interface IPlayerRepository
     {

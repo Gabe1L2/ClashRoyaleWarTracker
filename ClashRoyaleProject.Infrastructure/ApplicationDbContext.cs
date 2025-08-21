@@ -1,8 +1,15 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Numerics;
+using System.Reflection.Emit;
+using System.Text;
+using System.Threading.Tasks;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
-using ClashRoyaleProject.Shared.Models;
+using ClashRoyaleProject.Application.Models;
 
-namespace ClashRoyaleProject.Shared.Data
+namespace ClashRoyaleProject.Infrastructure
 {
     public class ApplicationDbContext : IdentityDbContext
     {

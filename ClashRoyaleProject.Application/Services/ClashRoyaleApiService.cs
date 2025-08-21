@@ -1,9 +1,9 @@
-using ClashRoyaleProject.Shared.Models;
-using ClashRoyaleWarProject.Configuration;
+using ClashRoyaleProject.Application.Models;
+using ClashRoyaleWarProject.Application;
 using System.Net.Http.Headers;
-using System.Text.Json;
+using ClashRoyaleProject.Application.Interfaces;
 
-namespace ClashRoyaleWarProject.Services
+namespace ClashRoyaleWarProject.Application.Services
 {
     public class ClashRoyaleApiService : IClashRoyaleApiService
     {

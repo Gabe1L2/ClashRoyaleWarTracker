@@ -15,7 +15,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\ClashRoyaleProject.Shared\ClashRoyaleProject.Shared.csproj" />
+    <ProjectReference Include="..\ClashRoyaleProject.Application\ClashRoyaleProject.Application.csproj" />
+    <ProjectReference Include="..\ClashRoyaleProject.Infrastructure\ClashRoyaleProject.Infrastructure.csproj" />
   </ItemGroup>
 
 </Project>

@@ -1,4 +1,4 @@
-namespace ClashRoyaleWarProject.Configuration
+namespace ClashRoyaleProject.Infrastructure
 {
     public class ClashRoyaleApiConfig
     {

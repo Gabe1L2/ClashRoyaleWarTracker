@@ -1,9 +1,9 @@
-using ClashRoyaleProject.Shared.Models;
-using ClashRoyaleProject.Shared.Data;
+using ClashRoyaleProject.Application.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
+using ClashRoyaleProject.Application.Interfaces;
 
-namespace ClashRoyaleWarProject.Data
+namespace ClashRoyaleProject.Infrastructure.Repositories
 {
     public class PlayerRepository : IPlayerRepository
     {

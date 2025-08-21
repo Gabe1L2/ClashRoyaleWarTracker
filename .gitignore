@@ -365,3 +365,4 @@ FodyWeavers.xsd
 # Dev settings
 appsettings.Development.json
 secrets.json
+/ClashRoyaleProject.Web/appsettings.json

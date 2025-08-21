@@ -2,7 +2,7 @@ using ClashRoyaleProject.Application.Models;
 
 namespace ClashRoyaleProject.Application.Interfaces
 {
-    public interface IPlayerRepository
+    public interface IRepository
     {
         Task<Player?> GetPlayerByTagAsync(string tag);
         Task<IEnumerable<Player>> GetAllPlayersAsync();

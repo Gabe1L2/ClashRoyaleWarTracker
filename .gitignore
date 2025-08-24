@@ -366,3 +366,4 @@ FodyWeavers.xsd
 appsettings.Development.json
 secrets.json
 /ClashRoyaleProject.Web/appsettings.json
+/ClashRoyaleWarProject/ClashRoyaleProject.Web/appsettings.json

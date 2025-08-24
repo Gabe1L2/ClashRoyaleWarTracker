@@ -32,7 +32,7 @@ namespace ClashRoyaleProject.Infrastructure
             // Configure relationships and constraints
             modelBuilder.Entity<ClanHistory>()
                 .HasOne<Clan>()
-                .WithMany(c => c.Histories)
+                .WithMany()
                 .HasForeignKey(ch => ch.ClanID);
 
             // Configure unique constraints

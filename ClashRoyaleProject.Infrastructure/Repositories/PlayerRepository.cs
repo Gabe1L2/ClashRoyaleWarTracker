@@ -5,7 +5,7 @@ using ClashRoyaleProject.Application.Interfaces;
 
 namespace ClashRoyaleProject.Infrastructure.Repositories
 {
-    public class PlayerRepository : IPlayerRepository
+    public class PlayerRepository : IRepository
     {
         private readonly ApplicationDbContext _context;
         public PlayerRepository(ApplicationDbContext context)
@@ -33,7 +33,6 @@ namespace ClashRoyaleProject.Infrastructure.Repositories
             else
             {
                 existing.Name = player.Name;
-                existing.TrophyCount = player.TrophyCount;
                 existing.LastUpdated = player.LastUpdated;
             }
             await _context.SaveChangesAsync();

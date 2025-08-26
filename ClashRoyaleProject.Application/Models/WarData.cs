@@ -3,8 +3,8 @@ namespace ClashRoyaleProject.Application.Models
     public class RawWarData
     {
         public int ID { get; set; }
-        public int PlayerID { get; set; }
-        public int ClanHistoryID { get; set; }
+        public required int PlayerID { get; set; }
+        public required int ClanHistoryID { get; set; }
         public int Fame { get; set; }
         public int RepairPoints { get; set; }
         public int BoatAttacks { get; set; }
@@ -15,8 +15,8 @@ namespace ClashRoyaleProject.Application.Models
     public class WarData
     {
         public int ID { get; set; }
-        public int PlayerID { get; set; }
-        public int ClanHistoryID { get; set; }
+        public required int PlayerID { get; set; }
+        public required int ClanHistoryID { get; set; }
         public int Fame { get; set; }
         public int DecksUsed { get; set; }
         public DateTime LastUpdated { get; set; }

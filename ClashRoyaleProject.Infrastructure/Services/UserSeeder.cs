@@ -22,52 +22,67 @@ namespace ClashRoyaleProject.Infrastructure.Services
 
         public async Task StartAsync(CancellationToken cancellationToken)
         {
-            using var scope = _serviceProvider.CreateScope(); // create scope to get scoped services
-            var userManager = scope.ServiceProvider.GetRequiredService<UserManager<IdentityUser>>(); // get UserManager
-
-            // Read users from configuration
-            var defaultUsers = _configuration.GetSection("DefaultUsers").Get<DefaultUser[]>();
-            
-            if (defaultUsers == null || defaultUsers.Length == 0)
+            try
             {
-                _logger.LogWarning("No default users configured in DefaultUsers section");
-                return;
+                using var scope = _serviceProvider.CreateScope(); // create scope to get scoped services
+                var userManager = scope.ServiceProvider.GetRequiredService<UserManager<IdentityUser>>(); // get UserManager
+
+                // Read users from configuration
+                var defaultUsers = _configuration.GetSection("DefaultUsers").Get<DefaultUser[]>();
+                
+                if (defaultUsers == null || defaultUsers.Length == 0)
+                {
+                    _logger.LogWarning("No default users configured in DefaultUsers section");
+                    return;
+                }
+
+                foreach (var userData in defaultUsers)
+                {
+                    if (string.IsNullOrEmpty(userData.Email) || string.IsNullOrEmpty(userData.Password))
+                    {
+                        _logger.LogWarning("Skipping user with empty email or password");
+                        continue;
+                    }
+
+                    try
+                    {
+                        var existingUser = await userManager.FindByEmailAsync(userData.Email);
+                        if (existingUser == null)
+                        {
+                            var user = new IdentityUser
+                            {
+                                UserName = userData.Email,
+                                Email = userData.Email,
+                                EmailConfirmed = true // Auto-confirm since you control access
+                            };
+
+                            var result = await userManager.CreateAsync(user, userData.Password);
+                            if (result.Succeeded)
+                            {
+                                _logger.LogInformation("Created user: {Email}", userData.Email);
+                            }
+                            else
+                            {
+                                _logger.LogError("Failed to create user {Email}: {Errors}", 
+                                    userData.Email, 
+                                    string.Join(", ", result.Errors.Select(e => e.Description)));
+                            }
+                        }
+                        else
+                        {
+                            _logger.LogInformation("User {Email} already exists, skipping creation", userData.Email);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "Error processing user {Email}: {Message}", userData.Email, ex.Message);
+                    }
+                }
             }
-
-            foreach (var userData in defaultUsers)
+            catch (Exception ex)
             {
-                if (string.IsNullOrEmpty(userData.Email) || string.IsNullOrEmpty(userData.Password))
-                {
-                    _logger.LogWarning("Skipping user with empty email or password");
-                    continue;
-                }
-
-                var existingUser = await userManager.FindByEmailAsync(userData.Email);
-                if (existingUser == null)
-                {
-                    var user = new IdentityUser
-                    {
-                        UserName = userData.Email,
-                        Email = userData.Email,
-                        EmailConfirmed = true // Auto-confirm since you control access
-                    };
-
-                    var result = await userManager.CreateAsync(user, userData.Password);
-                    if (result.Succeeded)
-                    {
-                        _logger.LogInformation("Created user: {Email}", userData.Email);
-                    }
-                    else
-                    {
-                        _logger.LogError("Failed to create user {Email}: {Errors}", 
-                            userData.Email, 
-                            string.Join(", ", result.Errors.Select(e => e.Description)));
-                    }
-                }
-                else
-                {
-                    _logger.LogInformation("User {Email} already exists, skipping creation", userData.Email);
-                }
+                _logger.LogError(ex, "Error during user seeding: {Message}", ex.Message);
+                // Don't rethrow - let the application continue even if seeding fails
             }
         }
 

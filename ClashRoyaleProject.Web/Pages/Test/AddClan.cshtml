@@ -1,0 +1,24 @@
+@page "/test/addclan"
+@model ClashRoyaleProject.Web.Pages.Test.AddClanModel
+@{
+    ViewData["Title"] = "Test Add Clan";
+}
+
+<h2>Test Add Clan API</h2>
+
+@if (Model.IsSuccess.HasValue)
+{
+    <div class="alert @(Model.IsSuccess.Value ? "alert-success" : "alert-danger")" role="alert">
+        @Model.Message
+    </div>
+}
+
+<form method="post">
+    <div class="mb-3">
+        <label asp-for="ClanTag" class="form-label">Clan Tag</label>
+        <input asp-for="ClanTag" class="form-control" placeholder="Enter clan tag (e.g., #2Y0Y9CY08)" />
+        <div class="form-text">Try: #2Y0Y9CY08 (Nova eSports)</div>
+    </div>
+    
+    <button type="submit" class="btn btn-primary">Test Add Clan</button>
+</form>

@@ -362,8 +362,7 @@ MigrationBackup/
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
 
-# Dev settings
+# Dev settings - Updated for proper secrets management
 appsettings.Development.json
+appsettings.Production.json
 secrets.json
-/ClashRoyaleProject.Web/appsettings.json
-/ClashRoyaleWarProject/ClashRoyaleProject.Web/appsettings.json

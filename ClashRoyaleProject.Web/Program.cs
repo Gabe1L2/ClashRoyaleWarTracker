@@ -1,11 +1,13 @@
 using ClashRoyaleProject.Application;
 using ClashRoyaleProject.Infrastructure;
+using ClashRoyaleProject.Infrastructure.Services;
+using Microsoft.EntityFrameworkCore;
 
 namespace ClashRoyaleProject.Web
 {
     public class Program
     {
-        public static void Main(string[] args)
+        public static async Task Main(string[] args)
         {
             var builder = WebApplication.CreateBuilder(args);
 
@@ -17,6 +19,42 @@ namespace ClashRoyaleProject.Web
             builder.Services.AddRazorPages();
 
             var app = builder.Build();
+
+            // Ensure database is created and migrations are applied at startup
+            using (var scope = app.Services.CreateScope())
+            {
+                var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+                var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
+                
+                try
+                {
+                    logger.LogInformation("Applying database migrations...");
+                    await dbContext.Database.MigrateAsync();
+                    logger.LogInformation("Database migrations completed successfully.");
+                }
+                catch (Exception ex)
+                {
+                    logger.LogError(ex, "An error occurred while migrating the database.");
+                    throw;
+                }
+
+                try
+                {
+                    logger.LogInformation("Starting user seeding...");
+                    // Run user seeding after migrations are complete
+                    var userSeeder = new UserSeeder(
+                        app.Services, 
+                        app.Configuration, 
+                        scope.ServiceProvider.GetRequiredService<ILogger<UserSeeder>>());
+                    await userSeeder.StartAsync(CancellationToken.None);
+                    logger.LogInformation("User seeding completed.");
+                }
+                catch (Exception ex)
+                {
+                    logger.LogWarning(ex, "User seeding failed, but application will continue. Users may need to be created manually.");
+                    // Don't throw - let the application start even if seeding fails
+                }
+            }
 
             // Configure the HTTP request pipeline.
             app.UseExceptionHandler("/Error");
@@ -32,7 +70,7 @@ namespace ClashRoyaleProject.Web
 
             app.MapRazorPages();
 
-            app.Run();
+            await app.RunAsync();
         }
     }
 }

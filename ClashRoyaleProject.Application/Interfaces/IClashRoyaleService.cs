@@ -1,8 +1,8 @@
-﻿using ClashRoyaleProject.Application.Models;
+using ClashRoyaleProject.Application.Models;
 
 namespace ClashRoyaleProject.Application.Interfaces
 {
-    public interface IClashRoyaleApiClient
+    public interface IClashRoyaleService
     {
         Task<Clan> GetClanByTagAsync(string clanTag);
     }

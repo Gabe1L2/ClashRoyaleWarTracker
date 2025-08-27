@@ -1,4 +1,5 @@
 using ClashRoyaleProject.Application.Interfaces;
+using ClashRoyaleProject.Application.Services;
 using ClashRoyaleProject.Infrastructure.Http;
 using ClashRoyaleProject.Infrastructure.Repositories;
 using ClashRoyaleProject.Infrastructure.Services;
@@ -35,11 +36,9 @@ namespace ClashRoyaleProject.Infrastructure
             })
             .AddEntityFrameworkStores<ApplicationDbContext>();
 
-            // Register user seeder service to create hardcoded users
-            services.AddHostedService<UserSeeder>();
-
-            // Register repositories
-            services.AddScoped<IRepository, PlayerRepository>();
+            services.AddScoped<IClashRoyaleService, ClashRoyaleService>();
+            services.AddScoped<IClanRepository, ClanRepository>();
+            services.AddScoped<IApplicationService, ApplicationService>();
 
             // Clash Royale API configuration
             var apiKey = configuration["ClashRoyaleApi:ApiKey"]

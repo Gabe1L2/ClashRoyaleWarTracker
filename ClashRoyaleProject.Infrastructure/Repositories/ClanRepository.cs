@@ -1,6 +1,7 @@
 ﻿using ClashRoyaleProject.Application.Interfaces;
 using ClashRoyaleProject.Application.Models;
 using Microsoft.EntityFrameworkCore;
+using System.Text.RegularExpressions;
 
 namespace ClashRoyaleProject.Infrastructure.Repositories
 {
@@ -21,11 +22,13 @@ namespace ClashRoyaleProject.Infrastructure.Repositories
 
                 if (curClan == null)
                 {
+                    clan.Tag = Regex.Replace(clan.Tag,"#","");
                     clan.LastUpdated = DateTime.Now;
                     await _context.Clans.AddAsync(clan);
                 }
                 else
                 {
+                    curClan.Tag = Regex.Replace(clan.Tag, "#", "");
                     curClan.Name = clan.Name;
                     curClan.WarTrophies = clan.WarTrophies;
                     curClan.LastUpdated = DateTime.Now;

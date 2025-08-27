@@ -7,7 +7,6 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using System.Net.Http.Headers;
 
 namespace ClashRoyaleProject.Infrastructure
 {
@@ -41,28 +40,15 @@ namespace ClashRoyaleProject.Infrastructure
             services.AddScoped<IClanRepository, ClanRepository>();
             services.AddScoped<IApplicationService, ApplicationService>();
 
-            // Clash Royale API configuration
+            // Clash Royale API configuration - simplified without problematic header setup
             var apiKey = configuration["ClashRoyaleApi:ApiKey"]
                 ?? throw new InvalidOperationException("Clash Royale API Key not found in configuration.");
 
             var baseUrl = configuration["ClashRoyaleApi:BaseUrl"]
                 ?? throw new InvalidOperationException("Clash Royale API Base URL not found in configuration.");
 
-            // DEBUG: Log configuration values
-            Console.WriteLine($"DEBUG: API Key starts with: {apiKey.Substring(0, Math.Min(20, apiKey.Length))}...");
-            Console.WriteLine($"DEBUG: API Key length: {apiKey.Length}");
-            Console.WriteLine($"DEBUG: Base URL: {baseUrl}");
-
-            // Register HttpClient with headers set properly
-            services.AddHttpClient<IClashRoyaleApiClient, ClashRoyaleApiClient>(client =>
-            {
-                client.BaseAddress = new Uri(baseUrl);
-                client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", apiKey);
-
-                Console.WriteLine($"DEBUG: Setting Authorization header: Bearer {apiKey.Substring(0, Math.Min(20, apiKey.Length))}...");
-
-                client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
-            });
+            // Register HttpClient with minimal configuration (headers set manually in the client)
+            services.AddHttpClient<IClashRoyaleApiClient, ClashRoyaleApiClient>();
 
             return services;
         }

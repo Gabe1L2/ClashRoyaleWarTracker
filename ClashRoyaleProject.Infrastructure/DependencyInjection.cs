@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using System.Net.Http.Headers;
 
 namespace ClashRoyaleProject.Infrastructure
 {
@@ -15,9 +16,9 @@ namespace ClashRoyaleProject.Infrastructure
         public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration configuration)
         {
             // Database configuration
-            var connectionString = configuration.GetConnectionString("DefaultConnection") 
+            var connectionString = configuration.GetConnectionString("DefaultConnection")
                 ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
-            
+
             services.AddDbContext<ApplicationDbContext>(options =>
                 options.UseSqlServer(connectionString));
 
@@ -26,7 +27,7 @@ namespace ClashRoyaleProject.Infrastructure
             {
                 // Disable email confirmation requirement since you'll manage users manually
                 options.SignIn.RequireConfirmedAccount = false;
-                
+
                 // Make passwords simple since you control who gets access
                 options.Password.RequireDigit = false;
                 options.Password.RequireLowercase = false;
@@ -43,14 +44,24 @@ namespace ClashRoyaleProject.Infrastructure
             // Clash Royale API configuration
             var apiKey = configuration["ClashRoyaleApi:ApiKey"]
                 ?? throw new InvalidOperationException("Clash Royale API Key not found in configuration.");
-            
+
             var baseUrl = configuration["ClashRoyaleApi:BaseUrl"]
                 ?? throw new InvalidOperationException("Clash Royale API Base URL not found in configuration.");
 
+            // DEBUG: Log configuration values
+            Console.WriteLine($"DEBUG: API Key starts with: {apiKey.Substring(0, Math.Min(20, apiKey.Length))}...");
+            Console.WriteLine($"DEBUG: API Key length: {apiKey.Length}");
+            Console.WriteLine($"DEBUG: Base URL: {baseUrl}");
+
+            // Register HttpClient with headers set properly
             services.AddHttpClient<IClashRoyaleApiClient, ClashRoyaleApiClient>(client =>
             {
                 client.BaseAddress = new Uri(baseUrl);
-                client.DefaultRequestHeaders.Add("Authorization", $"Bearer {apiKey}");
+                client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", apiKey);
+
+                Console.WriteLine($"DEBUG: Setting Authorization header: Bearer {apiKey.Substring(0, Math.Min(20, apiKey.Length))}...");
+
+                client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
             });
 
             return services;

@@ -23,7 +23,13 @@ namespace ClashRoyaleProject.Infrastructure.Http
             {
                 _logger.LogInformation("Making API request for clan {ClanTag}", clanTag);
 
-                var response = await _httpClient.GetAsync($"clans/%23{clanTag}");
+                // Construct the full URI manually to ensure it's correct
+                var baseAddress = _httpClient.BaseAddress?.ToString().TrimEnd('/') ?? "https://api.clashroyale.com/v1";
+                var fullUri = $"{baseAddress}/clans/%23{clanTag}";
+
+                _logger.LogInformation("Full URI: {FullUri}", fullUri);
+
+                var response = await _httpClient.GetAsync(fullUri);
 
                 if (response.IsSuccessStatusCode)
                 {
@@ -31,6 +37,8 @@ namespace ClashRoyaleProject.Infrastructure.Http
 
                     if (clanData != null)
                     {
+                        _logger.LogInformation("Successfully retrieved clan {ClanName} with tag {ClanTag}", clanData.Name, clanData.Tag);
+
                         // Map from API response to the domain model
                         return new Clan
                         {
@@ -42,7 +50,8 @@ namespace ClashRoyaleProject.Infrastructure.Http
                 }
                 else
                 {
-                    _logger.LogWarning("API request failed for clan {ClanTag} with status {StatusCode}", clanTag, response.StatusCode);
+                    var responseContent = await response.Content.ReadAsStringAsync();
+                    _logger.LogWarning("API request failed for clan {ClanTag} with status {StatusCode}. Response: {ResponseContent}", clanTag, response.StatusCode, responseContent);
                 }
 
                 return null;

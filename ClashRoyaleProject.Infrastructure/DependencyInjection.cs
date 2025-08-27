@@ -1,3 +1,4 @@
+using Azure.Core;
 using ClashRoyaleProject.Application.Interfaces;
 using ClashRoyaleProject.Application.Services;
 using ClashRoyaleProject.Infrastructure.Http;
@@ -7,6 +8,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using System.Net.Http.Headers;
 
 namespace ClashRoyaleProject.Infrastructure
 {
@@ -40,15 +42,21 @@ namespace ClashRoyaleProject.Infrastructure
             services.AddScoped<IClanRepository, ClanRepository>();
             services.AddScoped<IApplicationService, ApplicationService>();
 
-            // Clash Royale API configuration - simplified without problematic header setup
+            // Clash Royale API configuration
             var apiKey = configuration["ClashRoyaleApi:ApiKey"]
                 ?? throw new InvalidOperationException("Clash Royale API Key not found in configuration.");
 
             var baseUrl = configuration["ClashRoyaleApi:BaseUrl"]
                 ?? throw new InvalidOperationException("Clash Royale API Base URL not found in configuration.");
 
-            // Register HttpClient with minimal configuration (headers set manually in the client)
-            services.AddHttpClient<IClashRoyaleApiClient, ClashRoyaleApiClient>();
+            // Register HttpClient with proper headers configuration
+            services.AddHttpClient<IClashRoyaleApiClient, ClashRoyaleApiClient>(client =>
+            {
+                client.BaseAddress = new Uri(baseUrl);
+                client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", apiKey);
+                client.DefaultRequestHeaders.Accept.Clear();
+                client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+            });
 
             return services;
         }

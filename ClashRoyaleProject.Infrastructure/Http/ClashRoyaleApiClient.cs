@@ -2,8 +2,9 @@
 using ClashRoyaleProject.Application.Models;
 using ClashRoyaleProject.Infrastructure.Models;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Configuration;
 using System.Net.Http.Json;
+using System.Net.Http.Headers;
+using Microsoft.Extensions.Configuration;
 
 namespace ClashRoyaleProject.Infrastructure.Http
 {
@@ -11,13 +12,11 @@ namespace ClashRoyaleProject.Infrastructure.Http
     {
         private readonly HttpClient _httpClient;
         private readonly ILogger<ClashRoyaleApiClient> _logger;
-        private readonly IConfiguration _configuration;
 
-        public ClashRoyaleApiClient(HttpClient httpClient, ILogger<ClashRoyaleApiClient> logger, IConfiguration configuration)
+        public ClashRoyaleApiClient(HttpClient httpClient, ILogger<ClashRoyaleApiClient> logger)
         {
             _httpClient = httpClient;
             _logger = logger;
-            _configuration = configuration;
         }
 
         public async Task<Clan?> GetClanByTagAsync(string clanTag)
@@ -26,18 +25,7 @@ namespace ClashRoyaleProject.Infrastructure.Http
             {
                 _logger.LogInformation("Making API request for clan {ClanTag}", clanTag);
 
-                // DEBUG: Check what's in configuration
-                var apiKey = _configuration["ClashRoyaleApi:ApiKey"];
-
-                // Create request with manual headers (the approach that worked)
-                using var request = new HttpRequestMessage(HttpMethod.Get, $"https://api.clashroyale.com/v1/clans/%23{clanTag}");
-                
-                request.Headers.Add("Authorization", $"Bearer {apiKey}");
-                request.Headers.Add("Accept", "application/json");
-                
-                _logger.LogInformation("Request URI: {RequestUri}", request.RequestUri);
-
-                var response = await _httpClient.SendAsync(request);
+                var response = await _httpClient.GetAsync($"clans/%23{clanTag}");
 
                 if (response.IsSuccessStatusCode)
                 {
@@ -47,7 +35,6 @@ namespace ClashRoyaleProject.Infrastructure.Http
                     {
                         _logger.LogInformation("Successfully retrieved clan {ClanName} with tag {ClanTag}", clanData.Name, clanData.Tag);
 
-                        // Map from API response to the domain model
                         return new Clan
                         {
                             Tag = clanData.Tag,
@@ -59,7 +46,8 @@ namespace ClashRoyaleProject.Infrastructure.Http
                 else
                 {
                     var responseContent = await response.Content.ReadAsStringAsync();
-                    _logger.LogWarning("API request failed for clan {ClanTag} with status {StatusCode}. Response: {ResponseContent}", clanTag, response.StatusCode, responseContent);
+                    _logger.LogWarning("API request failed for clan {ClanTag} with status {StatusCode}. Response: {ResponseContent}", 
+                        clanTag, response.StatusCode, responseContent);
                 }
 
                 return null;

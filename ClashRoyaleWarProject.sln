@@ -14,6 +14,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ClashRoyaleProject.Infrastr
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ClashRoyaleProject.Web", "ClashRoyaleProject.Web\ClashRoyaleProject.Web.csproj", "{60C4B6C4-8A0B-D418-4048-A97F0D073E32}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ClashRoyaleProject.Tests", "ClashRoyaleProject.Tests\ClashRoyaleProject.Tests.csproj", "{A1BCB7CF-7F2E-4018-A210-E9260D6CD4CC}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -32,6 +34,10 @@ Global
 		{60C4B6C4-8A0B-D418-4048-A97F0D073E32}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{60C4B6C4-8A0B-D418-4048-A97F0D073E32}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{60C4B6C4-8A0B-D418-4048-A97F0D073E32}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A1BCB7CF-7F2E-4018-A210-E9260D6CD4CC}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A1BCB7CF-7F2E-4018-A210-E9260D6CD4CC}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A1BCB7CF-7F2E-4018-A210-E9260D6CD4CC}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A1BCB7CF-7F2E-4018-A210-E9260D6CD4CC}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

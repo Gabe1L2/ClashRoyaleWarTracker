@@ -1,12 +1,8 @@
 ﻿using ClashRoyaleProject.Application.Interfaces;
 using ClashRoyaleProject.Application.Models;
 using Microsoft.Extensions.Logging;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Text.RegularExpressions;
-using System.Threading.Tasks;
+using ClashRoyaleProject.Application.Helpers;
 
 namespace ClashRoyaleProject.Application.Services
 {
@@ -23,12 +19,15 @@ namespace ClashRoyaleProject.Application.Services
             _logger = logger;
         }
 
+        // Change the method signature to remove the generic type parameter T, since T is not defined or needed.
+        // Use ServiceResult instead of ServiceResult<T> for AddClanAsync, and update return statements accordingly.
+
         public async Task<ServiceResult> AddClanAsync(string clanTag)
         {
             try
             {
                 // Input Validation
-                var sanitizedTag = ValidateAndSanitizeClanTag(clanTag);
+                var sanitizedTag = ClanTagValidator.ValidateAndSanitizeClanTag(clanTag);
                 if (!sanitizedTag.isValid)
                 {
                     _logger.LogWarning($"Invalid clan tag provided: {clanTag}");
@@ -36,21 +35,27 @@ namespace ClashRoyaleProject.Application.Services
                 }
 
                 var tag = sanitizedTag.sanitizedTag;
-
                 _logger.LogInformation($"Adding clan with tag {tag}");
                 var clan = await _clashRoyaleService.GetClanByTagAsync(tag);
-
                 if (clan == null)
                 {
                     _logger.LogWarning($"Clan with tag {tag} not found in API");
                     return ServiceResult.Failure($"Clan with tag '{tag}' not found in API");
                 }
 
-                _logger.LogInformation($"Clan {clan.Name} with tag {tag} found. Adding to database");
-                await _clanRepository.AddOrUpdateClanAsync(clan);
+                clan.Tag = Regex.Replace(clan.Tag, @"[^a-zA-Z0-9]", "");
 
-                _logger.LogInformation($"Successfully added {clan.Name} with tag {tag} to database");
-                return ServiceResult.Successful($"{clan.Name} successfully added to Clans!");
+                _logger.LogInformation($"Clan {clan.Name} with tag {clan.Tag} found. Adding to database");
+                if (await _clanRepository.AddClanAsync(clan))
+                {
+                    _logger.LogInformation($"Successfully added {clan.Name} with tag {clan.Tag} to database");
+                    return ServiceResult.Successful($"{clan.Name} successfully added to Clans!");
+                }
+                else
+                {
+                    _logger.LogWarning($"Clan with tag {clan.Tag} already exists in database");
+                    return ServiceResult.Failure($"Clan with tag '{clan.Tag}' already exists in database");
+                }
             }
             catch (Exception ex)
             {
@@ -59,36 +64,85 @@ namespace ClashRoyaleProject.Application.Services
             }
         }
 
-        private static (bool isValid, string sanitizedTag, string errorMessage) ValidateAndSanitizeClanTag(string clanTag)
+        public async Task<ServiceResult<IEnumerable<Clan>>> GetAllClansAsync()
         {
-            if (string.IsNullOrWhiteSpace(clanTag))
+            try
             {
-                return (false, string.Empty, "Clan tag cannot be empty");
+                _logger.LogInformation("Retrieving all clans from database");
+                var data = await _clanRepository.GetAllClansAsync();
+                return ServiceResult<IEnumerable<Clan>>.Successful(data);
             }
-
-            // Remove all non-alphanumeric characters (including spaces, special chars, etc.)
-            var sanitized = Regex.Replace(clanTag.Trim(), @"[^a-zA-Z0-9]", "");
-
-            if (string.IsNullOrEmpty(sanitized))
+            catch (Exception ex)
             {
-                return (false, string.Empty, "Clan tag must contain at least one letter or number");
+                _logger.LogError(ex, "An unexpected error occurred while retrieving all clans");
+                return ServiceResult<IEnumerable<Clan>>.Failure("An unexpected error occurred while retrieving all clans");
             }
+        }
 
-            if (sanitized.Length > 25)
+        public async Task<ServiceResult> DeleteClanAsync(string clanTag)
+        {
+            try
             {
-                return (false, string.Empty, "Clan tag cannot exceed 25 characters");
+                _logger.LogInformation($"Deleting clan with tag {clanTag}");
+                if (await _clanRepository.DeleteClanAsync(clanTag))
+                {
+                    _logger.LogInformation($"Successfully deleted clan with tag {clanTag}");
+                    return ServiceResult.Successful($"Clan with tag {clanTag} successfully deleted");
+                }
+                else
+                {
+                    _logger.LogWarning($"Clan with tag {clanTag} not found in database");
+                    return ServiceResult.Failure($"Clan with tag {clanTag} not found in database");
+                }
             }
-
-            // Clash Royale clan tags are typically 8-9 characters, but let's be flexible
-            // Most real clan tags are between 3-15 characters after removing the #
-            if (sanitized.Length < 3)
+            catch (Exception ex)
             {
-                return (false, string.Empty, "Clan tag must be at least 3 characters long");
+                _logger.LogError(ex, $"An unexpected error occurred while deleting clan with tag {clanTag}");
+                return ServiceResult.Failure($"An unexpected error occurred while deleting clan with tag {clanTag}");
             }
+        }
 
-            // Add # prefix if not already present (Clash Royale format)
+        public async Task<ServiceResult> UpdateClanAsync(string clanTag)
+        {
+            try
+            {
+                // Input Validation
+                var sanitizedTag = ClanTagValidator.ValidateAndSanitizeClanTag(clanTag);
+                if (!sanitizedTag.isValid)
+                {
+                    _logger.LogWarning($"Invalid clan tag provided: {clanTag}");
+                    return ServiceResult.Failure(sanitizedTag.errorMessage);
+                }
 
-            return (true, sanitized, string.Empty);
+                var tag = sanitizedTag.sanitizedTag;
+                _logger.LogInformation($"Updating clan with tag {tag}");
+                var clan = await _clashRoyaleService.GetClanByTagAsync(tag);
+
+                if (clan == null)
+                {
+                    _logger.LogWarning($"Clan with tag {tag} not found in API");
+                    return ServiceResult.Failure($"Clan with tag '{tag}' not found in API");
+                }
+
+                clan.Tag = Regex.Replace(clan.Tag, @"[^a-zA-Z0-9]", "");
+                _logger.LogInformation($"Clan {clan.Name} with tag {clan.Tag} found. Updating in database");
+
+                if (await _clanRepository.UpdateClanAsync(clan))
+                {
+                    _logger.LogInformation($"Successfully updated {clan.Name} with tag {clan.Tag} in database");
+                    return ServiceResult.Successful($"{clan.Name} successfully updated in Clans!");
+                }
+                else
+                {
+                    _logger.LogWarning($"Clan with tag {clan.Tag} does not exist in database");
+                    return ServiceResult.Failure($"Clan with tag '{clan.Tag}' does not exist in database");
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"An unexpected error occurred while updating clan with tag {clanTag}");
+                return ServiceResult.Failure($"An unexpected error occurred while updating clan with tag {clanTag}");
+            }
         }
     }
 }

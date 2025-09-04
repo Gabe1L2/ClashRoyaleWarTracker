@@ -75,7 +75,7 @@ ClashRoyaleWarTracker/
 │   ├── Http/                           # API clients
 │   ├── Migrations/                     # EF Core database migrations
 │   └── Services/                       # Infrastructure services
-└── ClashRoyaleWareTracker.Tests/           # Integration and unit tests
+└── ClashRoyaleWarTracker.Tests/           # Integration and unit tests
 ```
 
 ## 🚀 Getting Started

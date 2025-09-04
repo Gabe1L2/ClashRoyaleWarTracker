@@ -1,0 +1,10 @@
+using ClashRoyaleWarTracker.Application.Models;
+
+namespace ClashRoyaleWarTracker.Application.Interfaces
+{
+    public interface IClashRoyaleService
+    {
+        Task<Clan?> GetClanByTagAsync(string clanTag);
+        Task<RiverRaceLogResponse?> GetRiverRaceLogAsync(string clanTag);
+    }
+}

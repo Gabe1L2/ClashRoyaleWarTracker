@@ -19,7 +19,7 @@ namespace ClashRoyaleProject.Infrastructure.Http
             _logger = logger;
         }
 
-        public async Task<Clan?> GetClanByTagAsync(string clanTag)
+        public async Task<Clan> GetClanByTagAsync(string clanTag)
         {
             try
             {
@@ -42,15 +42,20 @@ namespace ClashRoyaleProject.Infrastructure.Http
                             WarTrophies = clanData.ClanWarTrophies,
                         };
                     }
+                    else
+                    {
+                        _logger.LogWarning("Clan data is null or missing required fields for tag {ClanTag}", clanTag);
+                        throw new InvalidOperationException($"Clan data is null or missing required fields for tag {clanTag}");
+                    }
                 }
                 else
                 {
                     var responseContent = await response.Content.ReadAsStringAsync();
                     _logger.LogWarning("API request failed for clan {ClanTag} with status {StatusCode}. Response: {ResponseContent}", 
                         clanTag, response.StatusCode, responseContent);
+                    throw new Exception($"API request failed with status {response.StatusCode}");
                 }
 
-                return null;
             }
             catch (HttpRequestException ex)
             {

@@ -19,7 +19,7 @@ namespace ClashRoyaleProject.Infrastructure.Http
             _logger = logger;
         }
 
-        public async Task<Clan> GetClanByTagAsync(string clanTag)
+        public async Task<Clan?> GetClanByTagAsync(string clanTag)
         {
             try
             {

@@ -60,22 +60,22 @@ This project serves as a learning platform for:
 ## 🏗️ Project Structure
 
 ```text
-ClashRoyaleProject/
-├── ClashRoyaleProject.Web/             # Razor Pages presentation layer
+ClashRoyaleWarTracker/
+├── ClashRoyaleWarTracker.Web/             # Razor Pages presentation layer
 │   ├── Pages/                          # Razor pages and page models
 │   ├── wwwroot/                        # Static files (CSS, JS, images)
 │   └── Program.cs                      # Application entry point
-├── ClashRoyaleProject.Application/     # Business logic and interfaces
+├── ClashRoyaleWarTracker.Application/     # Business logic and interfaces
 │   ├── Interfaces/                     # Service contracts
 │   ├── Models/                         # Domain models
 │   ├── Services/                       # Business logic implementation
 │   └── Helpers/                        # Utility classes
-├── ClashRoyaleProject.Infrastructure/  # Data access and external services
+├── ClashRoyaleWarTracker.Infrastructure/  # Data access and external services
 │   ├── Repositories/                   # Data access implementation
 │   ├── Http/                           # API clients
 │   ├── Migrations/                     # EF Core database migrations
 │   └── Services/                       # Infrastructure services
-└── ClashRoyaleProject.Tests/           # Integration and unit tests
+└── ClashRoyaleWareTracker.Tests/           # Integration and unit tests
 ```
 
 ## 🚀 Getting Started
@@ -90,11 +90,11 @@ ClashRoyaleProject/
 ### Installation
 1. **Clone the repository:**
 ```powershell
-git clone https://github.com/Gabe1L2/ClashRoyaleProject.git cd ClashRoyaleProject
+git clone https://github.com/Gabe1L2/ClashRoyaleWarTracker.git cd ClashRoyaleWarTracker
 ```
 2. **Set up User Secrets for development:**
 ```powershell
-cd ClashRoyaleProject.Web dotnet user-secrets init dotnet user-secrets set "ClashRoyaleApi:ApiKey" "YOUR_ACTUAL_API_KEY" dotnet user-secrets set "ConnectionStrings:DefaultConnection" "YOUR_CONNECTION_STRING"
+cd ClashRoyaleWarTracker.Web dotnet user-secrets init dotnet user-secrets set "ClashRoyaleApi:ApiKey" "YOUR_ACTUAL_API_KEY" dotnet user-secrets set "ConnectionStrings:DefaultConnection" "YOUR_CONNECTION_STRING"
 ```
 3. **Configure default users (optional):**
 ```powershell
@@ -102,11 +102,11 @@ dotnet user-secrets set "DefaultUsers:0:Email" "admin@example.com" dotnet user-s
 ```
 4. **Update the database:**
 ```powershell
-dotnet ef database update --project ClashRoyaleProject.Infrastructure --startup-project ClashRoyaleProject.Web
+dotnet ef database update --project ClashRoyaleWarTracker.Infrastructure --startup-project ClashRoyaleWarTracker.Web
 ```
 5. **Run the application:**
 ```powershell
-dotnet run --project ClashRoyaleProject.Web
+dotnet run --project ClashRoyaleWarTracker.Web
 ```
 6. **Access the application:**
    - Navigate to `https://localhost:7236` (or the URL shown in your terminal)

@@ -5,13 +5,13 @@ VisualStudioVersion = 17.14.36327.8
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{8EC462FD-D22E-90A8-E5CE-7E832BA40C5D}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ClashRoyaleWarTracker.Application", "ClashRoyaleProject.Application\ClashRoyaleWarTracker.Application.csproj", "{2A12EEB0-B133-1F39-412B-0F65FB422CD4}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ClashRoyaleWarTracker.Web", "ClashRoyaleWarTracker.Web\ClashRoyaleWarTracker.Web.csproj", "{60C4B6C4-8A0B-D418-4048-A97F0D073E32}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ClashRoyaleWarTracker.Infrastructure", "ClashRoyaleProject.Infrastructure\ClashRoyaleWarTracker.Infrastructure.csproj", "{B450DA86-A580-E404-C3D7-FE4DC4D554C7}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ClashRoyaleWarTracker.Tests", "ClashRoyaleWarTracker.Tests\ClashRoyaleWarTracker.Tests.csproj", "{A1BCB7CF-7F2E-4018-A210-E9260D6CD4CC}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ClashRoyaleWarTracker.Web", "ClashRoyaleProject.Web\ClashRoyaleWarTracker.Web.csproj", "{60C4B6C4-8A0B-D418-4048-A97F0D073E32}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ClashRoyaleWarTracker.Infrastructure", "ClashRoyaleWarTracker.Infrastructure\ClashRoyaleWarTracker.Infrastructure.csproj", "{2325AA77-C60A-DD39-F2CF-D721CE03405F}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ClashRoyaleWarTracker.Tests", "ClashRoyaleProject.Tests\ClashRoyaleWarTracker.Tests.csproj", "{A1BCB7CF-7F2E-4018-A210-E9260D6CD4CC}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ClashRoyaleWarTracker.Application", "ClashRoyaleWarTracker.Application\ClashRoyaleWarTracker.Application.csproj", "{8D7387C1-28AB-F2FB-13BD-0B0DC6F64C3A}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -19,14 +19,6 @@ Global
 		Release|Any CPU = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{2A12EEB0-B133-1F39-412B-0F65FB422CD4}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{2A12EEB0-B133-1F39-412B-0F65FB422CD4}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{2A12EEB0-B133-1F39-412B-0F65FB422CD4}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{2A12EEB0-B133-1F39-412B-0F65FB422CD4}.Release|Any CPU.Build.0 = Release|Any CPU
-		{B450DA86-A580-E404-C3D7-FE4DC4D554C7}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{B450DA86-A580-E404-C3D7-FE4DC4D554C7}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{B450DA86-A580-E404-C3D7-FE4DC4D554C7}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{B450DA86-A580-E404-C3D7-FE4DC4D554C7}.Release|Any CPU.Build.0 = Release|Any CPU
 		{60C4B6C4-8A0B-D418-4048-A97F0D073E32}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{60C4B6C4-8A0B-D418-4048-A97F0D073E32}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{60C4B6C4-8A0B-D418-4048-A97F0D073E32}.Release|Any CPU.ActiveCfg = Release|Any CPU
@@ -35,6 +27,14 @@ Global
 		{A1BCB7CF-7F2E-4018-A210-E9260D6CD4CC}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{A1BCB7CF-7F2E-4018-A210-E9260D6CD4CC}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{A1BCB7CF-7F2E-4018-A210-E9260D6CD4CC}.Release|Any CPU.Build.0 = Release|Any CPU
+		{2325AA77-C60A-DD39-F2CF-D721CE03405F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2325AA77-C60A-DD39-F2CF-D721CE03405F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2325AA77-C60A-DD39-F2CF-D721CE03405F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2325AA77-C60A-DD39-F2CF-D721CE03405F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{8D7387C1-28AB-F2FB-13BD-0B0DC6F64C3A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8D7387C1-28AB-F2FB-13BD-0B0DC6F64C3A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8D7387C1-28AB-F2FB-13BD-0B0DC6F64C3A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8D7387C1-28AB-F2FB-13BD-0B0DC6F64C3A}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

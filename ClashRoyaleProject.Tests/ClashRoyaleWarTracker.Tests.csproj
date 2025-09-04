@@ -20,8 +20,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\ClashRoyaleProject.Application\ClashRoyaleProject.Application.csproj" />
-    <ProjectReference Include="..\ClashRoyaleProject.Infrastructure\ClashRoyaleProject.Infrastructure.csproj" />
+    <ProjectReference Include="..\ClashRoyaleProject.Application\ClashRoyaleWarTracker.Application.csproj" />
+    <ProjectReference Include="..\ClashRoyaleProject.Infrastructure\ClashRoyaleWarTracker.Infrastructure.csproj" />
   </ItemGroup>
 
   <ItemGroup>

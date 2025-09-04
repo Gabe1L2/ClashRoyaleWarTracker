@@ -5,13 +5,13 @@ VisualStudioVersion = 17.14.36327.8
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{8EC462FD-D22E-90A8-E5CE-7E832BA40C5D}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ClashRoyaleProject.Application", "ClashRoyaleProject.Application\ClashRoyaleProject.Application.csproj", "{2A12EEB0-B133-1F39-412B-0F65FB422CD4}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ClashRoyaleWarTracker.Application", "ClashRoyaleProject.Application\ClashRoyaleWarTracker.Application.csproj", "{2A12EEB0-B133-1F39-412B-0F65FB422CD4}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ClashRoyaleProject.Infrastructure", "ClashRoyaleProject.Infrastructure\ClashRoyaleProject.Infrastructure.csproj", "{B450DA86-A580-E404-C3D7-FE4DC4D554C7}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ClashRoyaleWarTracker.Infrastructure", "ClashRoyaleProject.Infrastructure\ClashRoyaleWarTracker.Infrastructure.csproj", "{B450DA86-A580-E404-C3D7-FE4DC4D554C7}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ClashRoyaleProject.Web", "ClashRoyaleProject.Web\ClashRoyaleProject.Web.csproj", "{60C4B6C4-8A0B-D418-4048-A97F0D073E32}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ClashRoyaleWarTracker.Web", "ClashRoyaleProject.Web\ClashRoyaleWarTracker.Web.csproj", "{60C4B6C4-8A0B-D418-4048-A97F0D073E32}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ClashRoyaleProject.Tests", "ClashRoyaleProject.Tests\ClashRoyaleProject.Tests.csproj", "{A1BCB7CF-7F2E-4018-A210-E9260D6CD4CC}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ClashRoyaleWarTracker.Tests", "ClashRoyaleProject.Tests\ClashRoyaleWarTracker.Tests.csproj", "{A1BCB7CF-7F2E-4018-A210-E9260D6CD4CC}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

@@ -18,7 +18,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\ClashRoyaleProject.Application\ClashRoyaleProject.Application.csproj" />
+    <ProjectReference Include="..\ClashRoyaleProject.Application\ClashRoyaleWarTracker.Application.csproj" />
   </ItemGroup>
 
 </Project>

@@ -73,7 +73,7 @@ namespace ClashRoyaleProject.Tests.Services
         [Fact]
         public async Task AddClanAsyncTest()
         {
-            var testClanTag = "V2GQU";
+            var testClanTag = "YC8R0RJ0";
 
             _output.WriteLine($"Testing with clan tag: {testClanTag}");
 
@@ -102,7 +102,7 @@ namespace ClashRoyaleProject.Tests.Services
         [Fact]
         public async Task DeleteClanAsyncTest()
         {
-            var clanTagToDelete = "1";
+            var clanTagToDelete = "Y9Q9RRY0";
 
             _output.WriteLine($"Attempting to delete clan with tag: {clanTagToDelete}");
 

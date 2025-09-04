@@ -1,1 +1,98 @@
-# ClashRoyaleProject
+# 🏰 Clash Royale War Tracker
+
+A comprehensive .NET 8 Razor Pages application for automatically tracking and managing Clash Royale clan war statistics and performance metrics.
+
+## 🎯 Project Overview
+
+I am creating this project to gain more experience with full-stack .NET development and to gain exposure to technologies I have not previously worked with, including **Razor Pages** and **Entity Framework Core**. This project is still in progress with only some pieces working right now, but I am actively working on it as I have time.
+
+**What this project will eventually allow you to do** is automatically keep track of your Clash Royale clan(s)'s war stats, which need to be updated weekly to maintain accurate historical data and performance analytics.
+
+## 🚀 Current Status
+
+**🟢 Working Features:**
+- ✅ Clan management (Add, Update, Delete, View)
+- ✅ Integration with Clash Royale API
+- ✅ Entity Framework Core with SQL Server
+- ✅ User authentication with ASP.NET Core Identity
+- ✅ Clean Architecture implementation
+- ✅ Database migrations and seeding
+
+**🟡 In Development:**
+- 🔄 Automated weekly war statistics updates
+- 🔄 Historical clan performance tracking
+- 🔄 Player statistics and averages
+- 🔄 War participation analytics
+- 🔄 Administrative dashboard
+
+**🔴 Planned Features:**
+- 📅 Scheduled background tasks for weekly updates
+- 📊 Data visualization and charts
+- 📈 Performance trend analysis
+- 🏆 Clan ranking system
+- 📱 Responsive mobile interface
+
+## 🛠️ Technologies & Learning Objectives
+
+This project serves as a learning platform for:
+
+### **Frontend Technologies**
+- **Razor Pages** - Server-side page-based programming model
+- **Bootstrap 5** - Responsive UI framework
+- **jQuery** - Client-side interactivity
+
+### **Backend Technologies**
+- **.NET 8** - Latest version of the .NET framework
+- **Entity Framework Core** - Object-relational mapping (ORM)
+- **ASP.NET Core Identity** - Authentication and authorization
+- **SQL Server** - Relational database management
+
+### **Architecture & Patterns**
+- **Clean Architecture** - Separation of concerns and dependency inversion
+- **Repository Pattern** - Data access abstraction
+- **Dependency Injection** - Inversion of control
+- **Unit Testing** - Test-driven development practices
+
+### **External Integrations**
+- **Clash Royale API** - Real-time game data retrieval
+- **HttpClient** - RESTful API consumption
+
+## 🏗️ Project Structure
+
+```text
+ClashRoyaleProject/
+├── ClashRoyaleProject.Web/             # Razor Pages presentation layer
+│   ├── Pages/                          # Razor pages and page models
+│   ├── wwwroot/                        # Static files (CSS, JS, images)
+│   └── Program.cs                      # Application entry point
+├── ClashRoyaleProject.Application/     # Business logic and interfaces
+│   ├── Interfaces/                     # Service contracts
+│   ├── Models/                         # Domain models
+│   ├── Services/                       # Business logic implementation
+│   └── Helpers/                        # Utility classes
+├── ClashRoyaleProject.Infrastructure/  # Data access and external services
+│   ├── Repositories/                   # Data access implementation
+│   ├── Http/                           # API clients
+│   ├── Migrations/                     # EF Core database migrations
+│   └── Services/                       # Infrastructure services
+└── ClashRoyaleProject.Tests/           # Integration and unit tests
+```
+
+## 🚀 Getting Started
+
+### Prerequisites
+
+- **.NET 8 SDK** - [Download here](https://dotnet.microsoft.com/download/dotnet/8.0)
+- **SQL Server** or **SQL Server LocalDB**
+- **Clash Royale API Key** - [Get one here](https://developer.clashroyale.com/)
+- **Visual Studio 2022** or **VS Code** (recommended)
+
+### Installation
+1. **Clone the repository:**
+```powershell
+git clone https://github.com/Gabe1L2/ClashRoyaleProject.git cd ClashRoyaleProject
+```
+2. **Set up User Secrets for development:**
+```powershell
+cd ClashRoyaleProject.Web dotnet user-secrets init dotnet user-secrets set "ClashRoyaleApi:ApiKey" "YOUR_ACTUAL_API_KEY" dotnet user-secrets set "ConnectionStrings:DefaultConnection" "YOUR_CONNECTION_STRING"
+```

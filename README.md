@@ -96,3 +96,67 @@ git clone https://github.com/Gabe1L2/ClashRoyaleProject.git cd ClashRoyaleProjec
 ```powershell
 cd ClashRoyaleProject.Web dotnet user-secrets init dotnet user-secrets set "ClashRoyaleApi:ApiKey" "YOUR_ACTUAL_API_KEY" dotnet user-secrets set "ConnectionStrings:DefaultConnection" "YOUR_CONNECTION_STRING"
 ```
+3. **Configure default users (optional):**
+```powershell
+dotnet user-secrets set "DefaultUsers:0:Email" "admin@example.com" dotnet user-secrets set "DefaultUsers:0:Password" "YourPassword123!"
+```
+4. **Update the database:**
+```powershell
+dotnet ef database update --project ClashRoyaleProject.Infrastructure --startup-project ClashRoyaleProject.Web
+```
+5. **Run the application:**
+```powershell
+dotnet run --project ClashRoyaleProject.Web
+```
+6. **Access the application:**
+   - Navigate to `https://localhost:7236` (or the URL shown in your terminal)
+
+## 🎮 How to Get a Clash Royale API Key
+
+1. Visit the [Clash Royale Developer Portal](https://developer.clashroyale.com/)
+2. Create an account or log in with your Supercell ID
+3. Create a new API key:
+   - **Name**: Your project name
+   - **Description**: Brief description of your project
+   - **IP Addresses**: Add your development IP address(es)
+4. Copy the generated API key and add it to your User Secrets
+
+
+**Test Features:**
+- Full integration testing with real Clash Royale API
+- Database integration testing
+- User Secrets integration for secure testing
+
+## 🎯 Learning Outcomes
+
+Through this project, I'm gaining hands-on experience with:
+
+- **Razor Pages architecture** vs. traditional MVC
+- **Entity Framework Core** relationships and migrations
+- **Clean Architecture** principles in .NET
+- **API integration** and HTTP client management
+- **Authentication and authorization** in web applications
+- **Database design** and normalization
+- **Asynchronous programming** patterns
+- **Dependency injection** and service lifetimes
+- **Integration testing** strategies
+
+## 🤝 Contributing
+
+This is primarily a learning project, but suggestions and feedback are welcome! If you'd like to contribute:
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/new-feature`)
+3. Commit your changes (`git commit -am 'Add new feature'`)
+4. Push to the branch (`git push origin feature/new-feature`)
+5. Create a Pull Request
+
+## 📝 License
+
+This project is open source and available under the [MIT License](LICENSE).
+
+---
+
+**Note**: This project is actively under development as a learning exercise. Some features may be incomplete or subject to change as I continue to learn and improve the codebase.
+
+For questions or suggestions, feel free to open an issue or reach out!

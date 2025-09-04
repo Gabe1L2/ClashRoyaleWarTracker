@@ -22,8 +22,8 @@ namespace ClashRoyaleProject.Infrastructure
         public DbSet<ClanHistory> ClanHistories { get; set; } = null!;
         public DbSet<Player> Players { get; set; } = null!;
         public DbSet<PlayerAverage> PlayerAverages { get; set; } = null!;
-        public DbSet<RawWarData> RawWarData { get; set; } = null!;
-        public DbSet<WarData> WarData { get; set; } = null!;
+        public DbSet<RawWarHistory> RawWarData { get; set; } = null!;
+        public DbSet<WarHistory> WarData { get; set; } = null!;
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -60,28 +60,28 @@ namespace ClashRoyaleProject.Infrastructure
                 .HasPrincipalKey(c => c.ID)
                 .OnDelete(DeleteBehavior.Cascade);
 
-            modelBuilder.Entity<RawWarData>()
+            modelBuilder.Entity<RawWarHistory>()
                 .HasOne<Player>()
                 .WithMany()
                 .HasForeignKey(rwd => rwd.PlayerID)
                 .HasPrincipalKey(p => p.ID)
                 .OnDelete(DeleteBehavior.Cascade);
 
-            modelBuilder.Entity<RawWarData>()
+            modelBuilder.Entity<RawWarHistory>()
                 .HasOne<ClanHistory>()
                 .WithMany()
                 .HasForeignKey(rwd => rwd.ClanHistoryID)
                 .HasPrincipalKey(ch => ch.ID)
                 .OnDelete(DeleteBehavior.Cascade);
 
-            modelBuilder.Entity<WarData>()
+            modelBuilder.Entity<WarHistory>()
                 .HasOne<Player>()
                 .WithMany()
                 .HasForeignKey(wd => wd.PlayerID)
                 .HasPrincipalKey(p => p.ID)
                 .OnDelete(DeleteBehavior.Cascade);
 
-            modelBuilder.Entity<WarData>()
+            modelBuilder.Entity<WarHistory>()
                 .HasOne<ClanHistory>()
                 .WithMany()
                 .HasForeignKey(wd => wd.ClanHistoryID)
@@ -99,12 +99,12 @@ namespace ClashRoyaleProject.Infrastructure
                 .IsUnique();
 
             // Prevent duplicate war data for same player
-            modelBuilder.Entity<WarData>()
+            modelBuilder.Entity<WarHistory>()
                 .HasIndex(wd => new { wd.PlayerID, wd.ClanHistoryID })
                 .IsUnique();
 
             // Prevent duplicate raw war data entries (same player/clan history)
-            modelBuilder.Entity<RawWarData>()
+            modelBuilder.Entity<RawWarHistory>()
                 .HasIndex(rwd => new { rwd.PlayerID, rwd.ClanHistoryID })
                 .IsUnique();
         }

@@ -22,4 +22,6 @@ namespace ClashRoyaleProject.Application.Models
         public int WarTrophies { get; set; }
         public DateTime RecordedDate { get; set; }
     }
+
+
 }

@@ -36,6 +36,18 @@ namespace ClashRoyaleProject.Infrastructure.Repositories
             }
         }
 
+        public async Task<Clan?> GetClanAsync(string clanTag)
+        {
+            try
+            {
+                return await _context.Clans.FirstOrDefaultAsync(c => c.Tag == clanTag);
+            }
+            catch (Exception ex)
+            {
+                throw new InvalidOperationException($"Failed to retrieve clan with tag {clanTag} from the database", ex);
+            }
+        }
+
         public async Task<IEnumerable<Clan>> GetAllClansAsync()
         {
             try
@@ -87,6 +99,39 @@ namespace ClashRoyaleProject.Infrastructure.Repositories
             catch (Exception ex)
             {
                 throw new InvalidOperationException($"Failed to add/update clan {clan.Tag}", ex);
+            }
+        }
+
+        public async Task<bool> UpdateClanHistoryAsync(Clan clan, List<ClanHistory> clanHistories)
+        {
+            try
+            {
+                var curClan = await _context.Clans.FirstOrDefaultAsync(c => c.Tag == clan.Tag);
+                if (curClan == null)
+                {
+                    return false;
+                }
+
+                foreach (var clanHistory in clanHistories)
+                {
+                    var existingHistory = await _context.ClanHistories.FirstOrDefaultAsync(ch =>
+                        ch.ClanID == curClan.ID &&
+                        ch.SeasonID == clanHistory.SeasonID &&
+                        ch.WeekIndex == clanHistory.WeekIndex);
+
+                    if (existingHistory == null)
+                    {
+                        clanHistory.ClanID = curClan.ID;
+                        await _context.ClanHistories.AddAsync(clanHistory);
+                    }
+                }
+
+                await _context.SaveChangesAsync();
+                return true;
+            }
+            catch (Exception ex)
+            {
+                throw new InvalidOperationException($"Failed to update clan history for {clan.Tag}", ex);
             }
         }
     }

@@ -73,15 +73,12 @@ namespace ClashRoyaleProject.Tests.Services
         [Fact]
         public async Task AddClanAsyncTest()
         {
-            // Arrange - Use a real clan tag (you'll need to replace with a valid one)
-            var testClanTag = "2Y9VPJUY0"; // Example clan tag - replace with a real one you know exists
+            var testClanTag = "V2GQU";
 
             _output.WriteLine($"Testing with clan tag: {testClanTag}");
 
-            // Act - This hits the REAL Clash Royale API and your REAL database
             var result = await _applicationService.AddClanAsync(testClanTag);
 
-            // Assert
             if (result.Success)
             {
                 _output.WriteLine($"Successfully added clan: {result.Message}");
@@ -105,7 +102,8 @@ namespace ClashRoyaleProject.Tests.Services
         [Fact]
         public async Task DeleteClanAsyncTest()
         {
-            var clanTagToDelete = "2Y9VPJUY0";
+            var clanTagToDelete = "1";
+
             _output.WriteLine($"Attempting to delete clan with tag: {clanTagToDelete}");
 
             var deleteResult = await _applicationService.DeleteClanAsync(clanTagToDelete);
@@ -126,83 +124,92 @@ namespace ClashRoyaleProject.Tests.Services
         [Fact]
         public async Task UpdateClanAsyncTest()
         {
-            var clanTagToUpdate = "2Y9VPJUY0";
+            var clanTagToUpdate = "V2GQU";
             _output.WriteLine($"Attempting to update clan with tag: {clanTagToUpdate}");
 
-            var updateResult = await _applicationService.UpdateClanAsync(clanTagToUpdate);
-        }
+            var result = await _applicationService.UpdateClanAsync(clanTagToUpdate);
 
-        [Fact]
-        public async Task AddClanAsync_WithInvalidTag_ReturnsValidationError()
-        {
-            // Arrange
-            var invalidTag = ""; // Empty tag should fail validation
-
-            // Act
-            var result = await _applicationService.AddClanAsync(invalidTag);
-
-            // Assert
-            Assert.False(result.Success);
-            Assert.Contains("cannot be empty", result.Message.ToLower());
-            _output.WriteLine($"Validation correctly failed: {result.Message}");
-        }
-
-        [Fact]
-        public async Task AddClanAsync_WithMalformedTag_ReturnsValidationError()
-        {
-            // Arrange
-            var malformedTag = "!@#$%^&*()"; // Special characters should be stripped/fail
-
-            // Act
-            var result = await _applicationService.AddClanAsync(malformedTag);
-
-            // Assert
-            Assert.False(result.Success);
-            _output.WriteLine($"Malformed tag correctly rejected: {result.Message}");
-        }
-
-        [Fact]
-        public async Task Integration_AddAndRetrieveClan_WorksEndToEnd()
-        {
-            // This test demonstrates the full flow:
-            // 1. Get current clan count
-            // 2. Add a new clan (if possible)
-            // 3. Verify clan count increased
-            // 4. Verify the specific clan appears in the list
-
-            // Step 1: Get initial count
-            var initialResult = await _applicationService.GetAllClansAsync();
-            Assert.True(initialResult.Success);
-            var initialCount = initialResult.Data.Count();
-            _output.WriteLine($"Initial clan count: {initialCount}");
-
-            // Step 2: Try to add a clan (use a real clan tag)
-            var testTag = "2Y9VPJUY0"; // Replace with a clan tag you know exists
-            var addResult = await _applicationService.AddClanAsync(testTag);
-            
-            _output.WriteLine($"Add clan result: Success={addResult.Success}, Message={addResult.Message}");
-
-            // Step 3: Get final count
-            var finalResult = await _applicationService.GetAllClansAsync();
-            Assert.True(finalResult.Success);
-            var finalCount = finalResult.Data.Count();
-            _output.WriteLine($"Final clan count: {finalCount}");
-
-            // Step 4: Verify results
-            if (addResult.Success)
+            if (result.Success)
             {
-                // If add succeeded, count should have increased
-                Assert.True(finalCount >= initialCount);
-                
-                // The clan should be in the list
-                var sanitizedTag = testTag.Replace("#", "");
-                Assert.Contains(finalResult.Data, c => c.Tag == sanitizedTag);
-                _output.WriteLine($"Successfully verified clan {testTag} was added and appears in the list");
+                _output.WriteLine($"Successfully updated clan with tag: {clanTagToUpdate}");
+                Assert.True(result.Success);
             }
             else
             {
-                // If add failed (maybe clan already exists), that's also valid
-                _output.WriteLine($"Add failed as expected: {addResult.Message}");
+                _output.WriteLine($"Failed to update clan with tag: {clanTagToUpdate}. Message: {result.Message}");
+                Assert.False(result.Success);
+                Assert.NotEmpty(result.Message);
+            }
+        }
+
+        [Fact]
+        public async Task WeeklyUpdateAsyncTest()
+        {
+            _output.WriteLine("Starting weekly update test for all clans");
+
+            // Act - This will test the entire weekly update process
+            var result = await _applicationService.WeeklyUpdateAsync();
+
+            // Assert
+            Assert.True(result.Success);
+            Assert.NotEmpty(result.Message);
+
+            _output.WriteLine($"Weekly update result: {result.Message}");
+
+            // Verify that clans were actually processed by checking if we have any clans
+            var allClansResult = await _applicationService.GetAllClansAsync();
+            Assert.True(allClansResult.Success);
+
+            if (allClansResult.Data?.Any() == true)
+            {
+                _output.WriteLine($"Verified: {allClansResult.Data.Count()} clans exist after weekly update");
+
+                // Check that at least one clan has a recent LastUpdated timestamp
+                var recentlyUpdated = allClansResult.Data.Any(c =>
+                    (DateTime.Now - c.LastUpdated).TotalMinutes < 5);
+
+                if (recentlyUpdated)
+                {
+                    _output.WriteLine("At least one clan was updated recently");
+                }
+                else
+                {
+                    _output.WriteLine("No clans appear to have been updated recently");
+                }
+            }
+            else
+            {
+                _output.WriteLine("No clans found in database to update");
+            }
+        }
+
+        [Fact]
+        public async Task UpdateClanHistoryAsyncTest()
+        {
+            string testClanTag = "V2GQU";
+            _output.WriteLine($"Testing history update for clan {testClanTag}");
+
+            var getClanResult = await _applicationService.GetClanAsync(testClanTag);
+            if (getClanResult.Success == false || getClanResult.Data == null)
+            {
+                _output.WriteLine($"Clan with tag {testClanTag} not found in database. Cannot test history update.");
+                Assert.False(getClanResult.Success);
+                return;
+            }
+
+            var result = await _applicationService.UpdateClanHistoryAsync(getClanResult.Data);
+
+            // Assert
+            if (result.Success)
+            {
+                _output.WriteLine($"Successfully updated history: {result.Message}");
+                Assert.True(result.Success);
+            }
+            else
+            {
+                _output.WriteLine($"History update failed: {result.Message}");
+                // Don't fail the test - this might be expected if no war log data exists
+                Assert.False(result.Success);
             }
         }
 

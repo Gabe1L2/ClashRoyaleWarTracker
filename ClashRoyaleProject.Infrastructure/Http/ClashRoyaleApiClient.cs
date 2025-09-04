@@ -63,5 +63,43 @@ namespace ClashRoyaleProject.Infrastructure.Http
                 throw;
             }
         }
+
+        public async Task<RiverRaceLogResponse?> GetRiverRaceLogAsync(string clanTag)
+        {
+            try
+            {
+                _logger.LogInformation("Making API request for river race logs for clan {ClanTag}", clanTag);
+
+                var response = await _httpClient.GetAsync($"clans/%23{clanTag}/riverracelog");
+
+                if (response.IsSuccessStatusCode)
+                {
+                    var riverRaceLog = await response.Content.ReadFromJsonAsync<RiverRaceLogResponse>();
+                    if (riverRaceLog != null)
+                    {
+                        _logger.LogInformation("Successfully retrieved river race logs for clan {ClanTag}", clanTag);
+                        return riverRaceLog;
+                    }
+                }
+                else
+                {
+                    var responseContent = await response.Content.ReadAsStringAsync();
+                    _logger.LogWarning("API request failed for river race logs for clan {ClanTag} with status {StatusCode}. Response: {ResponseContent}",
+                        clanTag, response.StatusCode, responseContent);
+                }
+
+                return null;
+            }
+            catch (HttpRequestException ex)
+            {
+                _logger.LogError(ex, "HTTP error when fetching clan {ClanTag}", clanTag);
+                throw;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Unexpected error when fetching river race logs for clan {ClanTag}", clanTag);
+                throw;
+            }
+        }
     }
 }

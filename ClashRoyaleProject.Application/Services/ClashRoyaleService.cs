@@ -20,12 +20,12 @@ namespace ClashRoyaleProject.Application.Services
             _logger = logger;
         }
 
-        public async Task<Clan> GetClanByTagAsync(string clanTag)
+        public async Task<Clan?> GetClanByTagAsync(string clanTag)
         {
             try
             {
                 var clan = await _apiClient.GetClanByTagAsync(clanTag);
-                return clan;
+                return clan; // this will be null if not found
             }
             catch (Exception ex)
             {
@@ -34,5 +34,18 @@ namespace ClashRoyaleProject.Application.Services
             }
         }
 
+        public async Task<RiverRaceLogResponse?> GetRiverRaceLogAsync(string clanTag)
+        {
+            try
+            {
+                var rawWarLog = await _apiClient.GetRiverRaceLogAsync(clanTag);
+                return rawWarLog;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Error fetching war log for clan with tag {clanTag}");
+                throw;
+            }
+        }
     }
 }

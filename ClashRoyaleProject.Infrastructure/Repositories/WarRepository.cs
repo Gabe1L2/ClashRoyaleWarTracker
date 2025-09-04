@@ -6,7 +6,5 @@ using System.Threading.Tasks;
 
 namespace ClashRoyaleProject.Infrastructure.Repositories
 {
-    internal class WarDataRepository
-    {
-    }
+    
 }

@@ -1,7 +1,6 @@
 ﻿using ClashRoyaleWarTracker.Application.Interfaces;
 using ClashRoyaleWarTracker.Application.Models;
 using Microsoft.EntityFrameworkCore;
-using System.Text.RegularExpressions;
 
 namespace ClashRoyaleWarTracker.Infrastructure.Repositories
 {
@@ -74,7 +73,7 @@ namespace ClashRoyaleWarTracker.Infrastructure.Repositories
             {
                 throw new InvalidOperationException($"Failed to delete clan with tag {clanTag}", ex);
             }
-            
+
         }
 
         public async Task<bool> UpdateClanAsync(Clan clan)
@@ -102,7 +101,7 @@ namespace ClashRoyaleWarTracker.Infrastructure.Repositories
             }
         }
 
-        public async Task<bool> UpdateClanHistoryAsync(Clan clan, List<ClanHistory> clanHistories)
+        public async Task<bool> PopulateClanHistoryAsync(Clan clan, List<ClanHistory> clanHistories)
         {
             try
             {
@@ -132,6 +131,23 @@ namespace ClashRoyaleWarTracker.Infrastructure.Repositories
             catch (Exception ex)
             {
                 throw new InvalidOperationException($"Failed to update clan history for {clan.Tag}", ex);
+            }
+        }
+
+        public async Task<ClanHistory?> GetClanHistoryAsync(int clanID, int seasonID, int weekIndex)
+        {
+            try
+            {
+                var clanHistory = await _context.ClanHistories.FirstOrDefaultAsync(ch =>
+                    ch.ClanID == clanID &&
+                    ch.SeasonID == seasonID &&
+                    ch.WeekIndex == weekIndex);
+
+                return clanHistory;
+            }
+            catch (Exception ex)
+            {
+                throw new InvalidOperationException($"Failed to retrieve clan history for ClanID {clanID}, SeasonID {seasonID}, WeekIndex {weekIndex}", ex);
             }
         }
     }

@@ -10,12 +10,16 @@ namespace ClashRoyaleWarTracker.Application.Services
     {
         private readonly IClashRoyaleService _clashRoyaleService;
         private readonly IClanRepository _clanRepository;
+        private readonly IPlayerRepository _playerRepository;
+        private readonly IWarRepository _warRepository;
         private readonly ILogger<ApplicationService> _logger;
 
-        public ApplicationService(IClashRoyaleService clashRoyaleService, IClanRepository clanRepository, ILogger<ApplicationService> logger)
+        public ApplicationService(IClashRoyaleService clashRoyaleService, IClanRepository clanRepository, IPlayerRepository playerRepository, IWarRepository warRepository, ILogger<ApplicationService> logger)
         {
             _clashRoyaleService = clashRoyaleService;
             _clanRepository = clanRepository;
+            _playerRepository = playerRepository;
+            _warRepository = warRepository;
             _logger = logger;
         }
 
@@ -61,7 +65,7 @@ namespace ClashRoyaleWarTracker.Application.Services
                         }
 
                         // Update clan history regardless of basic update result
-                        var historyResult = await UpdateClanHistoryAsync(clan);
+                        var historyResult = await PopulateClanHistoryAsync(clan);
                         if (historyResult.Success)
                         {
                             successfulHistoryUpdates++;
@@ -72,9 +76,6 @@ namespace ClashRoyaleWarTracker.Application.Services
                             failedHistoryUpdates++;
                             _logger.LogWarning($"Failed to update history for clan {clan.Name}: {historyResult.Message}");
                         }
-
-                        // Add a small delay between API calls to be respectful to the API
-                        await Task.Delay(500);
                     }
                     catch (Exception ex)
                     {
@@ -264,14 +265,14 @@ namespace ClashRoyaleWarTracker.Application.Services
             }
         }
 
-        public async Task<ServiceResult> UpdateClanHistoryAsync(Clan clan)
+        public async Task<ServiceResult> PopulateClanHistoryAsync(Clan clan)
         {
             try
             {
                 _logger.LogInformation($"Updating history for clan {clan.Name}");
 
                 var riverRaceLog = await _clashRoyaleService.GetRiverRaceLogAsync(clan.Tag);
-                if (riverRaceLog == null || riverRaceLog.Items == null || !riverRaceLog.Items.Any())
+                if (riverRaceLog == null || riverRaceLog.Items == null || riverRaceLog.Items.Count == 0)
                 {
                     _logger.LogWarning($"No war log data found for clan with tag {clan.Tag}");
                     return ServiceResult.Failure($"No war log data found for clan with tag '{clan.Tag}'");
@@ -309,7 +310,7 @@ namespace ClashRoyaleWarTracker.Application.Services
                     return ServiceResult.Failure($"No valid clan standings found in war log for clan with tag '{clan.Tag}'");
                 }
 
-                if (await _clanRepository.UpdateClanHistoryAsync(clan, clanHistories))
+                if (await _clanRepository.PopulateClanHistoryAsync(clan, clanHistories))
                 {
                     _logger.LogInformation($"Successfully updated history for {clan.Name} in database");
                     return ServiceResult.Successful($"{clan.Name} history successfully updated!");
@@ -324,6 +325,94 @@ namespace ClashRoyaleWarTracker.Application.Services
             {
                 _logger.LogError(ex, $"An unexpected error occurred while updating history for clan with tag {clan.Tag}");
                 return ServiceResult.Failure($"An unexpected error occurred while updating history for clan with tag {clan.Tag}");
+            }
+        }
+
+        public async Task<ServiceResult> PopulateRawWarHistory(Clan clan)
+        {
+            try
+            {
+                _logger.LogInformation($"Populating raw war history for {clan.Name}");
+
+                var riverRaceLog = await _clashRoyaleService.GetRiverRaceLogAsync(clan.Tag);
+                if (riverRaceLog == null || riverRaceLog.Items == null || riverRaceLog.Items.Count == 0)
+                {
+                    _logger.LogWarning($"No war log data found for clan with tag {clan.Tag}");
+                    return ServiceResult.Failure($"No war log data found for clan with tag '{clan.Tag}'");
+                }
+
+                var rawWarHistories = new List<RawWarHistory>();
+
+                foreach (var riverRace in riverRaceLog.Items)
+                {
+                    // Find the clan's standing in this river race
+                    var clanStanding = riverRace.Standings?.FirstOrDefault(s => s.Clan.Tag.Replace("#", "") == clan.Tag);
+                    if (clanStanding != null)
+                    {
+                        var clanHistory = await _clanRepository.GetClanHistoryAsync(clan.ID, riverRace.SeasonId, riverRace.SectionIndex);
+                        if (clanHistory == null)
+                        {
+                            _logger.LogWarning($"No clan history found for {clan.Name} for Season {riverRace.SeasonId}, Week {riverRace.SectionIndex}");
+                            return ServiceResult.Failure($"No clan history found for {clan.Name} for Season {riverRace.SeasonId}, Week {riverRace.SectionIndex}");
+                        }
+
+                        foreach (var participant in clanStanding.Clan.Participants)
+                        {
+                            if (participant.Fame != 0)
+                            {
+                                var playerTag = participant.Tag.Replace("#", "");
+                                var player = await _playerRepository.GetPlayerAsync(playerTag);
+                                if (player == null)
+                                {
+                                    var newPlayer = new Player
+                                    {
+                                        Tag = playerTag,
+                                        ClanID = clan.ID,
+                                        Name = participant.Name,
+                                        IsActive = true,
+                                        LastUpdated = DateTime.Now
+                                    };
+
+                                    player = await _playerRepository.AddPlayerAsync(newPlayer);
+                                    if (player == null)
+                                    {
+                                        _logger.LogWarning($"Failed to add new player with tag {playerTag}");
+                                        return ServiceResult.Failure($"Failed to add new player with tag '{playerTag}'");
+                                    }
+
+                                    _logger.LogInformation($"Added new player {player.Name} with tag {player.Tag}");
+                                }
+
+                                var rawWarHistory = new RawWarHistory
+                                {
+                                    PlayerID = player.ID,
+                                    ClanHistoryID = clanHistory.ID,
+                                    Fame = participant.Fame,
+                                    RepairPoints = participant.RepairPoints,
+                                    BoatAttacks = participant.BoatAttacks,
+                                    DecksUsed = participant.DecksUsed
+                                };
+                                rawWarHistories.Add(rawWarHistory);
+                            }
+                        }
+                    }
+                }
+
+                if (await _warRepository.AddRawWarHistoriesAsync(rawWarHistories))
+                {
+                    _logger.LogInformation($"Successfully populated raw war history for {clan.Name}");
+                    return ServiceResult.Successful($"{clan.Name} raw war history successfully populated!");
+                }
+                else
+                {
+                    _logger.LogWarning($"Failed to populate raw war history for clan {clan.Name}");
+                    return ServiceResult.Failure($"Failed to populate raw war history for clan {clan.Name}");
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"An unexpected error occurred while populating raw war history for {clan.Name}");
+                return ServiceResult.Failure($"An unexpected error occurred while populating raw war history for {clan.Name}");
             }
         }
     }

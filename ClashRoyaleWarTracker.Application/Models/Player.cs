@@ -6,6 +6,7 @@ namespace ClashRoyaleWarTracker.Application.Models
     public class Player
     {
         public int ID { get; set; }
+        public int? ClanID { get; set; }
         [MaxLength(32)]
         public required string Tag { get; set; }
         [MaxLength(50)]

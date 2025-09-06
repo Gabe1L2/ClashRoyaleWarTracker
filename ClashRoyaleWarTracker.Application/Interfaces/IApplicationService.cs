@@ -15,6 +15,7 @@ namespace ClashRoyaleWarTracker.Application.Interfaces
         Task<ServiceResult<Clan>> GetClanAsync(string clanTag);
         Task<ServiceResult> DeleteClanAsync(string clanTag);
         Task<ServiceResult> UpdateClanAsync(string clanTag);
-        Task<ServiceResult> UpdateClanHistoryAsync(Clan clan);
+        Task<ServiceResult> PopulateClanHistoryAsync(Clan clan);
+        Task<ServiceResult> PopulateRawWarHistory(Clan clan);
     }
 }

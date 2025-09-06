@@ -9,6 +9,7 @@ namespace ClashRoyaleWarTracker.Application.Interfaces
         Task<IEnumerable<Clan>> GetAllClansAsync();
         Task<bool> DeleteClanAsync(string clanTag);
         Task<bool> UpdateClanAsync(Clan clan);
-        Task<bool> UpdateClanHistoryAsync(Clan clan, List<ClanHistory> clanHistories);
+        Task<bool> PopulateClanHistoryAsync(Clan clan, List<ClanHistory> clanHistories);
+        Task<ClanHistory?> GetClanHistoryAsync(int clanID, int seasonID, int weekIndex);
     }
 }

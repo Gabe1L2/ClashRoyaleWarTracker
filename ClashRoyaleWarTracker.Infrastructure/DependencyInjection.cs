@@ -39,6 +39,8 @@ namespace ClashRoyaleWarTracker.Infrastructure
 
             services.AddScoped<IClashRoyaleService, ClashRoyaleService>();
             services.AddScoped<IClanRepository, ClanRepository>();
+            services.AddScoped<IPlayerRepository, PlayerRepository>();
+            services.AddScoped<IWarRepository, WarRepository>();
             services.AddScoped<IApplicationService, ApplicationService>();
 
             // Clash Royale API configuration

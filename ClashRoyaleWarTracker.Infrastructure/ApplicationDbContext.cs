@@ -46,6 +46,13 @@ namespace ClashRoyaleWarTracker.Infrastructure
                 .HasPrincipalKey(c => c.ID)
                 .OnDelete(DeleteBehavior.Cascade);
 
+            modelBuilder.Entity<Player>()
+                .HasOne<Clan>()
+                .WithMany()
+                .HasForeignKey(p => p.ClanID)
+                .HasPrincipalKey(c => c.ID)
+                .OnDelete(DeleteBehavior.SetNull);
+
             modelBuilder.Entity<PlayerAverage>()
                 .HasOne<Player>()
                 .WithMany()
@@ -58,7 +65,7 @@ namespace ClashRoyaleWarTracker.Infrastructure
                 .WithMany()
                 .HasForeignKey(pa => pa.ClanID)
                 .HasPrincipalKey(c => c.ID)
-                .OnDelete(DeleteBehavior.Cascade);
+                .OnDelete(DeleteBehavior.SetNull);
 
             modelBuilder.Entity<RawWarHistory>()
                 .HasOne<Player>()

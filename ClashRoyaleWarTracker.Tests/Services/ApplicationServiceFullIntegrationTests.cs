@@ -5,11 +5,66 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using System.Diagnostics;
 using Xunit;
 using Xunit.Abstractions;
 
 namespace ClashRoyaleWarTracker.Tests.Services
 {
+    public class TestOutputLoggerProvider : ILoggerProvider
+    {
+        private readonly ITestOutputHelper _testOutputHelper;
+
+        public TestOutputLoggerProvider(ITestOutputHelper testOutputHelper)
+        {
+            _testOutputHelper = testOutputHelper;
+        }
+
+        public ILogger CreateLogger(string categoryName)
+        {
+            return new TestOutputLogger(_testOutputHelper, categoryName);
+        }
+
+        public void Dispose() { }
+    }
+
+    public class TestOutputLogger : ILogger
+    {
+        private readonly ITestOutputHelper _testOutputHelper;
+        private readonly string _categoryName;
+
+        public TestOutputLogger(ITestOutputHelper testOutputHelper, string categoryName)
+        {
+            _testOutputHelper = testOutputHelper;
+            _categoryName = categoryName;
+        }
+
+        public IDisposable BeginScope<TState>(TState state) => null!;
+
+        public bool IsEnabled(LogLevel logLevel) => true;
+
+        public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter)
+        {
+            try
+            {
+                if (_categoryName.StartsWith("ClashRoyaleWarTracker"))
+                {
+                    var message = formatter(state, exception);
+
+                    // Just the clean message to debug output
+                    Debug.WriteLine(message);
+
+                    // Also to test output
+                    _testOutputHelper.WriteLine(message);
+                }
+            }
+            catch
+            {
+                // Ignore if test output is not available
+            }
+        }
+    }
+
     public class ApplicationServiceFullIntegrationTests : IDisposable
     {
         private readonly IServiceProvider _serviceProvider;
@@ -36,7 +91,12 @@ namespace ClashRoyaleWarTracker.Tests.Services
             services.AddLogging(builder =>
             {
                 builder.AddConsole();
+                builder.AddDebug();
+                builder.AddProvider(new TestOutputLoggerProvider(output)); // This will capture all logger messages
                 builder.SetMinimumLevel(LogLevel.Information);
+                builder.AddFilter("ClashRoyaleWarTracker", LogLevel.Information);
+                builder.AddFilter("Microsoft", LogLevel.Warning);
+                builder.AddFilter("System", LogLevel.Warning);
             });
 
             // Add your application layers (exactly like Program.cs)
@@ -45,12 +105,17 @@ namespace ClashRoyaleWarTracker.Tests.Services
 
             _serviceProvider = services.BuildServiceProvider();
             _applicationService = _serviceProvider.GetRequiredService<IApplicationService>();
+
+            var logger = _serviceProvider.GetRequiredService<ILogger<ApplicationServiceFullIntegrationTests>>();
+            logger.LogInformation("=== Test initialization completed ===");
         }
 
         [Fact]
         public async Task GetAllClansAsyncTest()
         {
-            // Act - This hits your REAL database
+            var logger = _serviceProvider.GetRequiredService<ILogger<ApplicationServiceFullIntegrationTests>>();
+            logger.LogInformation("=== Starting GetAllClansAsyncTest ===");
+
             var result = await _applicationService.GetAllClansAsync();
 
             // Assert
@@ -58,6 +123,7 @@ namespace ClashRoyaleWarTracker.Tests.Services
             Assert.NotNull(result.Data);
 
             _output.WriteLine($"Retrieved {result.Data.Count()} clans from database");
+            logger.LogInformation($"Test retrieved {result.Data.Count()} clans from database");
 
             foreach (var clan in result.Data)
             {
@@ -68,6 +134,7 @@ namespace ClashRoyaleWarTracker.Tests.Services
                 Assert.NotNull(clan.Tag);
                 Assert.True(clan.WarTrophies >= 0);
             }
+            logger.LogInformation("=== GetAllClansAsyncTest completed successfully ===");
         }
 
         [Fact]
@@ -184,7 +251,7 @@ namespace ClashRoyaleWarTracker.Tests.Services
         }
 
         [Fact]
-        public async Task UpdateClanHistoryAsyncTest()
+        public async Task PopulateClanHistoryAsyncTest()
         {
             string testClanTag = "V2GQU";
             _output.WriteLine($"Testing history update for clan {testClanTag}");
@@ -197,7 +264,7 @@ namespace ClashRoyaleWarTracker.Tests.Services
                 return;
             }
 
-            var result = await _applicationService.UpdateClanHistoryAsync(getClanResult.Data);
+            var result = await _applicationService.PopulateClanHistoryAsync(getClanResult.Data);
 
             // Assert
             if (result.Success)
@@ -211,6 +278,36 @@ namespace ClashRoyaleWarTracker.Tests.Services
                 // Don't fail the test - this might be expected if no war log data exists
                 Assert.False(result.Success);
             }
+        }
+
+        [Fact]
+        public async Task PopulateRawWarHistoryTest()
+        {
+            var logger = _serviceProvider.GetRequiredService<ILogger<ApplicationServiceFullIntegrationTests>>();
+
+            string testClanTag = "V2GQU";
+            logger.LogInformation($"=== Starting PopulateRawWarHistoryTest with tag: {testClanTag} ===");
+
+            var getClanResult = await _applicationService.GetClanAsync(testClanTag);
+            if (getClanResult.Success == false || getClanResult.Data == null)
+            {
+                logger.LogWarning($"Clan with tag {testClanTag} not found for raw war history test");
+                Assert.False(getClanResult.Success);
+                return;
+            }
+            var result = await _applicationService.PopulateRawWarHistory(getClanResult.Data);
+            // Assert
+            if (result.Success)
+            {
+                logger.LogInformation($"Test successfully populated raw war histories: {result.Message}");
+                Assert.True(result.Success);
+            }
+            else
+            {
+                logger.LogWarning($"Test raw war history population failed: {result.Message}");
+                Assert.False(result.Success);
+            }
+            logger.LogInformation("=== PopulateRawWarHistoryTest completed ===");
         }
 
         public void Dispose()

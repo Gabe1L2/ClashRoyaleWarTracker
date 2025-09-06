@@ -328,7 +328,7 @@ namespace ClashRoyaleWarTracker.Application.Services
             }
         }
 
-        public async Task<ServiceResult> PopulatePlayerWarHistories(Clan clan)
+        public async Task<ServiceResult> PopulatePlayerWarHistories(Clan clan, int numOfRiverRaces = 1) // Looks at every river race
         {
             try
             {
@@ -342,8 +342,9 @@ namespace ClashRoyaleWarTracker.Application.Services
                 }
 
                 var playerWarHistories = new List<PlayerWarHistory>();
+                var racesToProcess = riverRaceLog.Items.Take(numOfRiverRaces);
 
-                foreach (var riverRace in riverRaceLog.Items)
+                foreach (var riverRace in racesToProcess)
                 {
                     // Find the clan's standing in this river race
                     var clanStanding = riverRace.Standings?.FirstOrDefault(s => s.Clan.Tag.Replace("#", "") == clan.Tag);

@@ -4,28 +4,17 @@ using System.Text.Json.Serialization;
 namespace ClashRoyaleWarTracker.Application.Models
 {
 
-    [Table("RawWarData")]
-    public class RawWarHistory
+    public class PlayerWarHistory
     {
         public int ID { get; set; }
         public required int PlayerID { get; set; }
         public required int ClanHistoryID { get; set; }
         public int Fame { get; set; }
-        public int RepairPoints { get; set; }
+        public int DecksUsed { get; set; }
         public int BoatAttacks { get; set; }
-        public int DecksUsed { get; set; }
-        public DateTime InsertDate { get; set; }
-    }
-
-    [Table("WarData")]
-    public class WarHistory
-    {
-        public int ID { get; set; }
-        public required int PlayerID { get; set; }
-        public required int ClanHistoryID { get; set; }
-        public int Fame { get; set; }
-        public int DecksUsed { get; set; }
         public DateTime LastUpdated { get; set; }
+        public bool IsModified { get; set; }
+        public string? UpdatedBy { get; set; }
     }
 
     public class RiverRaceLogResponse

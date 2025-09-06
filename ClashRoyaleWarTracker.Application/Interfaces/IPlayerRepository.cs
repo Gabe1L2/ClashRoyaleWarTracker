@@ -5,6 +5,6 @@ namespace ClashRoyaleWarTracker.Application.Interfaces
     public interface IPlayerRepository
     {
         Task<Player?> GetPlayerAsync(string playerTag);
-        Task<Player?> AddPlayerAsync(Player player);
+        Task<int> AddPlayerAsync(Player player);
     }
 }

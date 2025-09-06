@@ -12,22 +12,22 @@ namespace ClashRoyaleWarTracker.Infrastructure.Repositories
             _context = context;
         }
 
-        public async Task<bool> AddRawWarHistoriesAsync(List<RawWarHistory> rawWarHistories)
+        public async Task<bool> AddPlayerWarHistoriesAsync(List<PlayerWarHistory> playerWarHistories)
         {
             try
             {
-                foreach (var rawWarHistory in rawWarHistories)
+                foreach (var playerWarHistory in playerWarHistories)
                 {
-                    var exists = await _context.RawWarData.AnyAsync(rwh =>
-                        rwh.PlayerID == rawWarHistory.PlayerID &&
-                        rwh.ClanHistoryID == rawWarHistory.ClanHistoryID);
+                    var exists = await _context.PlayerWarHistories.AnyAsync(rwh =>
+                        rwh.PlayerID == playerWarHistory.PlayerID &&
+                        rwh.ClanHistoryID == playerWarHistory.ClanHistoryID);
                     if (!exists)
                     {
-                        rawWarHistory.InsertDate = DateTime.Now;
-                        await _context.RawWarData.AddAsync(rawWarHistory);
-                        await _context.SaveChangesAsync();
+                        playerWarHistory.LastUpdated = DateTime.Now;
+                        await _context.PlayerWarHistories.AddAsync(playerWarHistory);
                     }
                 }
+                await _context.SaveChangesAsync();
                 return true;
             }
             catch (Exception ex)

@@ -25,18 +25,13 @@ namespace ClashRoyaleWarTracker.Infrastructure.Repositories
             }
         }
 
-        public async Task<Player?> AddPlayerAsync(Player player)
+        public async Task<int> AddPlayerAsync(Player player)
         {
             try
             {
-                var existingPlayer = await _context.Players.FirstOrDefaultAsync(p => p.Tag == player.Tag);
-                if (existingPlayer != null)
-                {
-                    return null; // Player already exists
-                }
                 await _context.Players.AddAsync(player);
                 await _context.SaveChangesAsync();
-                return player;
+                return player.ID;
             }
             catch (Exception ex)
             {

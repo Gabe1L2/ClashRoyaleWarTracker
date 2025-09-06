@@ -285,7 +285,7 @@ namespace ClashRoyaleWarTracker.Tests.Services
         {
             var logger = _serviceProvider.GetRequiredService<ILogger<ApplicationServiceFullIntegrationTests>>();
 
-            string testClanTag = "V2GQU";
+            string testClanTag = "9U82JJ0Y";
             logger.LogInformation($"=== Starting PopulateRawWarHistoryTest with tag: {testClanTag} ===");
 
             var getClanResult = await _applicationService.GetClanAsync(testClanTag);
@@ -295,7 +295,7 @@ namespace ClashRoyaleWarTracker.Tests.Services
                 Assert.False(getClanResult.Success);
                 return;
             }
-            var result = await _applicationService.PopulateRawWarHistory(getClanResult.Data);
+            var result = await _applicationService.PopulatePlayerWarHistories(getClanResult.Data);
             // Assert
             if (result.Success)
             {

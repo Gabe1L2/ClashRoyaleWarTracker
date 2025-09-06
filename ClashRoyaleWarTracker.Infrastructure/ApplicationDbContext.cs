@@ -22,8 +22,7 @@ namespace ClashRoyaleWarTracker.Infrastructure
         public DbSet<ClanHistory> ClanHistories { get; set; } = null!;
         public DbSet<Player> Players { get; set; } = null!;
         public DbSet<PlayerAverage> PlayerAverages { get; set; } = null!;
-        public DbSet<RawWarHistory> RawWarData { get; set; } = null!;
-        public DbSet<WarHistory> WarData { get; set; } = null!;
+        public DbSet<PlayerWarHistory> PlayerWarHistories { get; set; } = null!;
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -67,31 +66,17 @@ namespace ClashRoyaleWarTracker.Infrastructure
                 .HasPrincipalKey(c => c.ID)
                 .OnDelete(DeleteBehavior.SetNull);
 
-            modelBuilder.Entity<RawWarHistory>()
+            modelBuilder.Entity<PlayerWarHistory>()
                 .HasOne<Player>()
                 .WithMany()
-                .HasForeignKey(rwd => rwd.PlayerID)
+                .HasForeignKey(pwh => pwh.PlayerID)
                 .HasPrincipalKey(p => p.ID)
                 .OnDelete(DeleteBehavior.Cascade);
 
-            modelBuilder.Entity<RawWarHistory>()
+            modelBuilder.Entity<PlayerWarHistory>()
                 .HasOne<ClanHistory>()
                 .WithMany()
-                .HasForeignKey(rwd => rwd.ClanHistoryID)
-                .HasPrincipalKey(ch => ch.ID)
-                .OnDelete(DeleteBehavior.Cascade);
-
-            modelBuilder.Entity<WarHistory>()
-                .HasOne<Player>()
-                .WithMany()
-                .HasForeignKey(wd => wd.PlayerID)
-                .HasPrincipalKey(p => p.ID)
-                .OnDelete(DeleteBehavior.Cascade);
-
-            modelBuilder.Entity<WarHistory>()
-                .HasOne<ClanHistory>()
-                .WithMany()
-                .HasForeignKey(wd => wd.ClanHistoryID)
+                .HasForeignKey(pwh => pwh.ClanHistoryID)
                 .HasPrincipalKey(ch => ch.ID)
                 .OnDelete(DeleteBehavior.Cascade);
 
@@ -105,14 +90,9 @@ namespace ClashRoyaleWarTracker.Infrastructure
                 .HasIndex(pa => new { pa.PlayerID, pa.Is5k })
                 .IsUnique();
 
-            // Prevent duplicate war data for same player
-            modelBuilder.Entity<WarHistory>()
-                .HasIndex(wd => new { wd.PlayerID, wd.ClanHistoryID })
-                .IsUnique();
-
-            // Prevent duplicate raw war data entries (same player/clan history)
-            modelBuilder.Entity<RawWarHistory>()
-                .HasIndex(rwd => new { rwd.PlayerID, rwd.ClanHistoryID })
+            // Prevent duplicate war data for same player/clan history entry
+            modelBuilder.Entity<PlayerWarHistory>()
+                .HasIndex(pwh => new { pwh.PlayerID, pwh.ClanHistoryID })
                 .IsUnique();
         }
     }

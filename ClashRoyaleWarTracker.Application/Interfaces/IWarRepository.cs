@@ -4,6 +4,6 @@ namespace ClashRoyaleWarTracker.Application.Interfaces
 {
     public interface IWarRepository
     {
-        Task<bool> AddRawWarHistoriesAsync(List<RawWarHistory> rawWarHistories);
+        Task<bool> AddPlayerWarHistoriesAsync(List<PlayerWarHistory> playerWarHistories);
     }
 }

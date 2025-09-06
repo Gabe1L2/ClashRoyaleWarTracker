@@ -328,7 +328,7 @@ namespace ClashRoyaleWarTracker.Application.Services
             }
         }
 
-        public async Task<ServiceResult> PopulateRawWarHistory(Clan clan)
+        public async Task<ServiceResult> PopulatePlayerWarHistories(Clan clan)
         {
             try
             {
@@ -341,7 +341,7 @@ namespace ClashRoyaleWarTracker.Application.Services
                     return ServiceResult.Failure($"No war log data found for clan with tag '{clan.Tag}'");
                 }
 
-                var rawWarHistories = new List<RawWarHistory>();
+                var playerWarHistories = new List<PlayerWarHistory>();
 
                 foreach (var riverRace in riverRaceLog.Items)
                 {
@@ -360,9 +360,10 @@ namespace ClashRoyaleWarTracker.Application.Services
                         {
                             if (participant.Fame != 0)
                             {
+                                int playerID;
                                 var playerTag = participant.Tag.Replace("#", "");
-                                var player = await _playerRepository.GetPlayerAsync(playerTag);
-                                if (player == null)
+                                var existingPlayer = await _playerRepository.GetPlayerAsync(playerTag);
+                                if (existingPlayer == null)
                                 {
                                     var newPlayer = new Player
                                     {
@@ -373,32 +374,30 @@ namespace ClashRoyaleWarTracker.Application.Services
                                         LastUpdated = DateTime.Now
                                     };
 
-                                    player = await _playerRepository.AddPlayerAsync(newPlayer);
-                                    if (player == null)
-                                    {
-                                        _logger.LogWarning($"Failed to add new player with tag {playerTag}");
-                                        return ServiceResult.Failure($"Failed to add new player with tag '{playerTag}'");
-                                    }
+                                    playerID = await _playerRepository.AddPlayerAsync(newPlayer);
 
-                                    _logger.LogInformation($"Added new player {player.Name} with tag {player.Tag}");
                                 }
-
-                                var rawWarHistory = new RawWarHistory
+                                else
                                 {
-                                    PlayerID = player.ID,
+                                    playerID = existingPlayer.ID;
+                                }
+                                var playerWarHistory = new PlayerWarHistory
+                                {
+                                    PlayerID = playerID,
                                     ClanHistoryID = clanHistory.ID,
                                     Fame = participant.Fame,
-                                    RepairPoints = participant.RepairPoints,
+                                    DecksUsed = participant.DecksUsed,
                                     BoatAttacks = participant.BoatAttacks,
-                                    DecksUsed = participant.DecksUsed
+                                    IsModified = false,
+                                    UpdatedBy = "System"
                                 };
-                                rawWarHistories.Add(rawWarHistory);
+                                playerWarHistories.Add(playerWarHistory);
                             }
                         }
                     }
                 }
 
-                if (await _warRepository.AddRawWarHistoriesAsync(rawWarHistories))
+                if (await _warRepository.AddPlayerWarHistoriesAsync(playerWarHistories))
                 {
                     _logger.LogInformation($"Successfully populated raw war history for {clan.Name}");
                     return ServiceResult.Successful($"{clan.Name} raw war history successfully populated!");

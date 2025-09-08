@@ -42,60 +42,68 @@ namespace ClashRoyaleWarTracker.Application.Services
                 var failedUpdates = 0;
                 var successfulHistoryUpdates = 0;
                 var failedHistoryUpdates = 0;
+                var successfulWarHistoryUpdates = 0;
+                var failedWarHistoryUpdates = 0;
 
                 _logger.LogInformation($"Found {totalClans} clans to update");
 
                 foreach (var clan in clans)
                 {
-                    try
+                    _logger.LogInformation($"Processing clan {clan.Name} ({clan.Tag})");
+
+                    // Update clan basic information
+                    var updateResult = await UpdateClanAsync(clan.Tag);
+                    if (updateResult.Success)
                     {
-                        _logger.LogInformation($"Processing clan {clan.Name} ({clan.Tag})");
-
-                        // Update clan basic information
-                        var updateResult = await UpdateClanAsync(clan.Tag);
-                        if (updateResult.Success)
-                        {
-                            successfulUpdates++;
-                            _logger.LogInformation($"Successfully updated clan {clan.Name}");
-                        }
-                        else
-                        {
-                            failedUpdates++;
-                            _logger.LogWarning($"Failed to update clan {clan.Name}: {updateResult.Message}");
-                        }
-
-                        // Update clan history regardless of basic update result
-                        var historyResult = await PopulateClanHistoryAsync(clan);
-                        if (historyResult.Success)
-                        {
-                            successfulHistoryUpdates++;
-                            _logger.LogInformation($"Successfully updated history for clan {clan.Name}");
-                        }
-                        else
-                        {
-                            failedHistoryUpdates++;
-                            _logger.LogWarning($"Failed to update history for clan {clan.Name}: {historyResult.Message}");
-                        }
+                        successfulUpdates++;
+                        _logger.LogInformation($"Successfully updated clan {clan.Name}");
                     }
-                    catch (Exception ex)
+                    else
                     {
                         failedUpdates++;
+                        _logger.LogWarning($"Failed to update clan {clan.Name}: {updateResult.Message}");
+                    }
+
+                    // Update clan history regardless of basic update result
+                    var historyResult = await PopulateClanHistoryAsync(clan);
+                    if (historyResult.Success)
+                    {
+                        successfulHistoryUpdates++;
+                        _logger.LogInformation($"Successfully updated history for clan {clan.Name}");
+                    }
+                    else
+                    {
                         failedHistoryUpdates++;
-                        _logger.LogError(ex, $"Unexpected error processing clan {clan.Name} ({clan.Tag})");
+                        _logger.LogWarning($"Failed to update history for clan {clan.Name}: {historyResult.Message}");
+                    }
+
+                    // Populate new player war histories
+                    var warHistoryResult = await PopulatePlayerWarHistories(clan); // does last week
+                    if (warHistoryResult.Success)
+                    {
+                        successfulWarHistoryUpdates++;
+                        _logger.LogInformation($"Successfully populated player war histories for clan {clan.Name}");
+                    }
+                    else
+                    {
+                        failedWarHistoryUpdates++;
+                        _logger.LogWarning($"Failed to populate player war histories for clan {clan.Name}: {warHistoryResult.Message}");
                     }
                 }
 
-                var summary = $"Weekly update completed. " +
-                             $"Clan Updates: {successfulUpdates} successful, {failedUpdates} failed. " +
-                             $"History Updates: {successfulHistoryUpdates} successful, {failedHistoryUpdates} failed.";
+                string summary = $"Weekly update completed. " + 
+                              $"Total Clans: {totalClans}, " +
+                              $"Successful Clan Updates: {successfulUpdates}, Failed Clan Updates: {failedUpdates}, " +
+                              $"Successful ClanHistory Updates: {successfulHistoryUpdates}, Failed ClanHistory Updates: {failedHistoryUpdates}," +
+                              $"Successful PlayerWarHistory Updates: {successfulWarHistoryUpdates}, Failed PlayerWarHistory Updates: {failedWarHistoryUpdates}";
 
                 _logger.LogInformation(summary);
 
-                if (failedUpdates == 0 && failedHistoryUpdates == 0)
+                if (failedUpdates == 0 && failedHistoryUpdates == 0 && failedWarHistoryUpdates == 0)
                 {
                     return ServiceResult.Successful(summary);
                 }
-                else if (successfulUpdates > 0 || successfulHistoryUpdates > 0)
+                else if (successfulUpdates > 0 || successfulHistoryUpdates > 0 || successfulWarHistoryUpdates > 0)
                 {
                     return ServiceResult.Successful($"Partial success: {summary}");
                 }
@@ -328,7 +336,7 @@ namespace ClashRoyaleWarTracker.Application.Services
             }
         }
 
-        public async Task<ServiceResult> PopulatePlayerWarHistories(Clan clan, int numOfRiverRaces = 1) // Looks at every river race
+        public async Task<ServiceResult> PopulatePlayerWarHistories(Clan clan, int numOfRiverRaces = 1) // Looks at every river race past
         {
             try
             {

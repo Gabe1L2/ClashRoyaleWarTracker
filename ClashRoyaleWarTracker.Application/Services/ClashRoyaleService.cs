@@ -24,7 +24,9 @@ namespace ClashRoyaleWarTracker.Application.Services
         {
             try
             {
+                _logger.LogDebug("Starting GetClanByTagAsync call");
                 var clan = await _apiClient.GetClanByTagAsync(clanTag);
+                _logger.LogDebug("Finished GetClanByTagAsync call");
                 return clan; // this will be null if not found
             }
             catch (Exception ex)
@@ -38,7 +40,9 @@ namespace ClashRoyaleWarTracker.Application.Services
         {
             try
             {
+                _logger.LogDebug("Starting GetRiverRaceLogAsync call");
                 var rawWarLog = await _apiClient.GetRiverRaceLogAsync(clanTag);
+                _logger.LogDebug("Finished GetRiverRaceLogAsync call");
                 return rawWarLog;
             }
             catch (Exception ex)

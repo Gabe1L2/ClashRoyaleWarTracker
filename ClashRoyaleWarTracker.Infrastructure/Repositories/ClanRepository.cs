@@ -1,22 +1,26 @@
 ﻿using ClashRoyaleWarTracker.Application.Interfaces;
 using ClashRoyaleWarTracker.Application.Models;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 
 namespace ClashRoyaleWarTracker.Infrastructure.Repositories
 {
     public class ClanRepository : IClanRepository
     {
         private readonly ApplicationDbContext _context;
+        private readonly ILogger<ClanRepository> _logger;
 
-        public ClanRepository(ApplicationDbContext context)
+        public ClanRepository(ApplicationDbContext context, ILogger<ClanRepository> logger)
         {
             _context = context;
+            _logger = logger;
         }
 
         public async Task<bool> AddClanAsync(Clan clan)
         {
             try
             {
+                _logger.LogDebug($"Attempting to add clan with tag {clan.Tag}");
                 var curClan = await _context.Clans.FirstOrDefaultAsync(c => c.Tag == clan.Tag);
 
                 if (curClan == null)
@@ -24,13 +28,17 @@ namespace ClashRoyaleWarTracker.Infrastructure.Repositories
                     clan.LastUpdated = DateTime.Now;
                     await _context.Clans.AddAsync(clan);
                     await _context.SaveChangesAsync();
+
+                    _logger.LogInformation($"Successfully added clan {clan.Name}");
                     return true;
                 }
 
+                _logger.LogWarning($"Clan with tag {clan.Tag} already exists. Skipping add.");
                 return false;
             }
             catch (Exception ex)
             {
+                _logger.LogError(ex, $"Failed to add clan {clan.Tag}");
                 throw new InvalidOperationException($"Failed to add clan {clan.Tag}", ex);
             }
         }
@@ -39,10 +47,24 @@ namespace ClashRoyaleWarTracker.Infrastructure.Repositories
         {
             try
             {
-                return await _context.Clans.FirstOrDefaultAsync(c => c.Tag == clanTag);
+                _logger.LogDebug("Retrieving clan with tag {ClanTag}", clanTag);
+
+                var clan = await _context.Clans.FirstOrDefaultAsync(c => c.Tag == clanTag);
+
+                if (clan != null)
+                {
+                    _logger.LogDebug("Found clan {ClanName} with tag {ClanTag}", clan.Name, clanTag);
+                }
+                else
+                {
+                    _logger.LogDebug("No clan found with tag {ClanTag}", clanTag);
+                }
+
+                return clan;
             }
             catch (Exception ex)
             {
+                _logger.LogError(ex, $"Failed to retrieve clan with tag {clanTag} from the database");
                 throw new InvalidOperationException($"Failed to retrieve clan with tag {clanTag} from the database", ex);
             }
         }
@@ -51,10 +73,15 @@ namespace ClashRoyaleWarTracker.Infrastructure.Repositories
         {
             try
             {
-                return await _context.Clans.ToListAsync();
+                _logger.LogDebug("Retrieving all clans from the database");
+                var clans = await _context.Clans.ToListAsync();
+
+                _logger.LogInformation($"Retrieved {clans.Count} clans from database");
+                return clans;
             }
             catch (Exception ex)
             {
+                _logger.LogError(ex, "Failed to retrieve all clans from database");
                 throw new InvalidOperationException("Failed to retrieve clans from the database", ex);
             }
         }
@@ -63,14 +90,25 @@ namespace ClashRoyaleWarTracker.Infrastructure.Repositories
         {
             try
             {
+                _logger.LogDebug($"Attempting to delete clan with tag {clanTag}");
                 var delCount = await _context.Clans
                     .Where(c => c.Tag == clanTag)
                     .ExecuteDeleteAsync();
 
-                return delCount > 0;
+                if (delCount > 0)
+                {
+                    _logger.LogInformation($"Successfully deleted clan with tag {clanTag}");
+                    return true;
+                }
+                else
+                {
+                    _logger.LogWarning($"No clan found with tag {clanTag} to delete");
+                    return false;
+                }
             }
             catch (Exception ex)
             {
+                _logger.LogError(ex, $"Failed to delete clan with tag {clanTag}");
                 throw new InvalidOperationException($"Failed to delete clan with tag {clanTag}", ex);
             }
 
@@ -80,9 +118,11 @@ namespace ClashRoyaleWarTracker.Infrastructure.Repositories
         {
             try
             {
+                _logger.LogDebug($"Attempting to update clan {clan.Name}");
                 var curClan = await _context.Clans.FirstOrDefaultAsync(c => c.Tag == clan.Tag);
                 if (curClan == null)
                 {
+                    _logger.LogWarning($"Clan with tag {clan.Tag} does not exist. Cannot update.");
                     return false;
                 }
 
@@ -93,10 +133,12 @@ namespace ClashRoyaleWarTracker.Infrastructure.Repositories
                 _context.Clans.Update(curClan);
                 await _context.SaveChangesAsync();
 
+                _logger.LogInformation($"Successfully updated clan {clan.Name}");
                 return true;
             }
             catch (Exception ex)
             {
+                _logger.LogError(ex, $"Failed to update clan {clan.Tag}");
                 throw new InvalidOperationException($"Failed to add/update clan {clan.Tag}", ex);
             }
         }
@@ -105,9 +147,11 @@ namespace ClashRoyaleWarTracker.Infrastructure.Repositories
         {
             try
             {
+                _logger.LogDebug($"Populating clan history for {clan.Name}");
                 var curClan = await _context.Clans.FirstOrDefaultAsync(c => c.Tag == clan.Tag);
                 if (curClan == null)
                 {
+                    _logger.LogWarning($"Clan with tag {clan.Tag} does not exist. Cannot populate history.");
                     return false;
                 }
 
@@ -122,14 +166,17 @@ namespace ClashRoyaleWarTracker.Infrastructure.Repositories
                     {
                         clanHistory.ClanID = curClan.ID;
                         await _context.ClanHistories.AddAsync(clanHistory);
+                        _logger.LogDebug($"Added new clan history for {clan.Name} - Season {clanHistory.SeasonID}, Week {clanHistory.WeekIndex}");
                     }
                 }
 
                 await _context.SaveChangesAsync();
+                _logger.LogInformation($"Successfully populated clan history for {clan.Name}");
                 return true;
             }
             catch (Exception ex)
             {
+                _logger.LogError(ex, $"Failed to populate clan history for {clan.Tag}");
                 throw new InvalidOperationException($"Failed to update clan history for {clan.Tag}", ex);
             }
         }
@@ -138,15 +185,26 @@ namespace ClashRoyaleWarTracker.Infrastructure.Repositories
         {
             try
             {
+                _logger.LogDebug($"Retrieving clan history from database for ClanID {clanID}, SeasonID {seasonID}, WeekIndex {weekIndex}");
                 var clanHistory = await _context.ClanHistories.FirstOrDefaultAsync(ch =>
                     ch.ClanID == clanID &&
                     ch.SeasonID == seasonID &&
                     ch.WeekIndex == weekIndex);
 
-                return clanHistory;
+                if (clanHistory != null)
+                {
+                    _logger.LogInformation($"Found clan history for ClanID {clanID}, SeasonID {seasonID}, WeekIndex {weekIndex}");
+                    return clanHistory;
+                }
+                else
+                {
+                    _logger.LogWarning($"No clan history found for ClanID {clanID}, SeasonID {seasonID}, WeekIndex {weekIndex}");
+                    return null;
+                }
             }
             catch (Exception ex)
             {
+                _logger.LogError(ex, $"Failed to retrieve clan history for ClanID {clanID}, SeasonID {seasonID}, WeekIndex {weekIndex}");
                 throw new InvalidOperationException($"Failed to retrieve clan history for ClanID {clanID}, SeasonID {seasonID}, WeekIndex {weekIndex}", ex);
             }
         }

@@ -122,12 +122,12 @@ namespace ClashRoyaleWarTracker.Tests.Services
             Assert.True(result.Success);
             Assert.NotNull(result.Data);
 
-            _output.WriteLine($"Retrieved {result.Data.Count()} clans from database");
+            logger.LogInformation($"Retrieved {result.Data.Count()} clans from database");
             logger.LogInformation($"Test retrieved {result.Data.Count()} clans from database");
 
             foreach (var clan in result.Data)
             {
-                _output.WriteLine($"Clan: {clan.Name} ({clan.Tag}) - {clan.WarTrophies} trophies");
+                logger.LogInformation($"Clan: {clan.Name} ({clan.Tag}) - {clan.WarTrophies} trophies");
 
                 // Basic data validation
                 Assert.NotNull(clan.Name);
@@ -140,15 +140,16 @@ namespace ClashRoyaleWarTracker.Tests.Services
         [Fact]
         public async Task AddClanAsyncTest()
         {
-            var testClanTag = "YC8R0RJ0";
+            var testClanTag = "PJQRLQPQ"; // panda
 
-            _output.WriteLine($"Testing with clan tag: {testClanTag}");
+            var logger = _serviceProvider.GetRequiredService<ILogger<ApplicationServiceFullIntegrationTests>>();
+            logger.LogInformation($"Testing with clan tag: {testClanTag}");
 
             var result = await _applicationService.AddClanAsync(testClanTag);
 
             if (result.Success)
             {
-                _output.WriteLine($"Successfully added clan: {result.Message}");
+                logger.LogInformation($"Successfully added clan: {result.Message}");
                 Assert.True(result.Success);
                 Assert.Contains("successfully added", result.Message.ToLower());
 
@@ -159,7 +160,7 @@ namespace ClashRoyaleWarTracker.Tests.Services
             }
             else
             {
-                _output.WriteLine($"Failed to add clan: {result.Message}");
+                logger.LogInformation($"Failed to add clan: {result.Message}");
 
                 Assert.False(result.Success);
                 Assert.NotEmpty(result.Message);
@@ -171,18 +172,19 @@ namespace ClashRoyaleWarTracker.Tests.Services
         {
             var clanTagToDelete = "Y9Q9RRY0";
 
-            _output.WriteLine($"Attempting to delete clan with tag: {clanTagToDelete}");
+            var logger = _serviceProvider.GetRequiredService<ILogger<ApplicationServiceFullIntegrationTests>>();
+            logger.LogInformation($"Attempting to delete clan with tag: {clanTagToDelete}");
 
             var deleteResult = await _applicationService.DeleteClanAsync(clanTagToDelete);
 
             if (deleteResult.Success)
             {
-                _output.WriteLine($"Successfully deleted clan with tag: {clanTagToDelete}");
+                logger.LogInformation($"Successfully deleted clan with tag: {clanTagToDelete}");
                 Assert.True(deleteResult.Success);
             }
             else
             {
-                _output.WriteLine($"Failed to delete clan with tag: {clanTagToDelete}. Message: {deleteResult.Message}");
+                logger.LogInformation($"Failed to delete clan with tag: {clanTagToDelete}. Message: {deleteResult.Message}");
                 Assert.False(deleteResult.Success);
                 Assert.NotEmpty(deleteResult.Message);
             }
@@ -192,18 +194,20 @@ namespace ClashRoyaleWarTracker.Tests.Services
         public async Task UpdateClanAsyncTest()
         {
             var clanTagToUpdate = "V2GQU";
-            _output.WriteLine($"Attempting to update clan with tag: {clanTagToUpdate}");
+
+            var logger = _serviceProvider.GetRequiredService<ILogger<ApplicationServiceFullIntegrationTests>>();
+            logger.LogInformation($"Attempting to update clan with tag: {clanTagToUpdate}");
 
             var result = await _applicationService.UpdateClanAsync(clanTagToUpdate);
 
             if (result.Success)
             {
-                _output.WriteLine($"Successfully updated clan with tag: {clanTagToUpdate}");
+                logger.LogInformation($"Successfully updated clan with tag: {clanTagToUpdate}");
                 Assert.True(result.Success);
             }
             else
             {
-                _output.WriteLine($"Failed to update clan with tag: {clanTagToUpdate}. Message: {result.Message}");
+                logger.LogInformation($"Failed to update clan with tag: {clanTagToUpdate}. Message: {result.Message}");
                 Assert.False(result.Success);
                 Assert.NotEmpty(result.Message);
             }
@@ -212,7 +216,9 @@ namespace ClashRoyaleWarTracker.Tests.Services
         [Fact]
         public async Task WeeklyUpdateAsyncTest()
         {
-            _output.WriteLine("Starting weekly update test for all clans");
+            var logger = _serviceProvider.GetRequiredService<ILogger<ApplicationServiceFullIntegrationTests>>();
+
+            logger.LogInformation("Starting weekly update test for all clans");
 
             // Act - This will test the entire weekly update process
             var result = await _applicationService.WeeklyUpdateAsync();
@@ -221,7 +227,7 @@ namespace ClashRoyaleWarTracker.Tests.Services
             Assert.True(result.Success);
             Assert.NotEmpty(result.Message);
 
-            _output.WriteLine($"Weekly update result: {result.Message}");
+            logger.LogInformation($"Weekly update result: {result.Message}");
 
             // Verify that clans were actually processed by checking if we have any clans
             var allClansResult = await _applicationService.GetAllClansAsync();
@@ -229,7 +235,7 @@ namespace ClashRoyaleWarTracker.Tests.Services
 
             if (allClansResult.Data?.Any() == true)
             {
-                _output.WriteLine($"Verified: {allClansResult.Data.Count()} clans exist after weekly update");
+                logger.LogInformation($"Verified: {allClansResult.Data.Count()} clans exist after weekly update");
 
                 // Check that at least one clan has a recent LastUpdated timestamp
                 var recentlyUpdated = allClansResult.Data.Any(c =>
@@ -237,16 +243,16 @@ namespace ClashRoyaleWarTracker.Tests.Services
 
                 if (recentlyUpdated)
                 {
-                    _output.WriteLine("At least one clan was updated recently");
+                    logger.LogInformation("At least one clan was updated recently");
                 }
                 else
                 {
-                    _output.WriteLine("No clans appear to have been updated recently");
+                    logger.LogInformation("No clans appear to have been updated recently");
                 }
             }
             else
             {
-                _output.WriteLine("No clans found in database to update");
+                logger.LogInformation("No clans found in database to update");
             }
         }
 
@@ -254,12 +260,14 @@ namespace ClashRoyaleWarTracker.Tests.Services
         public async Task PopulateClanHistoryAsyncTest()
         {
             string testClanTag = "V2GQU";
-            _output.WriteLine($"Testing history update for clan {testClanTag}");
+
+            var logger = _serviceProvider.GetRequiredService<ILogger<ApplicationServiceFullIntegrationTests>>();
+            logger.LogInformation($"Testing history update for clan {testClanTag}");
 
             var getClanResult = await _applicationService.GetClanAsync(testClanTag);
             if (getClanResult.Success == false || getClanResult.Data == null)
             {
-                _output.WriteLine($"Clan with tag {testClanTag} not found in database. Cannot test history update.");
+                logger.LogInformation($"Clan with tag {testClanTag} not found in database. Cannot test history update.");
                 Assert.False(getClanResult.Success);
                 return;
             }
@@ -269,12 +277,12 @@ namespace ClashRoyaleWarTracker.Tests.Services
             // Assert
             if (result.Success)
             {
-                _output.WriteLine($"Successfully updated history: {result.Message}");
+                logger.LogInformation($"Successfully updated history: {result.Message}");
                 Assert.True(result.Success);
             }
             else
             {
-                _output.WriteLine($"History update failed: {result.Message}");
+                logger.LogInformation($"History update failed: {result.Message}");
                 // Don't fail the test - this might be expected if no war log data exists
                 Assert.False(result.Success);
             }
@@ -283,9 +291,9 @@ namespace ClashRoyaleWarTracker.Tests.Services
         [Fact]
         public async Task PopulateRawWarHistoryTest()
         {
-            var logger = _serviceProvider.GetRequiredService<ILogger<ApplicationServiceFullIntegrationTests>>();
+            string testClanTag = "PJQRLQPQ";
 
-            string testClanTag = "9U82JJ0Y";
+            var logger = _serviceProvider.GetRequiredService<ILogger<ApplicationServiceFullIntegrationTests>>();
             logger.LogInformation($"=== Starting PopulateRawWarHistoryTest with tag: {testClanTag} ===");
 
             var getClanResult = await _applicationService.GetClanAsync(testClanTag);

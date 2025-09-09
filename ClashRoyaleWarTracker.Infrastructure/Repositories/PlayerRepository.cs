@@ -98,7 +98,6 @@ namespace ClashRoyaleWarTracker.Infrastructure.Repositories
                 }
 
                 await _context.SaveChangesAsync();
-                _logger.LogInformation("Successfully upserted player average for PlayerID {PlayerId}", newPlayerAverage.PlayerID);
             }
             catch (Exception ex)
             {

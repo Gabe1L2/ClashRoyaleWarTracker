@@ -483,13 +483,13 @@ namespace ClashRoyaleWarTracker.Application.Services
                         ClanID = mostRecentClanID,
                         FameAttackAverage = decksUsed == 0 ? 0 : Math.Round((decimal)fame / decksUsed, 2),
                         Is5k = aboveFiveThousandTrophies,
-                        LastUpdated = DateTime.Now
                     };
 
                     await _playerRepository.UpsertPlayerAverageAsync(newPlayerAverage);
                     _logger.LogInformation($"Successfully updated player average for {player.Name} ({player.Tag})");
-
                 }
+
+                _logger.LogInformation("Successfully updated player averages for all players");
                 return ServiceResult.Successful("Player averages successfully updated!");
             }
             catch (Exception ex)

@@ -11,5 +11,7 @@ namespace ClashRoyaleWarTracker.Application.Interfaces
         Task<bool> UpdateClanAsync(Clan clan);
         Task<bool> PopulateClanHistoryAsync(Clan clan, List<ClanHistory> clanHistories);
         Task<ClanHistory?> GetClanHistoryAsync(int clanID, int seasonID, int weekIndex);
+        Task<int> GetMostRecentClanIDAsync(Player player, bool aboveFiveThousandTrophies);
+
     }
 }

@@ -1,5 +1,6 @@
 ﻿using ClashRoyaleWarTracker.Application.Interfaces;
 using ClashRoyaleWarTracker.Application.Models;
+using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
@@ -206,6 +207,45 @@ namespace ClashRoyaleWarTracker.Infrastructure.Repositories
             {
                 _logger.LogError(ex, $"Failed to retrieve clan history for ClanID {clanID}, SeasonID {seasonID}, WeekIndex {weekIndex}");
                 throw new InvalidOperationException($"Failed to retrieve clan history for ClanID {clanID}, SeasonID {seasonID}, WeekIndex {weekIndex}", ex);
+            }
+        }
+
+        public async Task<int> GetMostRecentClanIDAsync(Player player, bool aboveFiveThousandTrophies)
+        {
+            try
+            {
+                _logger.LogDebug($"Getting most recent clan ID for player {player.Name} - {player.Tag} {(aboveFiveThousandTrophies ? "above/equal to" : "below")} 5000 war trophies");
+
+                var trophyCondition = aboveFiveThousandTrophies ? ">= 5000" : "< 5000";
+
+                var sql = $@"
+                    SELECT TOP 1 ch.ClanID AS Value
+                    FROM PlayerWarHistories pwh
+                    INNER JOIN ClanHistories ch ON pwh.ClanHistoryID = ch.ID
+                    WHERE pwh.PlayerID = @playerId
+                        AND ch.WarTrophies {trophyCondition}
+                        AND EXISTS (
+                            SELECT 1 
+                            FROM PlayerWarHistories pwh_check
+                            INNER JOIN ClanHistories ch_check ON pwh_check.ClanHistoryID = ch_check.ID
+                            WHERE ch_check.SeasonID = ch.SeasonID 
+                                AND ch_check.WeekIndex = ch.WeekIndex
+                                AND ch_check.WarTrophies {trophyCondition}
+                                AND pwh_check.BoatAttacks = 0
+                        )
+                    ORDER BY ch.SeasonID DESC, ch.WeekIndex DESC, ch.WarTrophies DESC";
+
+                var result = await _context.Database
+                    .SqlQueryRaw<int>(sql, new SqlParameter("@playerId", player.ID))
+                    .FirstOrDefaultAsync();
+
+                _logger.LogInformation("Found most recent clan ID {ClanId} for player {PlayerName}", result, player.Name);
+                return result;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Failed to retrieve most recent ClanID for player {player.Tag} from the database");
+                throw new InvalidOperationException($"Failed to retrieve most recent ClanID for player tag {player.Tag} from the database", ex);
             }
         }
     }

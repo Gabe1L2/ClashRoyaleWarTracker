@@ -55,5 +55,56 @@ namespace ClashRoyaleWarTracker.Infrastructure.Repositories
                 throw new InvalidOperationException($"Failed to add player {player.Tag}", ex);
             }
         }
+
+        public async Task<List<Player>> GetAllActivePlayersAsync()
+        {
+            try
+            {
+                _logger.LogDebug("Retrieving all active players from database");
+                var players = await _context.Players.Where(p => p.IsActive).ToListAsync();
+                _logger.LogDebug("Found {Count} active players", players.Count);
+                return players;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to retrieve active players from the database");
+                throw new InvalidOperationException("Failed to retrieve active players from the database", ex);
+            }
+        }
+
+        public async Task UpsertPlayerAverageAsync(PlayerAverage newPlayerAverage)
+        {
+            try
+            {
+                _logger.LogDebug("Upserting player average for PlayerID {PlayerId}, Is5k: {Is5k}", newPlayerAverage.PlayerID, newPlayerAverage.Is5k);
+
+                var existingAverage = await _context.PlayerAverages
+                    .FirstOrDefaultAsync(pa => pa.PlayerID == newPlayerAverage.PlayerID && pa.Is5k == newPlayerAverage.Is5k);
+
+                if (existingAverage != null)
+                {
+                    // Update existing record
+                    existingAverage.ClanID = newPlayerAverage.ClanID;
+                    existingAverage.FameAttackAverage = newPlayerAverage.FameAttackAverage;
+                    existingAverage.LastUpdated = DateTime.Now;
+                    _context.PlayerAverages.Update(existingAverage);
+                    _logger.LogDebug("Updated existing player average for PlayerID {PlayerId}", newPlayerAverage.PlayerID);
+                }
+                else
+                {
+                    newPlayerAverage.LastUpdated = DateTime.Now;
+                    await _context.PlayerAverages.AddAsync(newPlayerAverage);
+                    _logger.LogDebug("Added new player average for PlayerID {PlayerId}", newPlayerAverage.PlayerID);
+                }
+
+                await _context.SaveChangesAsync();
+                _logger.LogInformation("Successfully upserted player average for PlayerID {PlayerId}", newPlayerAverage.PlayerID);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to upsert player average for PlayerID {PlayerId}", newPlayerAverage.PlayerID);
+                throw new InvalidOperationException($"Failed to upsert player average for PlayerID {newPlayerAverage.PlayerID}", ex);
+            }
+        }
     }
 }

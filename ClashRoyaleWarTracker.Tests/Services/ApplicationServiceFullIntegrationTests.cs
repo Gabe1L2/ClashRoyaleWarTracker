@@ -291,7 +291,7 @@ namespace ClashRoyaleWarTracker.Tests.Services
         [Fact]
         public async Task PopulateRawWarHistoryTest()
         {
-            string testClanTag = "PJQRLQPQ";
+            string testClanTag = "YC8R0RJ0";
 
             var logger = _serviceProvider.GetRequiredService<ILogger<ApplicationServiceFullIntegrationTests>>();
             logger.LogInformation($"=== Starting PopulateRawWarHistoryTest with tag: {testClanTag} ===");
@@ -316,6 +316,26 @@ namespace ClashRoyaleWarTracker.Tests.Services
                 Assert.False(result.Success);
             }
             logger.LogInformation("=== PopulateRawWarHistoryTest completed ===");
+        }
+
+        [Fact]
+        public async Task UpdateAllActivePlayerAveragesTest()
+        {
+            var logger = _serviceProvider.GetRequiredService<ILogger<ApplicationServiceFullIntegrationTests>>();
+            logger.LogInformation("=== Starting UpdateAllActivePlayerAveragesTest ===");
+
+            var result = await _applicationService.UpdateAllActivePlayerAverages(4, true);
+            if (result.Success)
+            {
+                logger.LogInformation($"Successfully updated all active player averages: {result.Message}");
+                Assert.True(result.Success);
+            }
+            else
+            {
+                logger.LogWarning($"Failed to update player averages: {result.Message}");
+                Assert.False(result.Success);
+            }
+            logger.LogInformation("=== UpdateAllActivePlayerAveragesTest completed ===");
         }
 
         public void Dispose()

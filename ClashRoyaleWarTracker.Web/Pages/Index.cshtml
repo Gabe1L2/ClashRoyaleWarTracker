@@ -1,10 +1,334 @@
 ﻿@page
 @model IndexModel
 @{
-    ViewData["Title"] = "Home page";
+    ViewData["Title"] = "Player War Statistics Dashboard";
 }
 
-<div class="text-center">
-    <h1 class="display-4">Welcome</h1>
-    <p>Learn about <a href="https://learn.microsoft.com/aspnet/core">building Web apps with ASP.NET Core</a>.</p>
+<div class="row">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1 class="display-4">Player War Statistics</h1>
+            <div>
+                <button class="btn btn-primary" onclick="refreshData()">
+                    <i class="fas fa-sync-alt"></i> Refresh Data
+                </button>
+                <form method="post" asp-page-handler="WeeklyUpdate" style="display: inline;">
+                    <button type="submit" class="btn btn-success" onclick="return confirm('This will run the weekly update process. Continue?')">
+                        <i class="fas fa-calendar-week"></i> Run Weekly Update
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        @if (TempData["SuccessMessage"] != null)
+        {
+            <div class="alert alert-success alert-dismissible fade show" role="alert">
+                @TempData["SuccessMessage"]
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        }
+
+        @if (TempData["ErrorMessage"] != null)
+        {
+            <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                @TempData["ErrorMessage"]
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        }
+
+        <!-- Filter Controls -->
+        <div class="card mb-4">
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-md-3">
+                        <label class="form-label">Clan Trophies</label>
+                        <select id="trophyFilter" class="form-select" onchange="filterTable()">
+                            <option value="">All</option>
+                            <option value="5k+">5k+ Trophies</option>
+                            <option value="Sub-5k">Sub-5k Trophies</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Active Status</label>
+                        <select id="activeFilter" class="form-select" onchange="filterTable()">
+                            <option value="">All</option>
+                            <option value="true">Active</option>
+                            <option value="false">Inactive</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Search Player</label>
+                        <input type="text" id="searchInput" class="form-control" placeholder="Search by name or tag..." onkeyup="filterTable()">
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">&nbsp;</label>
+                        <button class="btn btn-outline-secondary w-100" onclick="clearFilters()">Clear Filters</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Data Table -->
+        <div class="card">
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table id="playerTable" class="table table-striped table-hover">
+                        <thead class="table-dark">
+                            <tr>
+                                <th onclick="sortTable(0)" style="cursor: pointer;">
+                                    Player Name <i class="fas fa-sort"></i>
+                                </th>
+                                <th onclick="sortTable(1)" style="cursor: pointer;">
+                                    Player Tag <i class="fas fa-sort"></i>
+                                </th>
+                                <th onclick="sortTable(2)" style="cursor: pointer;">
+                                    Clan <i class="fas fa-sort"></i>
+                                </th>
+                                <th onclick="sortTable(3)" style="cursor: pointer;">
+                                    Fame/Attack Average <i class="fas fa-sort"></i>
+                                </th>
+                                <th onclick="sortTable(4)" style="cursor: pointer;">
+                                    Total Attacks <i class="fas fa-sort"></i>
+                                </th>
+                                <th onclick="sortTable(5)" style="cursor: pointer;">
+                                    Trophy Level <i class="fas fa-sort"></i>
+                                </th>
+                                <th onclick="sortTable(6)" style="cursor: pointer;">
+                                    Status <i class="fas fa-sort"></i>
+                                </th>
+                                <th onclick="sortTable(7)" style="cursor: pointer;">
+                                    Last Updated <i class="fas fa-sort"></i>
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var playerAverage in Model.PlayerAverages)
+                            {
+                                <tr onclick="selectPlayer(@playerAverage.PlayerID, '@playerAverage.PlayerName', '@playerAverage.PlayerTag')" 
+                                    style="cursor: pointer;" 
+                                    data-player-id="@playerAverage.PlayerID"
+                                    data-trophy-level="@(playerAverage.Is5k ? "5k+" : "Sub-5k")"
+                                    data-active="@playerAverage.IsActive.ToString().ToLower()">
+                                    <td>
+                                        <strong>@playerAverage.PlayerName</strong>
+                                        @if (!playerAverage.IsActive)
+                                        {
+                                            <span class="badge bg-secondary ms-2">Inactive</span>
+                                        }
+                                    </td>
+                                    <td><code>@playerAverage.PlayerTag</code></td>
+                                    <td>@(playerAverage.ClanName ?? "No Clan")</td>
+                                    <td>
+                                        <span class="badge bg-@(playerAverage.FameAttackAverage >= 1200 ? "success" : playerAverage.FameAttackAverage >= 1000 ? "warning" : "danger")">
+                                            @playerAverage.FameAttackAverage.ToString("F2")
+                                        </span>
+                                    </td>
+                                    <td>@playerAverage.Attacks</td>
+                                    <td>
+                                        <span class="badge bg-@(playerAverage.Is5k ? "primary" : "info")">
+                                            @(playerAverage.Is5k ? "5k+" : "Sub-5k")
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <i class="fas fa-circle text-@(playerAverage.IsActive ? "success" : "danger")"></i>
+                                        @(playerAverage.IsActive ? "Active" : "Inactive")
+                                    </td>
+                                    <td>@playerAverage.LastUpdated.ToString("MM/dd/yyyy HH:mm")</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+                
+                @if (!Model.PlayerAverages.Any())
+                {
+                    <div class="text-center py-5">
+                        <i class="fas fa-users fa-3x text-muted mb-3"></i>
+                        <h5 class="text-muted">No player data available</h5>
+                        <p class="text-muted">Run the weekly update to populate player statistics.</p>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
 </div>
+
+<!-- Player Actions Modal -->
+<div class="modal fade" id="playerActionsModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Player Actions</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <h6 id="selectedPlayerName">Player Name</h6>
+                <p class="text-muted" id="selectedPlayerTag">Player Tag</p>
+                
+                <div class="d-grid gap-2">
+                    <button class="btn btn-primary" onclick="updatePlayerAverages()">
+                        <i class="fas fa-chart-line"></i> Update Player Averages
+                    </button>
+                    <button class="btn btn-info" onclick="viewPlayerHistory()">
+                        <i class="fas fa-history"></i> View War History
+                    </button>
+                    <button class="btn btn-warning" onclick="togglePlayerStatus()">
+                        <i class="fas fa-user-check"></i> Toggle Active Status
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        let selectedPlayerId = null;
+        let selectedPlayerName = '';
+        let selectedPlayerTag = '';
+
+        function selectPlayer(playerId, playerName, playerTag) {
+            selectedPlayerId = playerId;
+            selectedPlayerName = playerName;
+            selectedPlayerTag = playerTag;
+            
+            document.getElementById('selectedPlayerName').textContent = playerName;
+            document.getElementById('selectedPlayerTag').textContent = `Tag: ${playerTag}`;
+            
+            var modal = new bootstrap.Modal(document.getElementById('playerActionsModal'));
+            modal.show();
+        }
+
+        function sortTable(columnIndex) {
+            const table = document.getElementById('playerTable');
+            const tbody = table.tBodies[0];
+            const rows = Array.from(tbody.rows);
+            
+            // Determine sort direction
+            const isAscending = table.getAttribute('data-sort-dir') !== 'asc';
+            table.setAttribute('data-sort-dir', isAscending ? 'asc' : 'desc');
+            
+            rows.sort((a, b) => {
+                const aVal = a.cells[columnIndex].textContent.trim();
+                const bVal = b.cells[columnIndex].textContent.trim();
+                
+                // Handle numeric columns
+                if (columnIndex === 3 || columnIndex === 4) { // Fame average and attacks
+                    const aNum = parseFloat(aVal) || 0;
+                    const bNum = parseFloat(bVal) || 0;
+                    return isAscending ? aNum - bNum : bNum - aNum;
+                }
+                
+                // Handle date column
+                if (columnIndex === 7) {
+                    const aDate = new Date(aVal);
+                    const bDate = new Date(bVal);
+                    return isAscending ? aDate - bDate : bDate - aDate;
+                }
+                
+                // Handle text columns
+                return isAscending ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
+            });
+            
+            // Re-append sorted rows
+            rows.forEach(row => tbody.appendChild(row));
+            
+            // Update sort indicators
+            updateSortIndicators(columnIndex, isAscending);
+        }
+
+        function updateSortIndicators(activeColumn, isAscending) {
+            const headers = document.querySelectorAll('#playerTable th i.fas');
+            headers.forEach((icon, index) => {
+                if (index === activeColumn) {
+                    icon.className = `fas fa-sort-${isAscending ? 'up' : 'down'}`;
+                } else {
+                    icon.className = 'fas fa-sort';
+                }
+            });
+        }
+
+        function filterTable() {
+            const trophyFilter = document.getElementById('trophyFilter').value;
+            const activeFilter = document.getElementById('activeFilter').value;
+            const searchInput = document.getElementById('searchInput').value.toLowerCase();
+            
+            const rows = document.querySelectorAll('#playerTable tbody tr');
+            
+            rows.forEach(row => {
+                const trophyLevel = row.getAttribute('data-trophy-level');
+                const isActive = row.getAttribute('data-active');
+                const playerName = row.cells[0].textContent.toLowerCase();
+                const playerTag = row.cells[1].textContent.toLowerCase();
+                
+                let showRow = true;
+                
+                // Trophy filter
+                if (trophyFilter && trophyLevel !== trophyFilter) {
+                    showRow = false;
+                }
+                
+                // Active filter
+                if (activeFilter && isActive !== activeFilter) {
+                    showRow = false;
+                }
+                
+                // Search filter
+                if (searchInput && !playerName.includes(searchInput) && !playerTag.includes(searchInput)) {
+                    showRow = false;
+                }
+                
+                row.style.display = showRow ? '' : 'none';
+            });
+        }
+
+        function clearFilters() {
+            document.getElementById('trophyFilter').value = '';
+            document.getElementById('activeFilter').value = '';
+            document.getElementById('searchInput').value = '';
+            filterTable();
+        }
+
+        async function refreshData() {
+            location.reload();
+        }
+
+        async function runWeeklyUpdate() {
+            if (!confirm('This will run the weekly update process. Continue?')) return;
+            
+            const button = event.target;
+            const originalText = button.innerHTML;
+            button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Running...';
+            button.disabled = true;
+            
+            try {
+                const response = await fetch('/api/weekly-update', { method: 'POST' });
+                if (response.ok) {
+                    location.reload();
+                } else {
+                    alert('Update failed. Please try again.');
+                }
+            } catch (error) {
+                alert('An error occurred during the update.');
+            } finally {
+                button.innerHTML = originalText;
+                button.disabled = false;
+            }
+        }
+
+        async function updatePlayerAverages() {
+            // Implement API call to update specific player averages
+            alert(`Update averages for ${selectedPlayerName} - Feature coming soon!`);
+        }
+
+        function viewPlayerHistory() {
+            // Navigate to player history page
+            window.location.href = `/Players/${selectedPlayerId}/History`;
+        }
+
+        function togglePlayerStatus() {
+            // Implement API call to toggle player active status
+            alert(`Toggle status for ${selectedPlayerName} - Feature coming soon!`);
+        }
+    </script>
+}

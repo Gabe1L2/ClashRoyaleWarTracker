@@ -239,7 +239,7 @@ namespace ClashRoyaleWarTracker.Infrastructure.Repositories
                     .SqlQueryRaw<int>(sql, new SqlParameter("@playerId", player.ID))
                     .FirstOrDefaultAsync();
 
-                _logger.LogInformation("Found most recent clan ID {ClanId} for player {PlayerName}", result, player.Name);
+                _logger.LogDebug("Found most recent clan ID {ClanId} for player {PlayerName}", result, player.Name);
                 return result;
             }
             catch (Exception ex)

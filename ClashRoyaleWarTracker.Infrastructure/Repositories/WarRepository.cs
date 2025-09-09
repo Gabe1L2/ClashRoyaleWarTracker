@@ -102,7 +102,7 @@ namespace ClashRoyaleWarTracker.Infrastructure.Repositories
                         new SqlParameter("@playerId", player.ID))
                     .ToListAsync();
 
-                _logger.LogInformation("Found {Count} war histories for player {PlayerName}", results.Count, player.Name);
+                _logger.LogDebug("Found {Count} war histories for player {PlayerName}", results.Count, player.Name);
                 return results.Any() ? results : null;
             }
             catch (Exception ex)

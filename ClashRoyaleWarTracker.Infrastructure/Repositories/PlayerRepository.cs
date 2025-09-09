@@ -86,6 +86,7 @@ namespace ClashRoyaleWarTracker.Infrastructure.Repositories
                     // Update existing record
                     existingAverage.ClanID = newPlayerAverage.ClanID;
                     existingAverage.FameAttackAverage = newPlayerAverage.FameAttackAverage;
+                    existingAverage.Attacks = newPlayerAverage.Attacks;
                     existingAverage.LastUpdated = DateTime.Now;
                     _context.PlayerAverages.Update(existingAverage);
                     _logger.LogDebug("Updated existing player average for PlayerID {PlayerId}", newPlayerAverage.PlayerID);
@@ -103,6 +104,42 @@ namespace ClashRoyaleWarTracker.Infrastructure.Repositories
             {
                 _logger.LogError(ex, "Failed to upsert player average for PlayerID {PlayerId}", newPlayerAverage.PlayerID);
                 throw new InvalidOperationException($"Failed to upsert player average for PlayerID {newPlayerAverage.PlayerID}", ex);
+            }
+        }
+
+        public async Task<List<PlayerAverageDTO>> GetAllPlayerAveragesAsync()
+        {
+            try
+            {
+                _logger.LogDebug("Retrieving all player averages with player and clan details");
+
+                var playerAverages = await _context.PlayerAverages
+                    .Join(_context.Players, pa => pa.PlayerID, p => p.ID, (pa, p) => new { pa, p })
+                    .GroupJoin(_context.Clans, x => x.pa.ClanID, c => c.ID, (x, clans) => new { x.pa, x.p, clans })
+                    .SelectMany(x => x.clans.DefaultIfEmpty(), (x, c) => new PlayerAverageDTO
+                    {
+                        ID = x.pa.ID,
+                        PlayerID = x.pa.PlayerID,
+                        PlayerName = x.p.Name ?? "Unknown",
+                        PlayerTag = x.p.Tag,
+                        ClanID = x.pa.ClanID,
+                        ClanName = c != null ? c.Name : "No Clan",
+                        FameAttackAverage = x.pa.FameAttackAverage,
+                        Attacks = x.pa.Attacks,
+                        Is5k = x.pa.Is5k,
+                        LastUpdated = x.pa.LastUpdated,
+                        IsActive = x.p.IsActive
+                    })
+                    .OrderByDescending(dto => dto.FameAttackAverage)
+                    .ToListAsync();
+
+                _logger.LogDebug("Found {Count} player averages", playerAverages.Count);
+                return playerAverages;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to retrieve player averages from the database");
+                throw new InvalidOperationException("Failed to retrieve player averages from the database", ex);
             }
         }
     }

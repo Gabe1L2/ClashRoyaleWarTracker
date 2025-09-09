@@ -483,6 +483,7 @@ namespace ClashRoyaleWarTracker.Application.Services
                         PlayerID = player.ID,
                         ClanID = mostRecentClanID,
                         FameAttackAverage = decksUsed == 0 ? 0 : Math.Round((decimal)fame / decksUsed, 2),
+                        Attacks = decksUsed,
                         Is5k = aboveFiveThousandTrophies,
                     };
 
@@ -497,6 +498,21 @@ namespace ClashRoyaleWarTracker.Application.Services
             {
                 _logger.LogError(ex, "An unexpected error occurred while updating player averages");
                 return ServiceResult.Failure($"An unexpected error occurred while updating player averages");
+            }
+        }
+
+        public async Task<ServiceResult<IEnumerable<PlayerAverageDTO>>> GetAllPlayerAveragesAsync()
+        {
+            try
+            {
+                _logger.LogInformation("Retrieving all player averages from database");
+                var data = await _playerRepository.GetAllPlayerAveragesAsync();
+                return ServiceResult<IEnumerable<PlayerAverageDTO>>.Successful(data);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "An unexpected error occurred while retrieving all player averages");
+                return ServiceResult<IEnumerable<PlayerAverageDTO>>.Failure("An unexpected error occurred while retrieving all player averages");
             }
         }
     }

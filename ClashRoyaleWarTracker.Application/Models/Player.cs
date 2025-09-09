@@ -19,9 +19,26 @@ namespace ClashRoyaleWarTracker.Application.Models
     {
         public int ID { get; set; }
         public required int PlayerID { get; set; }
-        public required int ClanID { get; set; }
+        public int? ClanID { get; set; }
         [Column(TypeName = "decimal(5,2)")]
         public decimal FameAttackAverage { get; set; }
+        public int Attacks { get; set; }
+        public bool Is5k { get; set; }
+        public DateTime LastUpdated { get; set; }
+    }
+
+    public class PlayerAverageDTO
+    {
+        public int ID { get; set; }
+        public int PlayerID { get; set; }
+        public string PlayerName { get; set; } = string.Empty;
+        public string PlayerTag { get; set; } = string.Empty;
+        public bool IsActive { get; set; }
+        public int? ClanID { get; set; }
+        public string? ClanName { get; set; }
+        public string? ClanTag { get; set; }
+        public decimal FameAttackAverage { get; set; }
+        public int Attacks { get; set; }
         public bool Is5k { get; set; }
         public DateTime LastUpdated { get; set; }
     }

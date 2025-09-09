@@ -45,23 +45,23 @@ namespace ClashRoyaleWarTracker.Application.Services
                 var successfulWarHistoryUpdates = 0;
                 var failedWarHistoryUpdates = 0;
 
-                _logger.LogInformation($"Found {totalClans} clans to update");
+                _logger.LogInformation("Found {TotalClans} clans to update", totalClans);
 
                 foreach (var clan in clans)
                 {
-                    _logger.LogInformation($"Processing clan {clan.Name} ({clan.Tag})");
+                    _logger.LogInformation("Processing clan {ClanName} ({ClanTag})", clan.Name, clan.Tag);
 
                     // Update clan basic information
                     var updateResult = await UpdateClanAsync(clan.Tag);
                     if (updateResult.Success)
                     {
                         successfulUpdates++;
-                        _logger.LogInformation($"Successfully updated clan {clan.Name}");
+                        _logger.LogInformation("Successfully updated clan {ClanName}", clan.Name);
                     }
                     else
                     {
                         failedUpdates++;
-                        _logger.LogWarning($"Failed to update clan {clan.Name}: {updateResult.Message}");
+                        _logger.LogWarning("Failed to update clan {ClanName}: {ErrorMessage}", clan.Name, updateResult.Message);
                     }
 
                     // Update clan history regardless of basic update result
@@ -69,12 +69,12 @@ namespace ClashRoyaleWarTracker.Application.Services
                     if (historyResult.Success)
                     {
                         successfulHistoryUpdates++;
-                        _logger.LogInformation($"Successfully updated history for clan {clan.Name}");
+                        _logger.LogInformation("Successfully updated history for clan {ClanName}", clan.Name);
                     }
                     else
                     {
                         failedHistoryUpdates++;
-                        _logger.LogWarning($"Failed to update history for clan {clan.Name}: {historyResult.Message}");
+                        _logger.LogWarning("Failed to update history for clan {ClanName}: {ErrorMessage}", clan.Name, historyResult.Message);
                     }
 
                     // Populate new player war histories
@@ -82,12 +82,12 @@ namespace ClashRoyaleWarTracker.Application.Services
                     if (warHistoryResult.Success)
                     {
                         successfulWarHistoryUpdates++;
-                        _logger.LogInformation($"Successfully populated player war histories for clan {clan.Name}");
+                        _logger.LogInformation("Successfully populated player war histories for clan {ClanName}", clan.Name);
                     }
                     else
                     {
                         failedWarHistoryUpdates++;
-                        _logger.LogWarning($"Failed to populate player war histories for clan {clan.Name}: {warHistoryResult.Message}");
+                        _logger.LogWarning("Failed to populate player war histories for clan {ClanName}: {ErrorMessage}", clan.Name, warHistoryResult.Message);
                     }
                 }
 
@@ -99,7 +99,7 @@ namespace ClashRoyaleWarTracker.Application.Services
                 }
                 else
                 {
-                    _logger.LogWarning($"Failed to update 5k+ player averages: {update5kAveragesResult.Message}");
+                    _logger.LogWarning("Failed to update 5k+ player averages: {ErrorMessage}", update5kAveragesResult.Message);
                 }
 
                 // Update all active player averages for sub-5k
@@ -110,7 +110,7 @@ namespace ClashRoyaleWarTracker.Application.Services
                 }
                 else
                 {
-                    _logger.LogWarning($"Failed to update sub-5k player averages: {updateSub5kAveragesResult.Message}");
+                    _logger.LogWarning("Failed to update sub-5k player averages: {ErrorMessage}", updateSub5kAveragesResult.Message);
                 }
 
                 string summary = $"Weekly update completed. " + 
@@ -119,7 +119,8 @@ namespace ClashRoyaleWarTracker.Application.Services
                               $"Successful ClanHistory Updates: {successfulHistoryUpdates}, Failed ClanHistory Updates: {failedHistoryUpdates}," +
                               $"Successful PlayerWarHistory Updates: {successfulWarHistoryUpdates}, Failed PlayerWarHistory Updates: {failedWarHistoryUpdates}";
 
-                _logger.LogInformation(summary);
+                _logger.LogInformation("Weekly update completed. Total Clans: {TotalClans}, Successful Clan Updates: {SuccessfulUpdates}, Failed Clan Updates: {FailedUpdates}, Successful ClanHistory Updates: {SuccessfulHistoryUpdates}, Failed ClanHistory Updates: {FailedHistoryUpdates}, Successful PlayerWarHistory Updates: {SuccessfulWarHistoryUpdates}, Failed PlayerWarHistory Updates: {FailedWarHistoryUpdates}", 
+                    totalClans, successfulUpdates, failedUpdates, successfulHistoryUpdates, failedHistoryUpdates, successfulWarHistoryUpdates, failedWarHistoryUpdates);
 
                 if (failedUpdates == 0 && failedHistoryUpdates == 0 && failedWarHistoryUpdates == 0)
                 {
@@ -149,36 +150,36 @@ namespace ClashRoyaleWarTracker.Application.Services
                 var sanitizedTag = ClanTagValidator.ValidateAndSanitizeClanTag(clanTag);
                 if (!sanitizedTag.isValid)
                 {
-                    _logger.LogWarning($"Invalid clan tag provided: {clanTag}");
+                    _logger.LogWarning("Invalid clan tag provided: {ClanTag}", clanTag);
                     return ServiceResult.Failure(sanitizedTag.errorMessage);
                 }
 
                 var tag = sanitizedTag.sanitizedTag;
-                _logger.LogInformation($"Adding clan with tag {tag}");
+                _logger.LogInformation("Adding clan with tag {ClanTag}", tag);
                 var clan = await _clashRoyaleService.GetClanByTagAsync(tag);
                 if (clan == null)
                 {
-                    _logger.LogWarning($"Clan with tag {tag} not found in API");
+                    _logger.LogWarning("Clan with tag {ClanTag} not found in API", tag);
                     return ServiceResult.Failure($"Clan with tag '{tag}' not found in API");
                 }
 
                 clan.Tag = Regex.Replace(clan.Tag, @"[^a-zA-Z0-9]", "");
 
-                _logger.LogInformation($"Clan {clan.Name} with tag {clan.Tag} found. Adding to database");
+                _logger.LogInformation("Clan {ClanName} with tag {ClanTag} found. Adding to database", clan.Name, clan.Tag);
                 if (await _clanRepository.AddClanAsync(clan))
                 {
-                    _logger.LogInformation($"Successfully added {clan.Name} with tag {clan.Tag} to database");
+                    _logger.LogInformation("Successfully added {ClanName} with tag {ClanTag} to database", clan.Name, clan.Tag);
                     return ServiceResult.Successful($"{clan.Name} successfully added to Clans!");
                 }
                 else
                 {
-                    _logger.LogWarning($"Clan with tag {clan.Tag} already exists in database");
+                    _logger.LogWarning("Clan with tag {ClanTag} already exists in database", clan.Tag);
                     return ServiceResult.Failure($"Clan with tag '{clan.Tag}' already exists in database");
                 }
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, $"An unexpected error occurred while adding clan with tag {clanTag}");
+                _logger.LogError(ex, "An unexpected error occurred while adding clan with tag {ClanTag}", clanTag);
                 return ServiceResult.Failure($"An unexpected error occurred while adding clan with tag {clanTag}");
             }
         }
@@ -206,25 +207,25 @@ namespace ClashRoyaleWarTracker.Application.Services
                 var sanitizedTag = ClanTagValidator.ValidateAndSanitizeClanTag(clanTag);
                 if (!sanitizedTag.isValid)
                 {
-                    _logger.LogWarning($"Invalid clan tag provided: {clanTag}");
+                    _logger.LogWarning("Invalid clan tag provided: {ClanTag}", clanTag);
                     return ServiceResult<Clan>.Failure(sanitizedTag.errorMessage);
                 }
                 var tag = sanitizedTag.sanitizedTag;
 
-                _logger.LogInformation($"Retrieving clan with tag {tag} from database");
+                _logger.LogInformation("Retrieving clan with tag {ClanTag} from database", tag);
                 var clan = await _clanRepository.GetClanAsync(tag);
                 if (clan == null)
                 {
-                    _logger.LogWarning($"Clan with tag {tag} not found in database");
+                    _logger.LogWarning("Clan with tag {ClanTag} not found in database", tag);
                     return ServiceResult<Clan>.Failure($"Clan with tag '{tag}' not found in database");
                 }
 
-                _logger.LogInformation($"Successfully retrieved clan {clan.Name} with tag {clan.Tag}");
+                _logger.LogInformation("Successfully retrieved clan {ClanName} with tag {ClanTag}", clan.Name, clan.Tag);
                 return ServiceResult<Clan>.Successful(clan);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, $"An unexpected error occurred while retrieving clan with tag {clanTag}");
+                _logger.LogError(ex, "An unexpected error occurred while retrieving clan with tag {ClanTag}", clanTag);
                 return ServiceResult<Clan>.Failure($"An unexpected error occurred while retrieving clan with tag {clanTag}");
             }
         }
@@ -233,21 +234,21 @@ namespace ClashRoyaleWarTracker.Application.Services
         {
             try
             {
-                _logger.LogInformation($"Deleting clan with tag {clanTag}");
+                _logger.LogInformation("Deleting clan with tag {ClanTag}", clanTag);
                 if (await _clanRepository.DeleteClanAsync(clanTag))
                 {
-                    _logger.LogInformation($"Successfully deleted clan with tag {clanTag}");
+                    _logger.LogInformation("Successfully deleted clan with tag {ClanTag}", clanTag);
                     return ServiceResult.Successful($"Clan with tag {clanTag} successfully deleted");
                 }
                 else
                 {
-                    _logger.LogWarning($"Clan with tag {clanTag} not found in database");
+                    _logger.LogWarning("Clan with tag {ClanTag} not found in database", clanTag);
                     return ServiceResult.Failure($"Clan with tag {clanTag} not found in database");
                 }
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, $"An unexpected error occurred while deleting clan with tag {clanTag}");
+                _logger.LogError(ex, "An unexpected error occurred while deleting clan with tag {ClanTag}", clanTag);
                 return ServiceResult.Failure($"An unexpected error occurred while deleting clan with tag {clanTag}");
             }
         }
@@ -260,37 +261,37 @@ namespace ClashRoyaleWarTracker.Application.Services
                 var sanitizedTag = ClanTagValidator.ValidateAndSanitizeClanTag(clanTag);
                 if (!sanitizedTag.isValid)
                 {
-                    _logger.LogWarning($"Invalid clan tag provided: {clanTag}");
+                    _logger.LogWarning("Invalid clan tag provided: {ClanTag}", clanTag);
                     return ServiceResult.Failure(sanitizedTag.errorMessage);
                 }
 
                 var tag = sanitizedTag.sanitizedTag;
-                _logger.LogInformation($"Updating clan with tag {tag}");
+                _logger.LogInformation("Updating clan with tag {ClanTag}", tag);
                 var updatedClan = await _clashRoyaleService.GetClanByTagAsync(tag);
 
                 if (updatedClan == null)
                 {
-                    _logger.LogWarning($"Clan with tag {tag} not found in API");
+                    _logger.LogWarning("Clan with tag {ClanTag} not found in API", tag);
                     return ServiceResult.Failure($"Clan with tag '{tag}' not found in API");
                 }
 
                 updatedClan.Tag = Regex.Replace(updatedClan.Tag, @"[^a-zA-Z0-9]", "");
-                _logger.LogInformation($"Clan {updatedClan.Name} with tag {updatedClan.Tag} found. Updating in database");
+                _logger.LogInformation("Clan {ClanName} with tag {ClanTag} found. Updating in database", updatedClan.Name, updatedClan.Tag);
 
                 if (await _clanRepository.UpdateClanAsync(updatedClan))
                 {
-                    _logger.LogInformation($"Successfully updated {updatedClan.Name} with tag {updatedClan.Tag} in database");
+                    _logger.LogInformation("Successfully updated {ClanName} with tag {ClanTag} in database", updatedClan.Name, updatedClan.Tag);
                     return ServiceResult.Successful($"{updatedClan.Name} successfully updated in Clans!");
                 }
                 else
                 {
-                    _logger.LogWarning($"Clan with tag {updatedClan.Tag} does not exist in database");
+                    _logger.LogWarning("Clan with tag {ClanTag} does not exist in database", updatedClan.Tag);
                     return ServiceResult.Failure($"Clan with tag '{updatedClan.Tag}' does not exist in database");
                 }
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, $"An unexpected error occurred while updating clan with tag {clanTag}");
+                _logger.LogError(ex, "An unexpected error occurred while updating clan with tag {ClanTag}", clanTag);
                 return ServiceResult.Failure($"An unexpected error occurred while updating clan with tag {clanTag}");
             }
         }
@@ -299,12 +300,12 @@ namespace ClashRoyaleWarTracker.Application.Services
         {
             try
             {
-                _logger.LogInformation($"Updating history for clan {clan.Name}");
+                _logger.LogInformation("Updating history for clan {ClanName}", clan.Name);
 
                 var riverRaceLog = await _clashRoyaleService.GetRiverRaceLogAsync(clan.Tag);
                 if (riverRaceLog == null || riverRaceLog.Items == null || riverRaceLog.Items.Count == 0)
                 {
-                    _logger.LogWarning($"No war log data found for clan with tag {clan.Tag}");
+                    _logger.LogWarning("No war log data found for clan with tag {ClanTag}", clan.Tag);
                     return ServiceResult.Failure($"No war log data found for clan with tag '{clan.Tag}'");
                 }
 
@@ -336,24 +337,24 @@ namespace ClashRoyaleWarTracker.Application.Services
 
                 if (clanHistories.Count == 0)
                 {
-                    _logger.LogWarning($"No valid clan standings found in war log for clan with tag {clan.Tag}");
+                    _logger.LogWarning("No valid clan standings found in war log for clan with tag {ClanTag}", clan.Tag);
                     return ServiceResult.Failure($"No valid clan standings found in war log for clan with tag '{clan.Tag}'");
                 }
 
                 if (await _clanRepository.PopulateClanHistoryAsync(clan, clanHistories))
                 {
-                    _logger.LogInformation($"Successfully updated history for {clan.Name} in database");
+                    _logger.LogInformation("Successfully updated history for {ClanName} in database", clan.Name);
                     return ServiceResult.Successful($"{clan.Name} history successfully updated!");
                 }
                 else
                 {
-                    _logger.LogWarning($"Failed to update history for clan with tag {clan.Tag}");
+                    _logger.LogWarning("Failed to update history for clan with tag {ClanTag}", clan.Tag);
                     return ServiceResult.Failure($"Failed to update history for clan with tag '{clan.Tag}'");
                 }
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, $"An unexpected error occurred while updating history for clan with tag {clan.Tag}");
+                _logger.LogError(ex, "An unexpected error occurred while updating history for clan with tag {ClanTag}", clan.Tag);
                 return ServiceResult.Failure($"An unexpected error occurred while updating history for clan with tag {clan.Tag}");
             }
         }
@@ -362,12 +363,12 @@ namespace ClashRoyaleWarTracker.Application.Services
         {
             try
             {
-                _logger.LogInformation($"Populating raw war history for {clan.Name}");
+                _logger.LogInformation("Populating raw war history for {ClanName}", clan.Name);
 
                 var riverRaceLog = await _clashRoyaleService.GetRiverRaceLogAsync(clan.Tag);
                 if (riverRaceLog == null || riverRaceLog.Items == null || riverRaceLog.Items.Count == 0)
                 {
-                    _logger.LogWarning($"No war log data found for clan with tag {clan.Tag}");
+                    _logger.LogWarning("No war log data found for clan with tag {ClanTag}", clan.Tag);
                     return ServiceResult.Failure($"No war log data found for clan with tag '{clan.Tag}'");
                 }
 
@@ -383,7 +384,7 @@ namespace ClashRoyaleWarTracker.Application.Services
                         var clanHistory = await _clanRepository.GetClanHistoryAsync(clan.ID, riverRace.SeasonId, riverRace.SectionIndex);
                         if (clanHistory == null)
                         {
-                            _logger.LogWarning($"No clan history found for {clan.Name} for Season {riverRace.SeasonId}, Week {riverRace.SectionIndex}");
+                            _logger.LogWarning("No clan history found for {ClanName} for Season {SeasonId}, Week {WeekIndex}", clan.Name, riverRace.SeasonId, riverRace.SectionIndex);
                             return ServiceResult.Failure($"No clan history found for {clan.Name} for Season {riverRace.SeasonId}, Week {riverRace.SectionIndex}");
                         }
 
@@ -430,18 +431,18 @@ namespace ClashRoyaleWarTracker.Application.Services
 
                 if (await _warRepository.AddPlayerWarHistoriesAsync(playerWarHistories))
                 {
-                    _logger.LogInformation($"Successfully populated raw war history for {clan.Name}");
+                    _logger.LogInformation("Successfully populated raw war history for {ClanName}", clan.Name);
                     return ServiceResult.Successful($"{clan.Name} raw war history successfully populated!");
                 }
                 else
                 {
-                    _logger.LogWarning($"Failed to populate raw war history for clan {clan.Name}");
+                    _logger.LogWarning("Failed to populate raw war history for clan {ClanName}", clan.Name);
                     return ServiceResult.Failure($"Failed to populate raw war history for clan {clan.Name}");
                 }
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, $"An unexpected error occurred while populating raw war history for {clan.Name}");
+                _logger.LogError(ex, "An unexpected error occurred while populating raw war history for {ClanName}", clan.Name);
                 return ServiceResult.Failure($"An unexpected error occurred while populating raw war history for {clan.Name}");
             }
         }
@@ -450,7 +451,7 @@ namespace ClashRoyaleWarTracker.Application.Services
         {
             try
             {
-                _logger.LogInformation($"Updating player averages for all players");
+                _logger.LogInformation("Updating player averages for all players {TrophyLevel} 5000 trophies", aboveFiveThousandTrophies ? "above" : "below");
                 var players = await _playerRepository.GetAllActivePlayersAsync();
                 if (players == null || players.Count == 0)
                 {
@@ -462,11 +463,11 @@ namespace ClashRoyaleWarTracker.Application.Services
                 {
                     int fame = 0;
                     int decksUsed = 0;
-                    _logger.LogDebug($"Grabbing last {numOfWeeksToUse} weeks of war history for player {player.Name} ({player.Tag})");
+                    _logger.LogDebug("Grabbing last {NumOfWeeks} weeks of war history for player {PlayerName} ({PlayerTag})", numOfWeeksToUse, player.Name, player.Tag);
                     var warHistoriesResult = await _warRepository.GetPlayerWarHistoriesAsync(player, numOfWeeksToUse, aboveFiveThousandTrophies); // As a reminder, this will not grab records with boat attacks
                     if (warHistoriesResult == null || warHistoriesResult.Count == 0)
                     {
-                        _logger.LogDebug($"No war history found for player {player.Name} ({player.Tag})");
+                        _logger.LogDebug("No war history found for player {PlayerName} ({PlayerTag})", player.Name, player.Tag);
                         continue;
                     }
 
@@ -486,7 +487,7 @@ namespace ClashRoyaleWarTracker.Application.Services
                     };
 
                     await _playerRepository.UpsertPlayerAverageAsync(newPlayerAverage);
-                    _logger.LogInformation($"Successfully updated player average for {player.Name} ({player.Tag})");
+                    _logger.LogInformation("Successfully updated player average for {PlayerName} ({PlayerTag})", player.Name, player.Tag);
                 }
 
                 _logger.LogInformation("Successfully updated player averages for all players");
@@ -494,7 +495,7 @@ namespace ClashRoyaleWarTracker.Application.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, $"An unexpected error occurred while updating player averages");
+                _logger.LogError(ex, "An unexpected error occurred while updating player averages");
                 return ServiceResult.Failure($"An unexpected error occurred while updating player averages");
             }
         }

@@ -31,7 +31,7 @@ namespace ClashRoyaleWarTracker.Application.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, $"Error fetching clan with tag {clanTag}");
+                _logger.LogError(ex, "Error fetching clan with tag {ClanTag}", clanTag);
                 throw;
             }
         }
@@ -47,7 +47,7 @@ namespace ClashRoyaleWarTracker.Application.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, $"Error fetching war log for clan with tag {clanTag}");
+                _logger.LogError(ex, "Error fetching war log for clan with tag {ClanTag}", clanTag);
                 throw;
             }
         }

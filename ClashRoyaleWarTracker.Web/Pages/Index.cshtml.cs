@@ -19,26 +19,39 @@ namespace ClashRoyaleWarTracker.Web.Pages
         }
 
         public IList<PlayerAverageDTO> PlayerAverages { get; set; } = new List<PlayerAverageDTO>();
+        public IList<Clan> AllClans { get; set; } = new List<Clan>();
 
         public async Task OnGetAsync()
         {
             try
             {
-                var result = await _applicationService.GetAllPlayerAveragesAsync();
-                if (result.Success && result.Data != null)
+                var playerAveragesResult = await _applicationService.GetAllPlayerAveragesAsync();
+                if (playerAveragesResult.Success && playerAveragesResult.Data != null)
                 {
-                    PlayerAverages = result.Data.ToList();
+                    PlayerAverages = playerAveragesResult.Data.ToList();
                 }
                 else
                 {
-                    _logger.LogWarning("Failed to load player averages: {Message}", result.Message);
+                    _logger.LogWarning("Failed to load player averages: {Message}", playerAveragesResult.Message);
                     PlayerAverages = new List<PlayerAverageDTO>();
+                }
+
+                var clansResult = await _applicationService.GetAllClansAsync();
+                if (clansResult.Success && clansResult.Data != null)
+                {
+                    AllClans = clansResult.Data.ToList();
+                }
+                else
+                {
+                    _logger.LogWarning("Failed to load clans: {Message}", clansResult.Message);
+                    AllClans = new List<Clan>();
                 }
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error loading player averages");
+                _logger.LogError(ex, "Error loading data");
                 PlayerAverages = new List<PlayerAverageDTO>();
+                AllClans = new List<Clan>();
             }
         }
 

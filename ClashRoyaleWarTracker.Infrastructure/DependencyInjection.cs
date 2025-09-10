@@ -25,7 +25,6 @@ namespace ClashRoyaleWarTracker.Infrastructure
             // Identity configuration with controlled access
             services.AddDefaultIdentity<IdentityUser>(options =>
             {
-                // Disable email confirmation requirement since you'll manage users manually
                 options.SignIn.RequireConfirmedAccount = false;
 
                 // Make passwords simple since you control who gets access
@@ -35,7 +34,10 @@ namespace ClashRoyaleWarTracker.Infrastructure
                 options.Password.RequireUppercase = false;
                 options.Password.RequiredLength = 6;
             })
+            .AddRoles<IdentityRole>()
             .AddEntityFrameworkStores<ApplicationDbContext>();
+
+            services.AddHostedService<UserSeeder>();
 
             services.AddScoped<IClashRoyaleService, ClashRoyaleService>();
             services.AddScoped<IClanRepository, ClanRepository>();

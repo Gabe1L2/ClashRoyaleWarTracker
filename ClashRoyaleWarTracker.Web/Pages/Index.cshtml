@@ -40,7 +40,39 @@
         <div class="card mb-4">
             <div class="card-body">
                 <div class="row g-3">
-                    <div class="col-md-3">
+                    <div class="col-md-2">
+                        <label class="form-label">Clans</label>
+                        <div class="dropdown">
+                            <button class="btn btn-outline-secondary dropdown-toggle w-100 text-start" type="button" id="clanFilterDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                                <span id="clanFilterText">All Clans</span>
+                            </button>
+                            <ul class="dropdown-menu w-100" aria-labelledby="clanFilterDropdown" style="max-height: 250px; overflow-y: auto;">
+                                <li>
+                                    <label class="dropdown-item">
+                                        <input type="checkbox" id="selectAllClans" onchange="toggleAllClans()" class="me-2" checked>
+                                        <strong>Select All</strong>
+                                    </label>
+                                </li>
+                                <li><hr class="dropdown-divider"></li>
+                                @foreach (var clan in Model.AllClans)
+                                {
+                                    <li>
+                                        <label class="dropdown-item">
+                                            <input type="checkbox" class="clan-checkbox me-2" value="@clan.Name" data-clan-id="@clan.ID" onchange="updateClanFilter()" checked>
+                                            @clan.Name
+                                        </label>
+                                    </li>
+                                }
+                                @if (!Model.AllClans.Any())
+                                {
+                                    <li>
+                                        <span class="dropdown-item text-muted">No clans available</span>
+                                    </li>
+                                }
+                            </ul>
+                        </div>
+                    </div>
+                    <div class="col-md-2">
                         <label class="form-label">Clan Trophies</label>
                         <select id="trophyFilter" class="form-select" onchange="filterTable()">
                             <option value="">All</option>
@@ -56,7 +88,7 @@
                             <option value="false">Inactive</option>
                         </select>
                     </div>
-                    <div class="col-md-4">
+                    <div class="col-md-3">
                         <label class="form-label">Search Player</label>
                         <input type="text" id="searchInput" class="form-control" placeholder="Search by name or tag..." onkeyup="filterTable()">
                     </div>
@@ -108,7 +140,8 @@
                                     style="cursor: pointer;" 
                                     data-player-id="@playerAverage.PlayerID"
                                     data-trophy-level="@(playerAverage.Is5k ? "5k+" : "Sub-5k")"
-                                    data-active="@playerAverage.IsActive.ToString().ToLower()">
+                                    data-active="@playerAverage.IsActive.ToString().ToLower()"
+                                    data-clan-name="@(playerAverage.ClanName ?? "No Clan")">
                                     <td>
                                         <strong>@playerAverage.PlayerName</strong>
                                         @if (!playerAverage.IsActive)
@@ -116,7 +149,7 @@
                                             <span class="badge bg-secondary ms-2">Inactive</span>
                                         }
                                     </td>
-                                    <td><code>@playerAverage.PlayerTag</code></td>
+                                    <td><code>#@playerAverage.PlayerTag</code></td>
                                     <td>@(playerAverage.ClanName ?? "No Clan")</td>
                                     <td>
                                         <span class="badge bg-@(playerAverage.FameAttackAverage >= 1200 ? "success" : playerAverage.FameAttackAverage >= 1000 ? "warning" : "danger")">
@@ -163,8 +196,13 @@
             </div>
             <div class="modal-body">
                 <h6 id="selectedPlayerName">Player Name</h6>
-                <p class="text-muted" id="selectedPlayerTag">Player Tag</p>
-                
+                <p class="text-muted" id="selectedPlayerTag">
+                    <span>Tag: </span>
+                    <a id="playerTagLink" href="#" target="_blank" class="text-decoration-none">
+                        <span id="playerTagText"></span>
+                        <i class="fas fa-external-link-alt ms-1" style="font-size: 0.8em;"></i>
+                    </a>
+                </p>
                 <div class="d-grid gap-2">
                     <button class="btn btn-primary" onclick="updatePlayerAverages()">
                         <i class="fas fa-chart-line"></i> Update Player Averages
@@ -186,20 +224,25 @@
         let selectedPlayerId = null;
         let selectedPlayerName = '';
         let selectedPlayerTag = '';
+        let selectedClans = new Set();
 
-        function selectPlayer(playerId, playerName, playerTag) {
+        function selectPlayer(playerId, playerName, playerTag)
+        {
             selectedPlayerId = playerId;
             selectedPlayerName = playerName;
             selectedPlayerTag = playerTag;
             
             document.getElementById('selectedPlayerName').textContent = playerName;
-            document.getElementById('selectedPlayerTag').textContent = `Tag: ${playerTag}`;
-            
+            // Player tag with API link
+            document.getElementById('playerTagText').textContent = `#${playerTag}`;
+            document.getElementById('playerTagLink').href = `https://royaleapi.com/player/${playerTag}`;
+
             var modal = new bootstrap.Modal(document.getElementById('playerActionsModal'));
             modal.show();
         }
 
-        function sortTable(columnIndex) {
+        function sortTable(columnIndex)
+        {
             const table = document.getElementById('playerTable');
             const tbody = table.tBodies[0];
             const rows = Array.from(tbody.rows);
@@ -237,7 +280,76 @@
             updateSortIndicators(columnIndex, isAscending);
         }
 
-        function updateSortIndicators(activeColumn, isAscending) {
+        function initializeClanFilter()
+        {
+            // Initialize with all clans selected
+            const clanCheckboxes = document.querySelectorAll('.clan-checkbox');
+            clanCheckboxes.forEach(checkbox => {
+                selectedClans.add(checkbox.value);
+            });
+            updateClanFilterText();
+        }
+
+        function toggleAllClans()
+        {
+            const selectAllCheckbox = document.getElementById('selectAllClans');
+            const clanCheckboxes = document.querySelectorAll('.clan-checkbox');
+            const isChecked = selectAllCheckbox.checked;
+
+            selectedClans.clear();
+
+            clanCheckboxes.forEach(checkbox => {
+                checkbox.checked = isChecked;
+                if (isChecked) {
+                    selectedClans.add(checkbox.value);
+                }
+            });
+
+            updateClanFilterText();
+            filterTable();
+        }
+
+        function updateClanFilter()
+        {
+            const clanCheckboxes = document.querySelectorAll('.clan-checkbox');
+            const selectAllCheckbox = document.getElementById('selectAllClans');
+
+            selectedClans.clear();
+            let checkedCount = 0;
+
+            clanCheckboxes.forEach(checkbox => {
+                if (checkbox.checked) {
+                    selectedClans.add(checkbox.value);
+                    checkedCount++;
+                }
+            });
+
+            // Update "Select All" checkbox state
+            selectAllCheckbox.checked = checkedCount === clanCheckboxes.length;
+            selectAllCheckbox.indeterminate = checkedCount > 0 && checkedCount < clanCheckboxes.length;
+
+            updateClanFilterText();
+            filterTable();
+        }
+
+        function updateClanFilterText()
+        {
+            const clanFilterText = document.getElementById('clanFilterText');
+            const totalClans = document.querySelectorAll('.clan-checkbox').length;
+
+            if (selectedClans.size === 0) {
+                clanFilterText.textContent = 'No Clans Selected';
+            } else if (selectedClans.size === totalClans) {
+                clanFilterText.textContent = 'All Clans';
+            } else if (selectedClans.size === 1) {
+                clanFilterText.textContent = Array.from(selectedClans)[0];
+            } else {
+                clanFilterText.textContent = `${selectedClans.size} Clans Selected`;
+            }
+        }
+
+        function updateSortIndicators(activeColumn, isAscending)
+        {
             const headers = document.querySelectorAll('#playerTable th i.fas');
             headers.forEach((icon, index) => {
                 if (index === activeColumn) {
@@ -248,7 +360,8 @@
             });
         }
 
-        function filterTable() {
+        function filterTable()
+        {
             const trophyFilter = document.getElementById('trophyFilter').value;
             const activeFilter = document.getElementById('activeFilter').value;
             const searchInput = document.getElementById('searchInput').value.toLowerCase();
@@ -258,23 +371,32 @@
             rows.forEach(row => {
                 const trophyLevel = row.getAttribute('data-trophy-level');
                 const isActive = row.getAttribute('data-active');
+                const clanName = row.getAttribute('data-clan-name');
                 const playerName = row.cells[0].textContent.toLowerCase();
                 const playerTag = row.cells[1].textContent.toLowerCase();
                 
                 let showRow = true;
                 
                 // Trophy filter
-                if (trophyFilter && trophyLevel !== trophyFilter) {
+                if (trophyFilter && trophyLevel !== trophyFilter)
+                {
                     showRow = false;
                 }
                 
                 // Active filter
-                if (activeFilter && isActive !== activeFilter) {
+                if (activeFilter && isActive !== activeFilter)
+                {
+                    showRow = false;
+                }
+                // Clan filter
+                if (selectedClans.size > 0 && !selectedClans.has(clanName))
+                {
                     showRow = false;
                 }
                 
                 // Search filter
-                if (searchInput && !playerName.includes(searchInput) && !playerTag.includes(searchInput)) {
+                if (searchInput && !playerName.includes(searchInput) && !playerTag.includes(searchInput))
+                {
                     showRow = false;
                 }
                 
@@ -282,18 +404,35 @@
             });
         }
 
-        function clearFilters() {
+        function clearFilters()
+        {
             document.getElementById('trophyFilter').value = '';
             document.getElementById('activeFilter').value = '';
             document.getElementById('searchInput').value = '';
+
+            // Reset clan filter
+            const selectAllCheckbox = document.getElementById('selectAllClans');
+            const clanCheckboxes = document.querySelectorAll('.clan-checkbox');
+
+            selectAllCheckbox.checked = true;
+            selectedClans.clear();
+
+            clanCheckboxes.forEach(checkbox => {
+                checkbox.checked = true;
+                selectedClans.add(checkbox.value);
+            });
+
+            updateClanFilterText();
             filterTable();
         }
 
-        async function refreshData() {
+        async function refreshData()
+        {
             location.reload();
         }
 
-        async function runWeeklyUpdate() {
+        async function runWeeklyUpdate()
+        {
             if (!confirm('This will run the weekly update process. Continue?')) return;
             
             const button = event.target;
@@ -316,19 +455,28 @@
             }
         }
 
-        async function updatePlayerAverages() {
+        async function updatePlayerAverages()
+        {
             // Implement API call to update specific player averages
             alert(`Update averages for ${selectedPlayerName} - Feature coming soon!`);
         }
 
-        function viewPlayerHistory() {
+        function viewPlayerHistory()
+        {
             // Navigate to player history page
             window.location.href = `/Players/${selectedPlayerId}/History`;
         }
 
-        function togglePlayerStatus() {
+        function togglePlayerStatus()
+        {
             // Implement API call to toggle player active status
             alert(`Toggle status for ${selectedPlayerName} - Feature coming soon!`);
         }
+
+        // Initialize clan filter when page loads
+        document.addEventListener('DOMContentLoaded', function()
+        {
+            initializeClanFilter();
+        });
     </script>
 }

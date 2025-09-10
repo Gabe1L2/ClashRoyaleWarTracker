@@ -9,15 +9,21 @@
 
   <ItemGroup>
     <Compile Remove="Data\**" />
+    <Compile Remove="Pages\Identity\**" />
     <Content Remove="Data\**" />
+    <Content Remove="Pages\Identity\**" />
     <EmbeddedResource Remove="Data\**" />
+    <EmbeddedResource Remove="Pages\Identity\**" />
     <None Remove="Data\**" />
+    <None Remove="Pages\Identity\**" />
   </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.Identity.UI" Version="8.0.19" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="8.0.11" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="8.0.19" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="8.0.19" />
+    <PackageReference Include="Microsoft.VisualStudio.Web.CodeGeneration.Design" Version="8.0.7" />
   </ItemGroup>
 
   <ItemGroup>

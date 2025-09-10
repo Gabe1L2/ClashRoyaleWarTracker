@@ -2,6 +2,7 @@ using ClashRoyaleWarTracker.Application;
 using ClashRoyaleWarTracker.Infrastructure;
 using ClashRoyaleWarTracker.Infrastructure.Services;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Identity;
 
 namespace ClashRoyaleWarTracker.Web
 {

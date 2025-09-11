@@ -9,14 +9,15 @@
         <div class="d-flex justify-content-between align-items-center mb-4">
             <h1 class="display-4">Player War Statistics</h1>
             <div>
+                <button class="btn btn-info" onclick="showAddClanModal()">
+                    <i class="fas fa-plus"></i> Add Clan
+                </button>
                 <button class="btn btn-primary" onclick="refreshData()">
                     <i class="fas fa-sync-alt"></i> Refresh Data
                 </button>
-                <form method="post" asp-page-handler="WeeklyUpdate" style="display: inline;">
-                    <button type="submit" class="btn btn-success" onclick="return confirm('This will run the weekly update process. Continue?')">
-                        <i class="fas fa-calendar-week"></i> Run Weekly Update
-                    </button>
-                </form>
+                <button class="btn btn-success" onclick="showUpdateModal()">
+                    <i class="fas fa-calendar-week"></i> Update Data
+                </button>
             </div>
         </div>
 
@@ -219,6 +220,110 @@
     </div>
 </div>
 
+<!-- Add Clan Modal -->
+<div class="modal fade" id="addClanModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-plus"></i> Add New Clan
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="post" asp-page-handler="AddClan" onsubmit="return validateClanTag()">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="clanTagInput" class="form-label">Clan Tag</label>
+                        <div class="input-group">
+                            <span class="input-group-text">#</span>
+                            <input type="text" 
+                                   class="form-control" 
+                                   id="clanTagInput" 
+                                   name="ClanTag" 
+                                   placeholder="Enter clan tag (without #)" 
+                                   required 
+                                   maxlength="32"
+                                   pattern="[A-Za-z0-9]+"
+                                   title="Clan tag should only contain letters and numbers">
+                        </div>
+                        <div class="form-text">
+                            Enter the clan tag without the # symbol. Example: 2Y9LPQG8
+                        </div>
+                        <div id="clanTagError" class="text-danger d-none"></div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        Cancel
+                    </button>
+                    <button type="submit" class="btn btn-primary" id="addClanSubmitBtn">
+                        <i class="fas fa-plus"></i> Add Clan
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Update Data Modal -->
+<div class="modal fade" id="updateDataModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-database"></i> Update Data Options
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-4">
+                    <h6>Choose Update Type:</h6>
+                    <p class="text-muted">Select how much data you want to update for all clans.</p>
+                </div>
+                
+                <div class="d-grid gap-3">
+                    <div class="card border-primary">
+                        <div class="card-body">
+                            <h6 class="card-title">
+                                <i class="fas fa-calendar-week text-primary"></i> Weekly Update
+                            </h6>
+                            <p class="card-text text-muted mb-3">
+                                Updates clan data and fetches the <strong>last week</strong> of clan war data for all clans.
+                            </p>
+                            <form method="post" asp-page-handler="WeeklyUpdate" style="display: inline;">
+                                <button type="submit" class="btn btn-primary w-100" onclick="return confirmUpdate('weekly')">
+                                    <i class="fas fa-calendar-week"></i> Run Weekly Update
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+
+                    <div class="card border-warning">
+                        <div class="card-body">
+                            <h6 class="card-title">
+                                <i class="fas fa-history text-warning"></i> Update Backlog
+                            </h6>
+                            <p class="card-text text-muted mb-3">
+                                Updates clan data and fetches the <strong>last 10 weeks</strong> of clan war data for all clans. This will take longer.
+                            </p>
+                            <form method="post" asp-page-handler="BacklogUpdate" style="display: inline;">
+                                <button type="submit" class="btn btn-warning w-100" onclick="return confirmUpdate('backlog')">
+                                    <i class="fas fa-history"></i> Run Backlog Update
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    Cancel
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 @section Scripts {
     <script>
         let selectedPlayerId = null;
@@ -239,6 +344,70 @@
 
             var modal = new bootstrap.Modal(document.getElementById('playerActionsModal'));
             modal.show();
+        }
+
+        function showAddClanModal()
+        {
+            // Clear any previous input
+            document.getElementById('clanTagInput').value = '';
+            document.getElementById('clanTagError').classList.add('d-none');
+            
+            var modal = new bootstrap.Modal(document.getElementById('addClanModal'));
+            modal.show();
+        }
+
+        function showUpdateModal()
+        {
+            var modal = new bootstrap.Modal(document.getElementById('updateDataModal'));
+            modal.show();
+        }
+
+        function confirmUpdate(type)
+        {
+            const messages = {
+                'weekly': 'This will run the weekly update process for all clans (last week of data). Continue?',
+                'backlog': 'This will run the backlog update process for all clans (last 10 weeks of data). This may take several minutes. Continue?'
+            };
+            
+            return confirm(messages[type]);
+        }
+
+        function validateClanTag()
+        {
+            const clanTagInput = document.getElementById('clanTagInput');
+            const clanTagError = document.getElementById('clanTagError');
+            const submitBtn = document.getElementById('addClanSubmitBtn');
+            
+            const clanTag = clanTagInput.value.trim().toUpperCase();
+            
+            // Basic validation
+            if (!clanTag) {
+                clanTagError.textContent = 'Clan tag is required.';
+                clanTagError.classList.remove('d-none');
+                return false;
+            }
+            
+            if (!/^[A-Z0-9]+$/.test(clanTag)) {
+                clanTagError.textContent = 'Clan tag should only contain letters and numbers.';
+                clanTagError.classList.remove('d-none');
+                return false;
+            }
+            
+            if (clanTag.length < 3 || clanTag.length > 15) {
+                clanTagError.textContent = 'Clan tag should be between 3 and 15 characters.';
+                clanTagError.classList.remove('d-none');
+                return false;
+            }
+            
+            // Update the input value to uppercase
+            clanTagInput.value = clanTag;
+            
+            // Show loading state
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Adding...';
+            submitBtn.disabled = true;
+            
+            clanTagError.classList.add('d-none');
+            return true;
         }
 
         function sortTable(columnIndex)
@@ -429,30 +598,6 @@
         async function refreshData()
         {
             location.reload();
-        }
-
-        async function runWeeklyUpdate()
-        {
-            if (!confirm('This will run the weekly update process. Continue?')) return;
-            
-            const button = event.target;
-            const originalText = button.innerHTML;
-            button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Running...';
-            button.disabled = true;
-            
-            try {
-                const response = await fetch('/api/weekly-update', { method: 'POST' });
-                if (response.ok) {
-                    location.reload();
-                } else {
-                    alert('Update failed. Please try again.');
-                }
-            } catch (error) {
-                alert('An error occurred during the update.');
-            } finally {
-                button.innerHTML = originalText;
-                button.disabled = false;
-            }
         }
 
         async function updatePlayerAverages()

@@ -67,22 +67,6 @@ namespace ClashRoyaleWarTracker.Infrastructure.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "Players",
-                columns: table => new
-                {
-                    ID = table.Column<int>(type: "int", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
-                    Tag = table.Column<string>(type: "nvarchar(32)", maxLength: 32, nullable: false),
-                    Name = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: true),
-                    IsActive = table.Column<bool>(type: "bit", nullable: false),
-                    LastUpdated = table.Column<DateTime>(type: "datetime2", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_Players", x => x.ID);
-                });
-
-            migrationBuilder.CreateTable(
                 name: "AspNetRoleClaims",
                 columns: table => new
                 {
@@ -212,14 +196,38 @@ namespace ClashRoyaleWarTracker.Infrastructure.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "Players",
+                columns: table => new
+                {
+                    ID = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    ClanID = table.Column<int>(type: "int", nullable: true),
+                    Tag = table.Column<string>(type: "nvarchar(32)", maxLength: 32, nullable: false),
+                    Name = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: true),
+                    IsActive = table.Column<bool>(type: "bit", nullable: false),
+                    LastUpdated = table.Column<DateTime>(type: "datetime2", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Players", x => x.ID);
+                    table.ForeignKey(
+                        name: "FK_Players_Clans_ClanID",
+                        column: x => x.ClanID,
+                        principalTable: "Clans",
+                        principalColumn: "ID",
+                        onDelete: ReferentialAction.SetNull);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "PlayerAverages",
                 columns: table => new
                 {
                     ID = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
                     PlayerID = table.Column<int>(type: "int", nullable: false),
-                    ClanID = table.Column<int>(type: "int", nullable: false),
+                    ClanID = table.Column<int>(type: "int", nullable: true),
                     FameAttackAverage = table.Column<decimal>(type: "decimal(5,2)", nullable: false),
+                    Attacks = table.Column<int>(type: "int", nullable: false),
                     Is5k = table.Column<bool>(type: "bit", nullable: false),
                     LastUpdated = table.Column<DateTime>(type: "datetime2", nullable: false)
                 },
@@ -231,7 +239,7 @@ namespace ClashRoyaleWarTracker.Infrastructure.Migrations
                         column: x => x.ClanID,
                         principalTable: "Clans",
                         principalColumn: "ID",
-                        onDelete: ReferentialAction.Cascade);
+                        onDelete: ReferentialAction.SetNull);
                     table.ForeignKey(
                         name: "FK_PlayerAverages_Players_PlayerID",
                         column: x => x.PlayerID,
@@ -241,7 +249,7 @@ namespace ClashRoyaleWarTracker.Infrastructure.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "RawWarData",
+                name: "PlayerWarHistories",
                 columns: table => new
                 {
                     ID = table.Column<int>(type: "int", nullable: false)
@@ -249,51 +257,23 @@ namespace ClashRoyaleWarTracker.Infrastructure.Migrations
                     PlayerID = table.Column<int>(type: "int", nullable: false),
                     ClanHistoryID = table.Column<int>(type: "int", nullable: false),
                     Fame = table.Column<int>(type: "int", nullable: false),
-                    RepairPoints = table.Column<int>(type: "int", nullable: false),
+                    DecksUsed = table.Column<int>(type: "int", nullable: false),
                     BoatAttacks = table.Column<int>(type: "int", nullable: false),
-                    DecksUsed = table.Column<int>(type: "int", nullable: false),
-                    InsertDate = table.Column<DateTime>(type: "datetime2", nullable: false)
+                    LastUpdated = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    IsModified = table.Column<bool>(type: "bit", nullable: false),
+                    UpdatedBy = table.Column<string>(type: "nvarchar(max)", nullable: true)
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_RawWarData", x => x.ID);
+                    table.PrimaryKey("PK_PlayerWarHistories", x => x.ID);
                     table.ForeignKey(
-                        name: "FK_RawWarData_ClanHistories_ClanHistoryID",
+                        name: "FK_PlayerWarHistories_ClanHistories_ClanHistoryID",
                         column: x => x.ClanHistoryID,
                         principalTable: "ClanHistories",
                         principalColumn: "ID",
                         onDelete: ReferentialAction.Cascade);
                     table.ForeignKey(
-                        name: "FK_RawWarData_Players_PlayerID",
-                        column: x => x.PlayerID,
-                        principalTable: "Players",
-                        principalColumn: "ID",
-                        onDelete: ReferentialAction.Cascade);
-                });
-
-            migrationBuilder.CreateTable(
-                name: "WarData",
-                columns: table => new
-                {
-                    ID = table.Column<int>(type: "int", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
-                    PlayerID = table.Column<int>(type: "int", nullable: false),
-                    ClanHistoryID = table.Column<int>(type: "int", nullable: false),
-                    Fame = table.Column<int>(type: "int", nullable: false),
-                    DecksUsed = table.Column<int>(type: "int", nullable: false),
-                    LastUpdated = table.Column<DateTime>(type: "datetime2", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_WarData", x => x.ID);
-                    table.ForeignKey(
-                        name: "FK_WarData_ClanHistories_ClanHistoryID",
-                        column: x => x.ClanHistoryID,
-                        principalTable: "ClanHistories",
-                        principalColumn: "ID",
-                        onDelete: ReferentialAction.Cascade);
-                    table.ForeignKey(
-                        name: "FK_WarData_Players_PlayerID",
+                        name: "FK_PlayerWarHistories_Players_PlayerID",
                         column: x => x.PlayerID,
                         principalTable: "Players",
                         principalColumn: "ID",
@@ -363,30 +343,24 @@ namespace ClashRoyaleWarTracker.Infrastructure.Migrations
                 unique: true);
 
             migrationBuilder.CreateIndex(
+                name: "IX_Players_ClanID",
+                table: "Players",
+                column: "ClanID");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_Players_Tag",
                 table: "Players",
                 column: "Tag",
                 unique: true);
 
             migrationBuilder.CreateIndex(
-                name: "IX_RawWarData_ClanHistoryID",
-                table: "RawWarData",
+                name: "IX_PlayerWarHistories_ClanHistoryID",
+                table: "PlayerWarHistories",
                 column: "ClanHistoryID");
 
             migrationBuilder.CreateIndex(
-                name: "IX_RawWarData_PlayerID_ClanHistoryID",
-                table: "RawWarData",
-                columns: new[] { "PlayerID", "ClanHistoryID" },
-                unique: true);
-
-            migrationBuilder.CreateIndex(
-                name: "IX_WarData_ClanHistoryID",
-                table: "WarData",
-                column: "ClanHistoryID");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_WarData_PlayerID_ClanHistoryID",
-                table: "WarData",
+                name: "IX_PlayerWarHistories_PlayerID_ClanHistoryID",
+                table: "PlayerWarHistories",
                 columns: new[] { "PlayerID", "ClanHistoryID" },
                 unique: true);
         }
@@ -413,10 +387,7 @@ namespace ClashRoyaleWarTracker.Infrastructure.Migrations
                 name: "PlayerAverages");
 
             migrationBuilder.DropTable(
-                name: "RawWarData");
-
-            migrationBuilder.DropTable(
-                name: "WarData");
+                name: "PlayerWarHistories");
 
             migrationBuilder.DropTable(
                 name: "AspNetRoles");

@@ -21,6 +21,9 @@ namespace ClashRoyaleWarTracker.Web.Pages
         public IList<PlayerAverageDTO> PlayerAverages { get; set; } = new List<PlayerAverageDTO>();
         public IList<Clan> AllClans { get; set; } = new List<Clan>();
 
+        [BindProperty]
+        public string ClanTag { get; set; } = string.Empty;
+
         public async Task OnGetAsync()
         {
             try
@@ -59,7 +62,7 @@ namespace ClashRoyaleWarTracker.Web.Pages
         {
             try
             {
-                var result = await _applicationService.WeeklyUpdateAsync();
+                var result = await _applicationService.DataUpdateAsync(1);
                 if (result.Success)
                 {
                     TempData["SuccessMessage"] = result.Message;
@@ -73,6 +76,52 @@ namespace ClashRoyaleWarTracker.Web.Pages
             {
                 _logger.LogError(ex, "Error during weekly update");
                 TempData["ErrorMessage"] = "An unexpected error occurred during the weekly update.";
+            }
+
+            return RedirectToPage();
+        }
+
+        public async Task<IActionResult> OnPostBacklogUpdateAsync()
+        {
+            try
+            {
+                var result = await _applicationService.DataUpdateAsync(10);
+                if (result.Success)
+                {
+                    TempData["SuccessMessage"] = result.Message;
+                }
+                else
+                {
+                    TempData["ErrorMessage"] = result.Message;
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error during backlog update");
+                TempData["ErrorMessage"] = "An unexpected error occurred during the backlog update.";
+            }
+
+            return RedirectToPage();
+        }
+
+        public async Task<IActionResult> OnPostAddClanAsync()
+        {
+            try
+            {
+                var result = await _applicationService.AddClanAsync(ClanTag ?? string.Empty);
+                if (result.Success)
+                {
+                    TempData["SuccessMessage"] = result.Message;
+                }
+                else
+                {
+                    TempData["ErrorMessage"] = result.Message;
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error adding clan with tag: {ClanTag}", ClanTag);
+                TempData["ErrorMessage"] = "An unexpected error occurred while adding the clan. Please try again.";
             }
 
             return RedirectToPage();

@@ -12,7 +12,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace ClashRoyaleWarTracker.Infrastructure.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20250826205000_InitialCreate")]
+    [Migration("20250911212214_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -96,6 +96,9 @@ namespace ClashRoyaleWarTracker.Infrastructure.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("ID"));
 
+                    b.Property<int?>("ClanID")
+                        .HasColumnType("int");
+
                     b.Property<bool>("IsActive")
                         .HasColumnType("bit");
 
@@ -113,6 +116,8 @@ namespace ClashRoyaleWarTracker.Infrastructure.Migrations
 
                     b.HasKey("ID");
 
+                    b.HasIndex("ClanID");
+
                     b.HasIndex("Tag")
                         .IsUnique();
 
@@ -127,7 +132,10 @@ namespace ClashRoyaleWarTracker.Infrastructure.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("ID"));
 
-                    b.Property<int>("ClanID")
+                    b.Property<int>("Attacks")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("ClanID")
                         .HasColumnType("int");
 
                     b.Property<decimal>("FameAttackAverage")
@@ -152,7 +160,7 @@ namespace ClashRoyaleWarTracker.Infrastructure.Migrations
                     b.ToTable("PlayerAverages");
                 });
 
-            modelBuilder.Entity("ClashRoyaleWarTracker.Application.Models.RawWarData", b =>
+            modelBuilder.Entity("ClashRoyaleWarTracker.Application.Models.PlayerWarHistory", b =>
                 {
                     b.Property<int>("ID")
                         .ValueGeneratedOnAdd()
@@ -172,41 +180,8 @@ namespace ClashRoyaleWarTracker.Infrastructure.Migrations
                     b.Property<int>("Fame")
                         .HasColumnType("int");
 
-                    b.Property<DateTime>("InsertDate")
-                        .HasColumnType("datetime2");
-
-                    b.Property<int>("PlayerID")
-                        .HasColumnType("int");
-
-                    b.Property<int>("RepairPoints")
-                        .HasColumnType("int");
-
-                    b.HasKey("ID");
-
-                    b.HasIndex("ClanHistoryID");
-
-                    b.HasIndex("PlayerID", "ClanHistoryID")
-                        .IsUnique();
-
-                    b.ToTable("RawWarData");
-                });
-
-            modelBuilder.Entity("ClashRoyaleWarTracker.Application.Models.WarData", b =>
-                {
-                    b.Property<int>("ID")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("ID"));
-
-                    b.Property<int>("ClanHistoryID")
-                        .HasColumnType("int");
-
-                    b.Property<int>("DecksUsed")
-                        .HasColumnType("int");
-
-                    b.Property<int>("Fame")
-                        .HasColumnType("int");
+                    b.Property<bool>("IsModified")
+                        .HasColumnType("bit");
 
                     b.Property<DateTime>("LastUpdated")
                         .HasColumnType("datetime2");
@@ -214,6 +189,9 @@ namespace ClashRoyaleWarTracker.Infrastructure.Migrations
                     b.Property<int>("PlayerID")
                         .HasColumnType("int");
 
+                    b.Property<string>("UpdatedBy")
+                        .HasColumnType("nvarchar(max)");
+
                     b.HasKey("ID");
 
                     b.HasIndex("ClanHistoryID");
@@ -221,7 +199,7 @@ namespace ClashRoyaleWarTracker.Infrastructure.Migrations
                     b.HasIndex("PlayerID", "ClanHistoryID")
                         .IsUnique();
 
-                    b.ToTable("WarData");
+                    b.ToTable("PlayerWarHistories");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRole", b =>
@@ -435,13 +413,20 @@ namespace ClashRoyaleWarTracker.Infrastructure.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("ClashRoyaleWarTracker.Application.Models.Player", b =>
+                {
+                    b.HasOne("ClashRoyaleWarTracker.Application.Models.Clan", null)
+                        .WithMany()
+                        .HasForeignKey("ClanID")
+                        .OnDelete(DeleteBehavior.SetNull);
+                });
+
             modelBuilder.Entity("ClashRoyaleWarTracker.Application.Models.PlayerAverage", b =>
                 {
                     b.HasOne("ClashRoyaleWarTracker.Application.Models.Clan", null)
                         .WithMany()
                         .HasForeignKey("ClanID")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.SetNull);
 
                     b.HasOne("ClashRoyaleWarTracker.Application.Models.Player", null)
                         .WithMany()
@@ -450,22 +435,7 @@ namespace ClashRoyaleWarTracker.Infrastructure.Migrations
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("ClashRoyaleWarTracker.Application.Models.RawWarData", b =>
-                {
-                    b.HasOne("ClashRoyaleWarTracker.Application.Models.ClanHistory", null)
-                        .WithMany()
-                        .HasForeignKey("ClanHistoryID")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("ClashRoyaleWarTracker.Application.Models.Player", null)
-                        .WithMany()
-                        .HasForeignKey("PlayerID")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-                });
-
-            modelBuilder.Entity("ClashRoyaleWarTracker.Application.Models.WarData", b =>
+            modelBuilder.Entity("ClashRoyaleWarTracker.Application.Models.PlayerWarHistory", b =>
                 {
                     b.HasOne("ClashRoyaleWarTracker.Application.Models.ClanHistory", null)
                         .WithMany()

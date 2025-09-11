@@ -23,7 +23,7 @@ namespace ClashRoyaleWarTracker.Application.Services
             _logger = logger;
         }
 
-        public async Task<ServiceResult> WeeklyUpdateAsync()
+        public async Task<ServiceResult> DataUpdateAsync(int numOfWeeksToUse)
         {
             try
             {
@@ -78,7 +78,7 @@ namespace ClashRoyaleWarTracker.Application.Services
                     }
 
                     // Populate new player war histories
-                    var warHistoryResult = await PopulatePlayerWarHistories(clan); // does last week
+                    var warHistoryResult = await PopulatePlayerWarHistories(clan, numOfWeeksToUse);
                     if (warHistoryResult.Success)
                     {
                         successfulWarHistoryUpdates++;
@@ -113,13 +113,13 @@ namespace ClashRoyaleWarTracker.Application.Services
                     _logger.LogWarning("Failed to update sub-5k player averages: {ErrorMessage}", updateSub5kAveragesResult.Message);
                 }
 
-                string summary = $"Weekly update completed. " + 
+                string summary = $"Data update completed. " + 
                               $"Total Clans: {totalClans}, " +
                               $"Successful Clan Updates: {successfulUpdates}, Failed Clan Updates: {failedUpdates}, " +
                               $"Successful ClanHistory Updates: {successfulHistoryUpdates}, Failed ClanHistory Updates: {failedHistoryUpdates}," +
                               $"Successful PlayerWarHistory Updates: {successfulWarHistoryUpdates}, Failed PlayerWarHistory Updates: {failedWarHistoryUpdates}";
 
-                _logger.LogInformation("Weekly update completed. Total Clans: {TotalClans}, Successful Clan Updates: {SuccessfulUpdates}, Failed Clan Updates: {FailedUpdates}, Successful ClanHistory Updates: {SuccessfulHistoryUpdates}, Failed ClanHistory Updates: {FailedHistoryUpdates}, Successful PlayerWarHistory Updates: {SuccessfulWarHistoryUpdates}, Failed PlayerWarHistory Updates: {FailedWarHistoryUpdates}", 
+                _logger.LogInformation("Data update completed. Total Clans: {TotalClans}, Successful Clan Updates: {SuccessfulUpdates}, Failed Clan Updates: {FailedUpdates}, Successful ClanHistory Updates: {SuccessfulHistoryUpdates}, Failed ClanHistory Updates: {FailedHistoryUpdates}, Successful PlayerWarHistory Updates: {SuccessfulWarHistoryUpdates}, Failed PlayerWarHistory Updates: {FailedWarHistoryUpdates}", 
                     totalClans, successfulUpdates, failedUpdates, successfulHistoryUpdates, failedHistoryUpdates, successfulWarHistoryUpdates, failedWarHistoryUpdates);
 
                 if (failedUpdates == 0 && failedHistoryUpdates == 0 && failedWarHistoryUpdates == 0)
@@ -137,8 +137,8 @@ namespace ClashRoyaleWarTracker.Application.Services
             }
             catch(Exception ex)
             {
-                _logger.LogError(ex, "An unexpected error occurred during the weekly update");
-                return ServiceResult.Failure("An unexpected error occurred during the weekly update");
+                _logger.LogError(ex, "An unexpected error occurred during the data update");
+                return ServiceResult.Failure("An unexpected error occurred during the data update");
             }
         }
 

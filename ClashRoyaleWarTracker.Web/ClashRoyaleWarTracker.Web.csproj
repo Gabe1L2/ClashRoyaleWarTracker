@@ -4,7 +4,6 @@
     <TargetFramework>net8.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
-    <UserSecretsId>aspnet-ClashRoyaleWarTracker.Web-6c242fba-7275-4e69-a0e7-4b430b574877</UserSecretsId>
   </PropertyGroup>
 
   <ItemGroup>

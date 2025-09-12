@@ -22,7 +22,15 @@ jobs:
         run: dotnet build --configuration Release --no-restore
 
       - name: Publish
-        run: dotnet publish --configuration Release --output ./publish --runtime win-x86
+        run: dotnet publish --configuration Release --output ./publish --runtime win-x86 
+
+      - name: Debug - Show connection string (masked)
+        run: |
+          echo "Connection string: ${{ secrets.CONNECTION_STRING != '' && 'SET' || 'NOT SET' }}"
+          echo "API Key: ${{ secrets.CLASH_ROYALE_API_KEY != '' && 'SET' || 'NOT SET' }}"
+          echo "Username: ${{ secrets.DEFAULT_ADMIN_USERNAME != '' && 'SET' || 'NOT SET' }}"
+          echo "Password: ${{ secrets.DEFAULT_ADMIN_PASSWORD != '' && 'SET' || 'NOT SET' }}"
+        shell: pwsh
 
       - name: Create appsettings.Production.json
         run: |
@@ -49,6 +57,18 @@ jobs:
             },
             "AllowedHosts": "*"
           }' > ./ClashRoyaleWarTracker.Web/appsettings.Production.json
+        shell: pwsh
+
+      - name: Debug - Verify appsettings.Production.json was created
+        run: |
+          echo "=== appsettings.Production.json content (with secrets masked) ==="
+          Get-Content ./ClashRoyaleWarTracker.Web/appsettings.Production.json | ForEach-Object { 
+            if ($_ -match '"DefaultConnection":|"ApiKey":|"Password":') { 
+              $_ -replace '": ".*"', '": "***MASKED***"' 
+            } else { 
+              $_ 
+            } 
+          }
         shell: pwsh
 
       - name: Create web.config for Production

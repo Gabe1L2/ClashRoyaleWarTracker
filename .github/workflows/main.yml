@@ -24,15 +24,7 @@ jobs:
       - name: Publish
         run: dotnet publish --configuration Release --output ./publish --runtime win-x86 
 
-      - name: Debug - Show connection string (masked)
-        run: |
-          echo "Connection string: ${{ secrets.CONNECTION_STRING != '' && 'SET' || 'NOT SET' }}"
-          echo "API Key: ${{ secrets.CLASH_ROYALE_API_KEY != '' && 'SET' || 'NOT SET' }}"
-          echo "Username: ${{ secrets.DEFAULT_ADMIN_USERNAME != '' && 'SET' || 'NOT SET' }}"
-          echo "Password: ${{ secrets.DEFAULT_ADMIN_PASSWORD != '' && 'SET' || 'NOT SET' }}"
-        shell: pwsh
-
-      - name: Create appsettings.Production.json
+      - name: Create production appsettings.json
         run: |
           echo '{
             "ConnectionStrings": {
@@ -56,36 +48,7 @@ jobs:
               }
             },
             "AllowedHosts": "*"
-          }' > ./ClashRoyaleWarTracker.Web/appsettings.Production.json
-        shell: pwsh
-
-      - name: Debug - Verify appsettings.Production.json was created
-        run: |
-          echo "=== appsettings.Production.json content (with secrets masked) ==="
-          Get-Content ./ClashRoyaleWarTracker.Web/appsettings.Production.json | ForEach-Object { 
-            if ($_ -match '"DefaultConnection":|"ApiKey":|"Password":') { 
-              $_ -replace '": ".*"', '": "***MASKED***"' 
-            } else { 
-              $_ 
-            } 
-          }
-        shell: pwsh
-
-      - name: Create web.config for Production
-        run: |
-          echo '<?xml version="1.0" encoding="utf-8"?>
-          <configuration>
-            <system.webServer>
-              <handlers>
-                <add name="aspNetCore" path="*" verb="*" modules="AspNetCoreModuleV2" resourceType="Unspecified" />
-              </handlers>
-              <aspNetCore processPath="dotnet" arguments="ClashRoyaleWarTracker.Web.dll" stdoutLogEnabled="true" stdoutLogFile="logs\stdout" hostingModel="inprocess">
-                <environmentVariables>
-                  <environmentVariable name="ASPNETCORE_ENVIRONMENT" value="Production" />
-                </environmentVariables>
-              </aspNetCore>
-            </system.webServer>
-          </configuration>' > ./ClashRoyaleWarTracker.Web/web.config
+          }' > ./publish/appsettings.json
         shell: pwsh
 
       - name: Deploy to MonsterASP.NET via WebDeploy

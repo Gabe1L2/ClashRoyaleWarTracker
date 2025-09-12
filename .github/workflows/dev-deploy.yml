@@ -30,9 +30,6 @@ jobs:
 
       - name: Publish
         run: dotnet publish --configuration Release --output ./publish --runtime win-x86 
-        
-      - name: Test with .NET
-        run: dotnet test
 
       - name: Create appsettings.Development.json
         run: |

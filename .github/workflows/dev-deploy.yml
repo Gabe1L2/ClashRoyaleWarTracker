@@ -1,14 +1,21 @@
-name: Build, publish and deploy to MonsterASP.NET
+name: Manual Development Deployment
 on: 
-  push:
-    branches: [ master ]  # Only run on master branch
+  workflow_dispatch:  # Manual trigger only
+    inputs:
+      branch:
+        description: 'Branch to deploy'
+        required: true
+        default: 'development'
+        type: string
 
 jobs:
   build_and_deploy:
     runs-on: windows-latest
-    environment: Production  # Always Production since only master triggers this
+    environment: Development  # Uses Development environment secrets
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.branch }}  # Deploy the specified branch
 
       - name: Setup .NET 8
         uses: actions/setup-dotnet@v4
@@ -27,7 +34,7 @@ jobs:
       - name: Test with .NET
         run: dotnet test
 
-      - name: Create appsettings.Production.json
+      - name: Create appsettings.Development.json
         run: |
           echo '{
             "ConnectionStrings": {
@@ -46,15 +53,15 @@ jobs:
             ],
             "Logging": {
               "LogLevel": {
-                "Default": "Warning",
-                "Microsoft.AspNetCore": "Warning"
+                "Default": "Debug",
+                "Microsoft.AspNetCore": "Information"
               }
             },
             "AllowedHosts": "*"
-          }' > ./ClashRoyaleWarTracker.Web/appsettings.Production.json
+          }' > ./ClashRoyaleWarTracker.Web/appsettings.Development.json
         shell: pwsh
 
-      - name: Deploy to MonsterASP.NET via WebDeploy
+      - name: Deploy to Development Site via WebDeploy
         uses: rasmusbuchholdt/simply-web-deploy@2.1.0
         with:
           website-name: ${{ secrets.WEBSITE_NAME }}

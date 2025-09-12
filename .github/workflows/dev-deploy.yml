@@ -55,7 +55,7 @@ jobs:
               }
             },
             "AllowedHosts": "*"
-          }' > ./ClashRoyaleWarTracker.Web/appsettings.Development.json
+          }' > ./ClashRoyaleWarTracker.Web/appsettings.json
         shell: pwsh
 
       - name: Deploy to Development Site via WebDeploy

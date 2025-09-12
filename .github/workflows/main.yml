@@ -51,6 +51,23 @@ jobs:
           }' > ./ClashRoyaleWarTracker.Web/appsettings.Production.json
         shell: pwsh
 
+      - name: Create web.config for Production
+        run: |
+          echo '<?xml version="1.0" encoding="utf-8"?>
+          <configuration>
+            <system.webServer>
+              <handlers>
+                <add name="aspNetCore" path="*" verb="*" modules="AspNetCoreModuleV2" resourceType="Unspecified" />
+              </handlers>
+              <aspNetCore processPath="dotnet" arguments="ClashRoyaleWarTracker.Web.dll" stdoutLogEnabled="true" stdoutLogFile="logs\stdout" hostingModel="inprocess">
+                <environmentVariables>
+                  <environmentVariable name="ASPNETCORE_ENVIRONMENT" value="Production" />
+                </environmentVariables>
+              </aspNetCore>
+            </system.webServer>
+          </configuration>' > ./ClashRoyaleWarTracker.Web/web.config
+        shell: pwsh
+
       - name: Deploy to MonsterASP.NET via WebDeploy
         uses: rasmusbuchholdt/simply-web-deploy@2.1.0
         with:

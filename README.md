@@ -4,14 +4,17 @@ A comprehensive .NET 8 Razor Pages application for automatically tracking and ma
 
 ## 🎯 Project Overview
 
-I am creating this project to gain more experience with full-stack .NET development and to gain exposure to technologies I have not previously worked with, including **Razor Pages** and **Entity Framework Core**. This project is still in progress with only some pieces working right now, but I am actively working on it as I have time.
+I am creating this project to gain more experience with full-stack .NET development and to gain exposure to technologies in the .NET ecosystem, including **Razor Pages** and **Entity Framework Core**. This project is still in progress but it is functional, and I am adding more features as time allows.
 
-**What this project will eventually allow you to do** is automatically keep track of your Clash Royale clan(s)'s war stats, which need to be updated weekly to maintain accurate historical data and performance analytics.
+What this project allows you do is automatically keep track of your Clash Royale clan(s)'s war stats, getting updated weekly to maintain accurate historical data and performance analytics.
+
+This is a private application, in that you can run this for yourself and your clan(s). I will be setting up a guest login so anyone can see the features available
 
 ## 🚀 Current Status
 
 **🟢 Working Features:**
 - ✅ Clan management (Add, Update, Delete, View)
+- ✅ Player statistics and averages
 - ✅ Integration with Clash Royale API
 - ✅ Entity Framework Core with SQL Server
 - ✅ User authentication with ASP.NET Core Identity
@@ -21,7 +24,6 @@ I am creating this project to gain more experience with full-stack .NET developm
 **🟡 In Development:**
 - 🔄 Automated weekly war statistics updates
 - 🔄 Historical clan performance tracking
-- 🔄 Player statistics and averages
 - 🔄 War participation analytics
 - 🔄 Administrative dashboard
 

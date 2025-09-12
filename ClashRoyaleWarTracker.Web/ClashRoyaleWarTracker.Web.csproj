@@ -18,6 +18,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Compile Remove="Areas\Identity\Pages\Account\ForgotPassword.cshtml.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.Identity.UI" Version="8.0.19" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="8.0.11" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="8.0.19" />
@@ -28,6 +32,10 @@
   <ItemGroup>
     <ProjectReference Include="..\ClashRoyaleWarTracker.Application\ClashRoyaleWarTracker.Application.csproj" />
     <ProjectReference Include="..\ClashRoyaleWarTracker.Infrastructure\ClashRoyaleWarTracker.Infrastructure.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="wwwroot\NewFolder\" />
   </ItemGroup>
 
 </Project>

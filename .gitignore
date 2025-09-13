@@ -368,3 +368,5 @@ appsettings.Production.json
 secrets.json
 /ClashRoyaleWarTracker.Web/appsettings.json
 /ClashRoyaleWarTracker.Web/Properties/launchSettings.json
+/.copilot/instructions.md
+/.github/copilot-instructions.md

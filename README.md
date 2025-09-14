@@ -42,7 +42,6 @@ This application automatically tracks your Clash Royale clan(s) war statistics, 
 
 ### **Production Environment**
 - **Hosting Provider**: [MonsterASP.NET](https://www.monsterasp.net/) - Professional ASP.NET hosting
-- **Application Hosting**: Windows-based shared hosting with .NET 8 support
 - **Database**: SQL Server hosting through MonsterASP.NET
 - **Deployment**: Automated CI/CD pipeline using GitHub Actions with WebDeploy
 - **Environment Management**: Separate Development and Production configurations

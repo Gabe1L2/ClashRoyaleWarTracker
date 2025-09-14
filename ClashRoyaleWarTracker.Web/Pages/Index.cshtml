@@ -27,7 +27,7 @@
         <button class="btn btn-primary" onclick="refreshData()">
             <i class="fas fa-sync-alt"></i> Refresh Data
         </button>
-        @if (Model.CanUpdateData)
+        @if (Model.CanUpdateWarData)
         {
             <button class="btn btn-success" onclick="showUpdateModal()">
                 <i class="fas fa-calendar-week"></i> Update Data
@@ -446,7 +446,7 @@
         // Store user permissions from server
         const userRole = '@Model.CurrentUserRole';
         const canManageClans = @Model.CanManageClans.ToString().ToLower();
-        const canUpdateData = @Model.CanUpdateData.ToString().ToLower();
+        const canUpdateWarData = @Model.CanUpdateWarData.ToString().ToLower();
         const canModifyPlayerData = @Model.CanModifyPlayerData.ToString().ToLower();
 
         function selectPlayer(playerId, playerName, playerTag)

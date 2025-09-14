@@ -12,16 +12,22 @@ namespace ClashRoyaleWarTracker.Application.Models
         Guest = 4       // Lowest permissions
     }
 
+    public class UserWithRoles
+    {
+        public string Id { get; set; } = string.Empty;
+        public string UserName { get; set; } = string.Empty;
+        public string Role { get; set; } = string.Empty;
+    }
+
     /// <summary>
     /// Define specific permissions for features
     /// </summary>
     public static class Permissions
     {
+        public const string ManageUsers = "ManageUsers";
         public const string ManageClans = "ManageClans";
         public const string ViewStatistics = "ViewStatistics";
-        public const string UpdateData = "UpdateData";
-        public const string ManageUsers = "ManageUsers";
-        public const string ViewReports = "ViewReports";
+        public const string UpdateWarData = "UpdateWarData";
         public const string ModifyPlayerData = "ModifyPlayerData";
     }
 
@@ -36,28 +42,24 @@ namespace ClashRoyaleWarTracker.Application.Models
             {
                 Permissions.ManageClans,
                 Permissions.ViewStatistics,
-                Permissions.UpdateData,
+                Permissions.UpdateWarData,
                 Permissions.ManageUsers,
-                Permissions.ViewReports,
                 Permissions.ModifyPlayerData
             },
             [UserRole.Management] = new()
             {
                 Permissions.ViewStatistics,
-                Permissions.UpdateData,
-                Permissions.ViewReports,
+                Permissions.UpdateWarData,
                 Permissions.ModifyPlayerData
             },
             [UserRole.Coleader] = new()
             {
                 Permissions.ViewStatistics,
-                Permissions.UpdateData,
-                Permissions.ViewReports
+                Permissions.ModifyPlayerData
             },
             [UserRole.Member] = new()
             {
                 Permissions.ViewStatistics,
-                Permissions.ViewReports
             },
             [UserRole.Guest] = new()
             {

@@ -28,9 +28,12 @@ namespace ClashRoyaleWarTracker.Infrastructure.Services
                 var userManager = scope.ServiceProvider.GetRequiredService<UserManager<IdentityUser>>();
                 var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
 
-                // Create roles if they don't exist
+                // Create roles if they don't exist - ordered from highest to lowest permission
                 await CreateRoleIfNotExists(roleManager, "Admin");
+                await CreateRoleIfNotExists(roleManager, "Management");
+                await CreateRoleIfNotExists(roleManager, "Coleader");
                 await CreateRoleIfNotExists(roleManager, "Member");
+                await CreateRoleIfNotExists(roleManager, "Guest");
 
                 // Read users from configuration
                 var defaultUsers = _configuration.GetSection("DefaultUsers").Get<DefaultUser[]>();

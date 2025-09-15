@@ -1,18 +1,20 @@
 using ClashRoyaleWarTracker.Application.Interfaces;
 using ClashRoyaleWarTracker.Application.Models;
+using ClashRoyaleWarTracker.Application.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using ClashRoyaleWarTracker.Web.Pages.Shared;
 
 namespace ClashRoyaleWarTracker.Web.Pages
 {
     [Authorize]
-    public class IndexModel : PageModel
+    public class IndexModel : BasePageModel
     {
         private readonly IApplicationService _applicationService;
         private readonly ILogger<IndexModel> _logger;
 
-        public IndexModel(IApplicationService applicationService, ILogger<IndexModel> logger)
+        public IndexModel(IApplicationService applicationService, ILogger<IndexModel> logger, IUserRoleService userRoleService) : base(userRoleService)
         {
             _applicationService = applicationService;
             _logger = logger;
@@ -20,6 +22,7 @@ namespace ClashRoyaleWarTracker.Web.Pages
 
         public IList<PlayerAverageDTO> PlayerAverages { get; set; } = new List<PlayerAverageDTO>();
         public IList<Clan> AllClans { get; set; } = new List<Clan>();
+        
 
         [BindProperty]
         public string ClanTag { get; set; } = string.Empty;
@@ -28,6 +31,18 @@ namespace ClashRoyaleWarTracker.Web.Pages
         {
             try
             {
+                // Get current user's role
+                var getUserRoleResult = await _userRoleService.GetUserRoleAsync(User);
+                if (getUserRoleResult.Success)
+                {
+                    CurrentUserRole = getUserRoleResult.Data;
+                }
+                else
+                {
+                    _logger.LogWarning("Failed to get user role: {Message}", getUserRoleResult.Message);
+                    CurrentUserRole = UserRole.Guest;
+                }
+
                 var playerAveragesResult = await _applicationService.GetAllPlayerAveragesAsync();
                 if (playerAveragesResult.Success && playerAveragesResult.Data != null)
                 {
@@ -55,20 +70,31 @@ namespace ClashRoyaleWarTracker.Web.Pages
                 _logger.LogError(ex, "Error loading data");
                 PlayerAverages = new List<PlayerAverageDTO>();
                 AllClans = new List<Clan>();
+                CurrentUserRole = UserRole.Guest;
             }
         }
 
         public async Task<IActionResult> OnPostWeeklyUpdateAsync()
         {
+            // Check permission
+            var hasPermissionResult = await _userRoleService.HasPermissionAsync(User, Permissions.UpdateWarData);
+            if (!hasPermissionResult.Success || !hasPermissionResult.Data)
+            {
+                TempData["ErrorMessage"] = "You don't have permission to update data.";
+                return RedirectToPage();
+            }
+
             try
             {
                 var result = await _applicationService.DataUpdateAsync(1);
                 if (result.Success)
                 {
+                    _logger.LogInformation("Weekly update successful: {Message}", result.Message);
                     TempData["SuccessMessage"] = result.Message;
                 }
                 else
                 {
+                    _logger.LogWarning("Weekly update failed: {Message}", result.Message);
                     TempData["ErrorMessage"] = result.Message;
                 }
             }
@@ -83,6 +109,14 @@ namespace ClashRoyaleWarTracker.Web.Pages
 
         public async Task<IActionResult> OnPostBacklogUpdateAsync()
         {
+            // Check permission
+            var hasPermissionResult = await _userRoleService.HasPermissionAsync(User, Permissions.UpdateWarData);
+            if (!hasPermissionResult.Success || !hasPermissionResult.Data)
+            {
+                TempData["ErrorMessage"] = "You don't have permission to update data.";
+                return RedirectToPage();
+            }
+
             try
             {
                 var result = await _applicationService.DataUpdateAsync(10);
@@ -106,6 +140,14 @@ namespace ClashRoyaleWarTracker.Web.Pages
 
         public async Task<IActionResult> OnPostAddClanAsync()
         {
+            // Check permission using the service
+            var hasPermissionResult = await _userRoleService.HasPermissionAsync(User, Permissions.ManageClans);
+            if (!hasPermissionResult.Success || !hasPermissionResult.Data)
+            {
+                TempData["ErrorMessage"] = "You don't have permission to update data.";
+                return RedirectToPage();
+            }
+
             try
             {
                 var result = await _applicationService.AddClanAsync(ClanTag ?? string.Empty);
@@ -122,6 +164,43 @@ namespace ClashRoyaleWarTracker.Web.Pages
             {
                 _logger.LogError(ex, "Error adding clan with tag: {ClanTag}", ClanTag);
                 TempData["ErrorMessage"] = "An unexpected error occurred while adding the clan. Please try again.";
+            }
+
+            return RedirectToPage();
+        }
+
+        public async Task<IActionResult> OnPostDeleteClanAsync()
+        {
+            // Check permission using the service
+            var hasPermissionResult = await _userRoleService.HasPermissionAsync(User, Permissions.ManageClans);
+            if (!hasPermissionResult.Success || !hasPermissionResult.Data)
+            {
+                TempData["ErrorMessage"] = "You don't have permission to update data.";
+                return RedirectToPage();
+            }
+
+            try
+            {
+                if (string.IsNullOrWhiteSpace(ClanTag))
+                {
+                    TempData["ErrorMessage"] = "Please select a clan to delete.";
+                    return RedirectToPage();
+                }
+
+                var result = await _applicationService.DeleteClanAsync(ClanTag);
+                if (result.Success)
+                {
+                    TempData["SuccessMessage"] = result.Message;
+                }
+                else
+                {
+                    TempData["ErrorMessage"] = result.Message;
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error deleting clan with tag: {ClanTag}", ClanTag);
+                TempData["ErrorMessage"] = "An unexpected error occurred while deleting the clan. Please try again.";
             }
 
             return RedirectToPage();

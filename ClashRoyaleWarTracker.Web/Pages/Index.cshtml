@@ -1,26 +1,43 @@
 ﻿@page
+@using ClashRoyaleWarTracker.Application.Models
 @model IndexModel
 @{
     ViewData["Title"] = "Player War Statistics Dashboard";
 }
 
+<!-- Update the button section -->
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="display-4">Player Statistics</h1>
+    <div>
+        @if (Model.CanManageClans)
+        {
+            <button class="btn btn-info" onclick="showManageClansModal()">
+                <i class="fas fa-cogs"></i> Manage Clans
+            </button>
+        }
+        else if (Model.CurrentUserRole <= UserRole.Coleader)
+        {
+            <button class="btn btn-outline-info" style="opacity: 0.7; cursor: not-allowed;"
+                    onclick="showPermissionDeniedManageClansModal()"
+                    title="Admin permission required">
+                <i class="fas fa-lock me-1"></i>
+                <i class="fas fa-cogs"></i> Manage Clans
+            </button>
+        }
+        <button class="btn btn-primary" onclick="refreshData()">
+            <i class="fas fa-sync-alt"></i> Refresh Data
+        </button>
+        @if (Model.CanUpdateWarData)
+        {
+            <button class="btn btn-success" onclick="showUpdateModal()">
+                <i class="fas fa-calendar-week"></i> Update Data
+            </button>
+        }
+    </div>
+</div>
+
 <div class="row">
     <div class="col-12">
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <h1 class="display-4">Player Statistics</h1>
-            <div>
-                <button class="btn btn-info" onclick="showAddClanModal()">
-                    <i class="fas fa-plus"></i> Add Clan
-                </button>
-                <button class="btn btn-primary" onclick="refreshData()">
-                    <i class="fas fa-sync-alt"></i> Refresh Data
-                </button>
-                <button class="btn btn-success" onclick="showUpdateModal()">
-                    <i class="fas fa-calendar-week"></i> Update Data
-                </button>
-            </div>
-        </div>
-
         @if (TempData["SuccessMessage"] != null)
         {
             <div class="alert alert-success alert-dismissible fade show" role="alert">
@@ -220,47 +237,142 @@
     </div>
 </div>
 
-<!-- Add Clan Modal -->
-<div class="modal fade" id="addClanModal" tabindex="-1">
-    <div class="modal-dialog">
+<!-- Manage Clans Modal (Admins only) -->
+<div class="modal fade" id="manageClansModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title">
-                    <i class="fas fa-plus"></i> Add New Clan
+                    <i class="fas fa-cogs"></i> Manage Clans
                 </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
-            <form method="post" asp-page-handler="AddClan" onsubmit="return validateClanTag()">
-                <div class="modal-body">
-                    <div class="mb-3">
-                        <label for="clanTagInput" class="form-label">Clan Tag</label>
-                        <div class="input-group">
-                            <span class="input-group-text">#</span>
-                            <input type="text" 
-                                   class="form-control" 
-                                   id="clanTagInput" 
-                                   name="ClanTag" 
-                                   placeholder="Enter clan tag (without #)" 
-                                   required 
-                                   maxlength="32"
-                                   pattern="[A-Za-z0-9]+"
-                                   title="Clan tag should only contain letters and numbers">
-                        </div>
-                        <div class="form-text">
-                            Enter the clan tag without the # symbol. Example: 2Y9LPQG8
-                        </div>
-                        <div id="clanTagError" class="text-danger d-none"></div>
+            <div class="modal-body">
+                <!-- Navigation Tabs -->
+                <ul class="nav nav-tabs mb-4" id="clanManagementTabs" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active" id="add-clan-tab" data-bs-toggle="tab" data-bs-target="#add-clan" type="button" role="tab">
+                            <i class="fas fa-plus me-2"></i>Add Clan
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="delete-clan-tab" data-bs-toggle="tab" data-bs-target="#delete-clan" type="button" role="tab">
+                            <i class="fas fa-trash me-2"></i>Delete Clan
+                        </button>
+                    </li>
+                </ul>
+
+                <!-- Tab Content -->
+                <div class="tab-content" id="clanManagementTabContent">
+                    
+                    <!-- Add Clan Tab -->
+                    <div class="tab-pane fade show active" id="add-clan" role="tabpanel">
+                        <form method="post" asp-page-handler="AddClan" onsubmit="return validateClanTag()">
+                            <div class="mb-3">
+                                <label for="clanTagInput" class="form-label">
+                                    <i class="fas fa-tag me-2"></i>Clan Tag
+                                </label>
+                                <div class="input-group">
+                                    <span class="input-group-text">#</span>
+                                    <input type="text" 
+                                           class="form-control" 
+                                           id="clanTagInput" 
+                                           name="ClanTag" 
+                                           placeholder="Enter clan tag (without #)" 
+                                           required 
+                                           maxlength="32"
+                                           pattern="[A-Za-z0-9]+"
+                                           title="Clan tag should only contain letters and numbers">
+                                </div>
+                                <div class="form-text">
+                                    <i class="fas fa-info-circle me-1"></i>
+                                    Enter the clan tag without the # symbol. Example: 2Y9LPQG8
+                                </div>
+                                <div id="clanTagError" class="text-danger d-none"></div>
+                            </div>
+                            <div class="d-grid">
+                                <button type="submit" class="btn btn-success" id="addClanSubmitBtn">
+                                    <i class="fas fa-plus"></i> Add Clan
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <!-- Delete Clan Tab -->
+                    <div class="tab-pane fade" id="delete-clan" role="tabpanel">
+                        <form method="post" asp-page-handler="DeleteClan" onsubmit="return confirmDeleteClan()">
+                            <div class="mb-3">
+                                <label for="deleteClanSelect" class="form-label">
+                                    <i class="fas fa-exclamation-triangle me-2 text-warning"></i>Select Clan to Delete
+                                </label>
+                                <select class="form-select" id="deleteClanSelect" name="ClanTag" required>
+                                    <option value="">Choose a clan to delete...</option>
+                                    @foreach (var clan in Model.AllClans)
+                                    {
+                                        <option value="@clan.Tag" data-clan-name="@clan.Name">
+                                            @clan.Name (#@clan.Tag) - @clan.WarTrophies trophies
+                                        </option>
+                                    }
+                                </select>
+                                @if (!Model.AllClans.Any())
+                                {
+                                    <div class="text-muted mt-2">
+                                        <i class="fas fa-info-circle me-1"></i>No clans available to delete
+                                    </div>
+                                }
+                            </div>
+                            
+                            @if (Model.AllClans.Any())
+                            {
+                                <div class="alert alert-warning" role="alert">
+                                    <i class="fas fa-exclamation-triangle me-2"></i>
+                                    <strong>Warning:</strong> Deleting a clan will permanently remove all associated data including player war histories and statistics. This action cannot be undone.
+                                </div>
+                                
+                                <div class="d-grid">
+                                    <button type="submit" class="btn btn-danger" id="deleteClanSubmitBtn" disabled>
+                                        <i class="fas fa-trash"></i> Delete Selected Clan
+                                    </button>
+                                </div>
+                            }
+                        </form>
                     </div>
                 </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                        Cancel
-                    </button>
-                    <button type="submit" class="btn btn-primary" id="addClanSubmitBtn">
-                        <i class="fas fa-plus"></i> Add Clan
-                    </button>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times"></i> Close
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Permission Denied Modal (for non-Admins) -->
+<div class="modal fade" id="permissionDeniedManageClansModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title">
+                    <i class="fas fa-exclamation-triangle"></i> Permission Required
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body text-center py-4">
+                <div class="mb-4">
+                    <i class="fas fa-shield-alt fa-4x text-danger mb-3"></i>
+                    <h5 class="text-danger">Access Denied</h5>
                 </div>
-            </form>
+                <p class="lead">You must have <strong>Admin permissions</strong> to add a clan.</p>
+                <p class="text-muted">
+                    Please contact your administrator if you need access to this feature.
+                </p>
+            </div>
+            <div class="modal-footer justify-content-center">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times"></i> Close
+                </button>
+            </div>
         </div>
     </div>
 </div>
@@ -330,6 +442,12 @@
         let selectedPlayerName = '';
         let selectedPlayerTag = '';
         let selectedClans = new Set();
+        
+        // Store user permissions from server
+        const userRole = '@Model.CurrentUserRole';
+        const canManageClans = @Model.CanManageClans.ToString().ToLower();
+        const canUpdateWarData = @Model.CanUpdateWarData.ToString().ToLower();
+        const canModifyPlayerData = @Model.CanModifyPlayerData.ToString().ToLower();
 
         function selectPlayer(playerId, playerName, playerTag)
         {
@@ -346,13 +464,89 @@
             modal.show();
         }
 
-        function showAddClanModal()
+        function showManageClansModal()
         {
-            // Clear any previous input
+            // Clear any previous inputs and errors
             document.getElementById('clanTagInput').value = '';
             document.getElementById('clanTagError').classList.add('d-none');
-            
-            var modal = new bootstrap.Modal(document.getElementById('addClanModal'));
+
+            // Reset the delete clan form
+            const deleteClanSelect = document.getElementById('deleteClanSelect');
+            if (deleteClanSelect)
+            {
+                deleteClanSelect.value = '';
+                updateDeleteButton();
+            }
+
+            // Show the add clan tab by default
+            const addClanTab = document.getElementById('add-clan-tab');
+            const addClanPane = document.getElementById('add-clan');
+            const deleteClanTab = document.getElementById('delete-clan-tab');
+            const deleteClanPane = document.getElementById('delete-clan');
+
+            addClanTab.classList.add('active');
+            addClanPane.classList.add('show', 'active');
+            deleteClanTab.classList.remove('active');
+            deleteClanPane.classList.remove('show', 'active');
+
+            var modal = new bootstrap.Modal(document.getElementById('manageClansModal'));
+            modal.show();
+        }
+
+        function confirmDeleteClan()
+        {
+            const deleteClanSelect = document.getElementById('deleteClanSelect');
+            const selectedOption = deleteClanSelect.options[deleteClanSelect.selectedIndex];
+
+            if (!selectedOption || !selectedOption.value) {
+                alert('Please select a clan to delete.');
+                return false;
+            }
+
+            const clanName = selectedOption.getAttribute('data-clan-name');
+            const clanTag = selectedOption.value;
+
+            const confirmMessage = `Are you sure you want to delete the clan "${clanName}" (#${clanTag})?\n\n` +
+                                  `This will permanently remove:\n` +
+                                  `• All clan data\n` +
+                                  `• All player war histories\n` +
+                                  `• All associated statistics\n\n` +
+                                  `This action CANNOT be undone!\n\n` +
+                                  `Type "DELETE" to confirm:`;
+
+            const userInput = prompt(confirmMessage);
+
+            if (userInput !== "DELETE")
+            {
+                if (userInput !== null)
+                {
+                    alert('Deletion cancelled. You must type "DELETE" exactly to confirm.');
+                }
+                return false;
+            }
+
+            // Show loading state
+            const submitBtn = document.getElementById('deleteClanSubmitBtn');
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Deleting...';
+            submitBtn.disabled = true;
+
+            return true;
+        }
+
+        function updateDeleteButton()
+        {
+            const deleteClanSelect = document.getElementById('deleteClanSelect');
+            const deleteButton = document.getElementById('deleteClanSubmitBtn');
+
+            if (deleteClanSelect && deleteButton)
+            {
+                deleteButton.disabled = !deleteClanSelect.value;
+            }
+        }
+
+        function showPermissionDeniedManageClansModal()
+        {
+            var modal = new bootstrap.Modal(document.getElementById('permissionDeniedManageClansModal'));
             modal.show();
         }
 
@@ -622,6 +816,19 @@
         document.addEventListener('DOMContentLoaded', function()
         {
             initializeClanFilter();
+        });
+
+        // Add event listener for delete clan dropdown
+        document.addEventListener('DOMContentLoaded', function()
+        {
+            initializeClanFilter();
+
+            // Add change listener for delete clan dropdown
+            const deleteClanSelect = document.getElementById('deleteClanSelect');
+            if (deleteClanSelect)
+            {
+                deleteClanSelect.addEventListener('change', updateDeleteButton);
+            }
         });
     </script>
 }

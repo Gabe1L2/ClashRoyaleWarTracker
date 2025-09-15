@@ -39,11 +39,20 @@ namespace ClashRoyaleWarTracker.Infrastructure
 
             services.AddHostedService<UserSeeder>();
 
+            services.AddMemoryCache();
+
+            // Business/Domain Services
             services.AddScoped<IClashRoyaleService, ClashRoyaleService>();
+            services.AddScoped<IApplicationService, ApplicationService>();
+            
+            // User/Auth Services  
+            services.AddScoped<IUserRoleService, UserRoleService>();
+            
+            // Repositories (Infrastructure)
             services.AddScoped<IClanRepository, ClanRepository>();
             services.AddScoped<IPlayerRepository, PlayerRepository>();
             services.AddScoped<IWarRepository, WarRepository>();
-            services.AddScoped<IApplicationService, ApplicationService>();
+            services.AddScoped<IUserRepository, UserRepository>();
 
             // Clash Royale API configuration
             var apiKey = configuration["ClashRoyaleApi:ApiKey"]

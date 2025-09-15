@@ -173,6 +173,77 @@
     </div>
 </div>
 
+<!-- Edit User Modal -->
+<div class="modal fade" id="editUserModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-user-edit"></i> Edit User
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="post" asp-page-handler="EditUser" onsubmit="return validateEditUser()">
+                <div class="modal-body">
+                    <input type="hidden" asp-for="EditUserInput.UserId" id="editUserId" />
+                    
+                    <div class="mb-3">
+                        <label class="form-label">
+                            <i class="fas fa-user me-2"></i>Username
+                        </label>
+                        <input type="text" 
+                               class="form-control" 
+                               id="editUserName" 
+                               readonly 
+                               style="background-color: #f8f9fa;">
+                        <div class="form-text">
+                            <i class="fas fa-info-circle me-1"></i>Username cannot be changed
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="EditRole" class="form-label">
+                            <i class="fas fa-shield-alt me-2"></i>Role
+                        </label>
+                        <select class="form-select" asp-for="EditUserInput.Role" id="editUserRole" required>
+                            <option value="">Select a role...</option>
+                            @foreach (var role in Model.AvailableRoles)
+                            {
+                                <option value="@role">@role</option>
+                            }
+                        </select>
+                        <span asp-validation-for="EditUserInput.Role" class="text-danger"></span>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="NewPassword" class="form-label">
+                            <i class="fas fa-lock me-2"></i>New Password
+                        </label>
+                        <input type="password" 
+                               class="form-control" 
+                               asp-for="EditUserInput.NewPassword" 
+                               placeholder="Enter new password (leave blank to keep current)" 
+                               minlength="6" 
+                               maxlength="100">
+                        <div class="form-text">
+                            <i class="fas fa-info-circle me-1"></i>Leave blank to keep current password. Minimum 6 characters if changing.
+                        </div>
+                        <span asp-validation-for="EditUserInput.NewPassword" class="text-danger"></span>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="fas fa-times"></i> Cancel
+                    </button>
+                    <button type="submit" class="btn btn-primary" id="editUserSubmitBtn">
+                        <i class="fas fa-save"></i> Update User
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
 <!-- Delete Confirmation Modal -->
 <div class="modal fade" id="deleteUserModal" tabindex="-1">
     <div class="modal-dialog">
@@ -209,7 +280,8 @@
 
 @section Scripts {
     <script>
-        function showAddUserModal() {
+        function showAddUserModal()
+        {
             // Clear previous input
             document.querySelector('input[name="CreateUserInput.Username"]').value = '';
             document.querySelector('input[name="CreateUserInput.Password"]').value = '';
@@ -219,7 +291,8 @@
             modal.show();
         }
 
-        function confirmDeleteUser(userId, userName) {
+        function confirmDeleteUser(userId, userName)
+        {
             document.getElementById('deleteUserId').value = userId;
             document.getElementById('deleteUserName').textContent = userName;
             
@@ -227,7 +300,20 @@
             modal.show();
         }
 
-        function validateCreateUser() {
+        function showEditUserModal(userId, userName, userRole)
+        {
+            // Clear and populate the edit form
+            document.getElementById('editUserId').value = userId;
+            document.getElementById('editUserName').value = userName;
+            document.getElementById('editUserRole').value = userRole;
+            document.querySelector('input[name="EditUserInput.NewPassword"]').value = '';
+            
+            var modal = new bootstrap.Modal(document.getElementById('editUserModal'));
+            modal.show();
+        }
+
+        function validateCreateUser()
+        {
             const username = document.querySelector('input[name="CreateUserInput.Username"]').value.trim();
             const password = document.querySelector('input[name="CreateUserInput.Password"]').value;
             const role = document.querySelector('select[name="CreateUserInput.Role"]').value;
@@ -250,6 +336,29 @@
             // Show loading state
             const submitBtn = document.getElementById('createUserSubmitBtn');
             submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Creating...';
+            submitBtn.disabled = true;
+            
+            return true;
+        }
+
+        function validateEditUser()
+        {
+            const role = document.getElementById('editUserRole').value;
+            const newPassword = document.querySelector('input[name="EditUserInput.NewPassword"]').value;
+            
+            if (!role) {
+                alert('Please select a role.');
+                return false;
+            }
+            
+            if (newPassword && newPassword.length < 6) {
+                alert('New password must be at least 6 characters long.');
+                return false;
+            }
+            
+            // Show loading state
+            const submitBtn = document.getElementById('editUserSubmitBtn');
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Updating...';
             submitBtn.disabled = true;
             
             return true;

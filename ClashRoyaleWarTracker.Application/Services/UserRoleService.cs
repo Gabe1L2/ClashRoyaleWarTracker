@@ -390,6 +390,52 @@ namespace ClashRoyaleWarTracker.Application.Services
             }
         }
 
+        public async Task<ServiceResult> ChangePasswordAsync(string userId, string newPassword)
+        {
+            try
+            {
+                _logger.LogDebug("Changing password for user {UserId} through UserRoleService", userId);
+
+                if (string.IsNullOrWhiteSpace(userId))
+                {
+                    return ServiceResult.Failure("User ID is required");
+                }
+
+                if (string.IsNullOrWhiteSpace(newPassword))
+                {
+                    return ServiceResult.Failure("Password is required");
+                }
+
+                if (newPassword.Length < 6)
+                {
+                    return ServiceResult.Failure("Password must be at least 6 characters long");
+                }
+
+                var result = await _userRepository.ChangePasswordAsync(userId, newPassword);
+
+                if (result.Succeeded)
+                {
+                    _logger.LogInformation("Successfully changed password for user {UserId}", userId);
+                    
+                    // Clear cached data since user was updated
+                    InvalidateUserCaches();
+                    
+                    return ServiceResult.Successful("Password changed successfully");
+                }
+                else
+                {
+                    var errors = string.Join(", ", result.Errors.Select(e => e.Description));
+                    _logger.LogWarning("Failed to change password for user {UserId}: {Errors}", userId, errors);
+                    return ServiceResult.Failure($"Failed to change password: {errors}");
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error changing password for user {UserId}", userId);
+                return ServiceResult.Failure("An unexpected error occurred while changing the password");
+            }
+        }
+
         #endregion
 
         #region Cache Management

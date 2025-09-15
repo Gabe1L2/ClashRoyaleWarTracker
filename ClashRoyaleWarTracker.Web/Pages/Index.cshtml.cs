@@ -4,36 +4,25 @@ using ClashRoyaleWarTracker.Application.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using ClashRoyaleWarTracker.Web.Pages.Shared;
 
 namespace ClashRoyaleWarTracker.Web.Pages
 {
     [Authorize]
-    public class IndexModel : PageModel
+    public class IndexModel : BasePageModel
     {
         private readonly IApplicationService _applicationService;
         private readonly ILogger<IndexModel> _logger;
-        private readonly IUserRoleService _userRoleService;
 
-        public IndexModel(
-            IApplicationService applicationService, 
-            ILogger<IndexModel> logger, 
-            IUserRoleService userRoleService)
+        public IndexModel(IApplicationService applicationService, ILogger<IndexModel> logger, IUserRoleService userRoleService) : base(userRoleService)
         {
             _applicationService = applicationService;
             _logger = logger;
-            _userRoleService = userRoleService;
         }
 
         public IList<PlayerAverageDTO> PlayerAverages { get; set; } = new List<PlayerAverageDTO>();
         public IList<Clan> AllClans { get; set; } = new List<Clan>();
         
-        // Replace individual bool properties with role-based properties
-        public UserRole CurrentUserRole { get; set; }
-        public bool CanManageClans => RolePermissions.HasPermission(CurrentUserRole, Permissions.ManageClans);
-        public bool CanViewStatistics => RolePermissions.HasPermission(CurrentUserRole, Permissions.ViewStatistics);
-        public bool CanUpdateWarData => RolePermissions.HasPermission(CurrentUserRole, Permissions.UpdateWarData);
-        public bool CanManageUsers => RolePermissions.HasPermission(CurrentUserRole, Permissions.ManageUsers);
-        public bool CanModifyPlayerData => RolePermissions.HasPermission(CurrentUserRole, Permissions.ModifyPlayerData);
 
         [BindProperty]
         public string ClanTag { get; set; } = string.Empty;

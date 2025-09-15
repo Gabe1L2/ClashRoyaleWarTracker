@@ -321,5 +321,49 @@ namespace ClashRoyaleWarTracker.Infrastructure.Repositories
                 });
             }
         }
+
+        public async Task<IdentityResult> ChangePasswordAsync(string userId, string newPassword)
+        {
+            try
+            {
+                _logger.LogDebug("Changing password for user {UserId}", userId);
+
+                var user = await _userManager.FindByIdAsync(userId);
+                if (user == null)
+                {
+                    _logger.LogWarning("User with ID {UserId} not found", userId);
+                    return IdentityResult.Failed(new IdentityError
+                    {
+                        Code = "UserNotFound",
+                        Description = "User not found."
+                    });
+                }
+
+                // Remove current password and set new one
+                var token = await _userManager.GeneratePasswordResetTokenAsync(user);
+                var result = await _userManager.ResetPasswordAsync(user, token, newPassword);
+
+                if (result.Succeeded)
+                {
+                    _logger.LogInformation("Successfully changed password for user {UserName} ({UserId})", user.UserName, userId);
+                }
+                else
+                {
+                    _logger.LogError("Failed to change password for user {UserName} ({UserId}): {Errors}",
+                        user.UserName, userId, string.Join(", ", result.Errors.Select(e => e.Description)));
+                }
+
+                return result;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error changing password for user {UserId}", userId);
+                return IdentityResult.Failed(new IdentityError
+                {
+                    Code = "UnexpectedError",
+                    Description = "An unexpected error occurred while changing the password."
+                });
+            }
+        }
     }
 }

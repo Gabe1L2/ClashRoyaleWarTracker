@@ -18,5 +18,6 @@ namespace ClashRoyaleWarTracker.Application.Interfaces
         Task<ServiceResult> CreateUserAsync(string username, string password, string role);
         Task<ServiceResult> DeleteUserAsync(string userId);
         Task<ServiceResult> UpdateUserRoleAsync(string userId, string newRole);
+        Task<ServiceResult> ChangePasswordAsync(string userId, string newPassword);
     }
 }

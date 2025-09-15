@@ -32,26 +32,7 @@
                     <span class="navbar-toggler-icon"></span>
                 </button>
                 <div class="navbar-collapse collapse d-sm-inline-flex justify-content-between">
-                    <ul class="navbar-nav flex-grow-1">
-                        <li class="nav-item">
-                            <a class="nav-link text-dark" asp-area="" asp-page="/Index">
-                                <i class="fas fa-home me-1"></i>Home
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link text-dark" asp-area="" asp-page="/Privacy">
-                                <i class="fas fa-shield-alt me-1"></i>Privacy
-                            </a>
-                        </li>
-                        @if (User.Identity?.IsAuthenticated == true && User.IsInRole("Admin"))
-                        {
-                            <li class="nav-item">
-                                <a class="nav-link text-dark" asp-area="" asp-page="/UserManagement">
-                                    <i class="fas fa-users-cog me-1"></i>User Management
-                                </a>
-                            </li>
-                        }
-                    </ul>
+                    @await Component.InvokeAsync("Navigation")
                     <partial name="_LoginPartial" />
                 </div>
             </div>

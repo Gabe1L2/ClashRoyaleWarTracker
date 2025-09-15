@@ -32,18 +32,31 @@ namespace ClashRoyaleWarTracker.Web.Pages
 
         public class CreateUserInputModel
         {
-            [Required]
             [StringLength(50, MinimumLength = 3)]
             [Display(Name = "Username")]
             public string Username { get; set; } = string.Empty;
 
-            [Required]
             [StringLength(100, MinimumLength = 6)]
             [DataType(DataType.Password)]
             [Display(Name = "Password")]
             public string Password { get; set; } = string.Empty;
 
-            [Required]
+            [Display(Name = "Role")]
+            public string Role { get; set; } = string.Empty;
+        }
+
+        [BindProperty]
+        public EditUserInputModel EditUserInput { get; set; } = new();
+
+        public class EditUserInputModel
+        {
+            public string UserId { get; set; } = string.Empty;
+
+            [StringLength(100, MinimumLength = 6)]
+            [DataType(DataType.Password)]
+            [Display(Name = "New Password")]
+            public string? NewPassword { get; set; }
+
             [Display(Name = "Role")]
             public string Role { get; set; } = string.Empty;
         }
@@ -100,12 +113,7 @@ namespace ClashRoyaleWarTracker.Web.Pages
 
             try
             {
-                // Now going through the UserRoleService (Application layer)
-                var result = await _userRoleService.CreateUserAsync(
-                    CreateUserInput.Username, 
-                    CreateUserInput.Password, 
-                    CreateUserInput.Role);
-
+                var result = await _userRoleService.CreateUserAsync(CreateUserInput.Username, CreateUserInput.Password, CreateUserInput.Role);
                 if (result.Success)
                 {
                     TempData["SuccessMessage"] = result.Message;
@@ -182,11 +190,74 @@ namespace ClashRoyaleWarTracker.Web.Pages
             return RedirectToPage();
         }
 
+        public async Task<IActionResult> OnPostEditUserAsync()
+        {
+            // Get current user's role and check permissions
+            var userRoleResult = await _userRoleService.GetUserRoleAsync(User);
+            if (userRoleResult.Success)
+            {
+                CurrentUserRole = userRoleResult.Data;
+            }
+            else
+            {
+                _logger.LogWarning("Failed to get user role: {Message}", userRoleResult.Message);
+                CurrentUserRole = UserRole.Guest;
+            }
+
+            if (!CanManageUsers)
+            {
+                TempData["ErrorMessage"] = "You don't have permission to manage users.";
+                return RedirectToPage();
+            }
+
+            if (string.IsNullOrWhiteSpace(EditUserInput.UserId) || string.IsNullOrWhiteSpace(EditUserInput.Role))
+            {
+                TempData["ErrorMessage"] = "User ID and Role are required.";
+                return RedirectToPage();
+            }
+
+            try
+            {
+                var roleResult = await _userRoleService.UpdateUserRoleAsync(EditUserInput.UserId, EditUserInput.Role);
+                if (!roleResult.Success)
+                {
+                    TempData["ErrorMessage"] = roleResult.Message;
+                    return RedirectToPage();
+                }
+
+                string successMessage = roleResult.Message;
+
+                // Update password if provided
+                if (!string.IsNullOrWhiteSpace(EditUserInput.NewPassword))
+                {
+                    var passwordResult = await _userRoleService.ChangePasswordAsync(EditUserInput.UserId, EditUserInput.NewPassword);
+                    if (!passwordResult.Success)
+                    {
+                        TempData["ErrorMessage"] = $"Role updated successfully, but password change failed: {passwordResult.Message}";
+                        return RedirectToPage();
+                    }
+                    successMessage += " and password updated";
+                }
+
+                TempData["SuccessMessage"] = successMessage + " successfully.";
+                _logger.LogInformation("User {CurrentUser} updated user {UserId} - role: {Role}, password: {PasswordChanged}", 
+                    User.Identity?.Name, EditUserInput.UserId, EditUserInput.Role, !string.IsNullOrWhiteSpace(EditUserInput.NewPassword));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error updating user {UserId}", EditUserInput.UserId);
+                TempData["ErrorMessage"] = "An unexpected error occurred while updating the user.";
+            }
+
+            // Clear the form
+            EditUserInput = new EditUserInputModel();
+            return RedirectToPage();
+        }
+
         private async Task LoadDataAsync()
         {
             try
             {
-                // Now going through the UserRoleService (Application layer)
                 var usersResult = await _userRoleService.GetAllUsersWithRolesAsync();
                 if (usersResult.Success && usersResult.Data != null)
                 {

@@ -9,7 +9,8 @@ namespace ClashRoyaleWarTracker.Application.Interfaces
 {
     public interface IApplicationService
     {
-        Task<ServiceResult> DataUpdateAsync(int numOfWeeksToUse);
+        Task<ServiceResult> WeeklyUpdateAsync(int numWeeksForPlayerAverages = 4);
+        Task<ServiceResult> DataUpdateAsync(int numWeeksWarHistory, int numWeeksPlayerAverages = 4);
         Task<ServiceResult> AddClanAsync(string clanTag);
         Task<ServiceResult<IEnumerable<Clan>>> GetAllClansAsync();
         Task<ServiceResult<Clan>> GetClanAsync(string clanTag);

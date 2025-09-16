@@ -41,6 +41,9 @@ jobs:
                 "Role": "Admin"
               }
             ],
+              "ScheduledTask": {
+                "SecurityKey": "${{ secrets.SCHEDULED_TASK_SECURITY_KEY }}"
+              },
             "Logging": {
               "LogLevel": {
                 "Default": "Warning",

@@ -221,7 +221,7 @@ namespace ClashRoyaleWarTracker.Tests.Services
             logger.LogInformation("Starting weekly update test for all clans");
 
             // Act - This will test the entire weekly update process
-            var result = await _applicationService.DataUpdateAsync(1);
+            var result = await _applicationService.WeeklyUpdateAsync();
 
             // Assert
             Assert.True(result.Success);

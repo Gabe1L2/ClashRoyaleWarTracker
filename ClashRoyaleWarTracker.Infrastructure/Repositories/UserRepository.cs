@@ -12,12 +12,14 @@ namespace ClashRoyaleWarTracker.Infrastructure.Repositories
         private readonly UserManager<IdentityUser> _userManager;
         private readonly RoleManager<IdentityRole> _roleManager;
         private readonly ILogger<UserRepository> _logger;
+        private readonly ITimeZoneService _timeZoneService;
 
-        public UserRepository(UserManager<IdentityUser> userManager, RoleManager<IdentityRole> roleManager, ILogger<UserRepository> logger)
+        public UserRepository(UserManager<IdentityUser> userManager, RoleManager<IdentityRole> roleManager, ILogger<UserRepository> logger, ITimeZoneService timeZoneService)
         {
             _userManager = userManager;
             _roleManager = roleManager;
             _logger = logger;
+            _timeZoneService = timeZoneService;
         }
 
         public async Task<IList<string>> GetUserRolesAsync(ClaimsPrincipal user)

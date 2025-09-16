@@ -23,7 +23,11 @@ namespace ClashRoyaleWarTracker.Application.Services
             _logger = logger;
         }
 
-        public async Task<ServiceResult> DataUpdateAsync(int numOfWeeksToUse)
+        public async Task<ServiceResult> WeeklyUpdateAsync(int numWeeksForPlayerAverages = 4)
+        {
+            return await DataUpdateAsync(1, numWeeksForPlayerAverages);
+        }
+        public async Task<ServiceResult> DataUpdateAsync(int numWeeksWarHistory, int numWeeksPlayerAverages = 4)
         {
             try
             {
@@ -78,7 +82,7 @@ namespace ClashRoyaleWarTracker.Application.Services
                     }
 
                     // Populate new player war histories
-                    var warHistoryResult = await PopulatePlayerWarHistories(clan, numOfWeeksToUse);
+                    var warHistoryResult = await PopulatePlayerWarHistories(clan, numWeeksWarHistory);
                     if (warHistoryResult.Success)
                     {
                         successfulWarHistoryUpdates++;
@@ -92,7 +96,7 @@ namespace ClashRoyaleWarTracker.Application.Services
                 }
 
                 // Update all active player averages for 5k+
-                var update5kAveragesResult = await UpdateAllActivePlayerAverages(4, true);
+                var update5kAveragesResult = await UpdateAllActivePlayerAverages(numWeeksPlayerAverages, true);
                 if (update5kAveragesResult.Success)
                 {
                     _logger.LogInformation("Successfully updated 5k+ player averages");
@@ -328,7 +332,6 @@ namespace ClashRoyaleWarTracker.Application.Services
                             SeasonID = riverRace.SeasonId,
                             WeekIndex = riverRace.SectionIndex,
                             WarTrophies = clan.WarTrophies - runningTrophyDifference, // take current trophies and subtract difference
-                            RecordedDate = DateTime.Now
                         };
 
                         clanHistories.Add(clanHistory);
@@ -403,7 +406,6 @@ namespace ClashRoyaleWarTracker.Application.Services
                                         ClanID = clan.ID,
                                         Name = participant.Name,
                                         IsActive = true,
-                                        LastUpdated = DateTime.Now
                                     };
 
                                     playerID = await _playerRepository.AddPlayerAsync(newPlayer);

@@ -11,10 +11,12 @@ namespace ClashRoyaleWarTracker.Infrastructure.Repositories
     {
         private readonly ApplicationDbContext _context;
         private readonly ILogger<WarRepository> _logger;
-        public WarRepository(ApplicationDbContext context, ILogger<WarRepository> logger)
+        private readonly ITimeZoneService _timeZoneService;
+        public WarRepository(ApplicationDbContext context, ILogger<WarRepository> logger, ITimeZoneService timeZoneService)
         {
             _context = context;
             _logger = logger;
+            _timeZoneService = timeZoneService;
         }
 
         public async Task<bool> AddPlayerWarHistoriesAsync(List<PlayerWarHistory> playerWarHistories)
@@ -31,7 +33,7 @@ namespace ClashRoyaleWarTracker.Infrastructure.Repositories
                         rwh.ClanHistoryID == playerWarHistory.ClanHistoryID);
                     if (!exists)
                     {
-                        playerWarHistory.LastUpdated = DateTime.Now;
+                        playerWarHistory.LastUpdated = _timeZoneService.Now;
                         _logger.LogDebug($"Adding player war history for PlayerID {playerWarHistory.PlayerID} and ClanHistoryID {playerWarHistory.ClanHistoryID}");
                         await _context.PlayerWarHistories.AddAsync(playerWarHistory);
                         successCount++;

@@ -9,10 +9,12 @@ namespace ClashRoyaleWarTracker.Infrastructure.Repositories
     {
         private readonly ApplicationDbContext _context;
         private readonly ILogger<PlayerRepository> _logger;
-        public PlayerRepository(ApplicationDbContext context, ILogger<PlayerRepository> logger)
+        private readonly ITimeZoneService _timeZoneService;
+        public PlayerRepository(ApplicationDbContext context, ILogger<PlayerRepository> logger, ITimeZoneService timeZoneService)
         {
             _context = context;
             _logger = logger;
+            _timeZoneService = timeZoneService;
         }
 
         public async Task<Player?> GetPlayerAsync(string playerTag)
@@ -43,6 +45,7 @@ namespace ClashRoyaleWarTracker.Infrastructure.Repositories
             try
             {
                 _logger.LogDebug("Adding new player {PlayerName} with tag {PlayerTag} to database", player.Name, player.Tag);
+                player.LastUpdated = _timeZoneService.Now;
                 await _context.Players.AddAsync(player);
                 await _context.SaveChangesAsync();
 
@@ -87,13 +90,13 @@ namespace ClashRoyaleWarTracker.Infrastructure.Repositories
                     existingAverage.ClanID = newPlayerAverage.ClanID;
                     existingAverage.FameAttackAverage = newPlayerAverage.FameAttackAverage;
                     existingAverage.Attacks = newPlayerAverage.Attacks;
-                    existingAverage.LastUpdated = DateTime.Now;
+                    existingAverage.LastUpdated = _timeZoneService.Now;
                     _context.PlayerAverages.Update(existingAverage);
                     _logger.LogDebug("Updated existing player average for PlayerID {PlayerId}", newPlayerAverage.PlayerID);
                 }
                 else
                 {
-                    newPlayerAverage.LastUpdated = DateTime.Now;
+                    newPlayerAverage.LastUpdated = _timeZoneService.Now;
                     await _context.PlayerAverages.AddAsync(newPlayerAverage);
                     _logger.LogDebug("Added new player average for PlayerID {PlayerId}", newPlayerAverage.PlayerID);
                 }

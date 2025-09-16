@@ -70,10 +70,12 @@ namespace ClashRoyaleWarTracker.Tests.Services
         private readonly IServiceProvider _serviceProvider;
         private readonly IApplicationService _applicationService;
         private readonly ITestOutputHelper _output;
+        private readonly ITimeZoneService _timeZoneService;
 
-        public ApplicationServiceFullIntegrationTests(ITestOutputHelper output)
+        public ApplicationServiceFullIntegrationTests(ITestOutputHelper output, ITimeZoneService timeZoneService)
         {
             _output = output;
+            _timeZoneService = timeZoneService;
 
             // Build configuration (same as your real app)
             var configuration = new ConfigurationBuilder()
@@ -239,7 +241,7 @@ namespace ClashRoyaleWarTracker.Tests.Services
 
                 // Check that at least one clan has a recent LastUpdated timestamp
                 var recentlyUpdated = allClansResult.Data.Any(c =>
-                    (DateTime.Now - c.LastUpdated).TotalMinutes < 5);
+                    (_timeZoneService.Now - c.LastUpdated).TotalMinutes < 5);
 
                 if (recentlyUpdated)
                 {

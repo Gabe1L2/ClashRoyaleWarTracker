@@ -9,15 +9,18 @@ namespace ClashRoyaleWarTracker.Web.Pages
         private readonly IApplicationService _applicationService;
         private readonly ILogger<ScheduledTaskModel> _logger;
         private readonly IConfiguration _configuration;
+        private readonly ITimeZoneService _timeZoneService;
 
         public ScheduledTaskModel(
             IApplicationService applicationService, 
             ILogger<ScheduledTaskModel> logger,
-            IConfiguration configuration)
+            IConfiguration configuration,
+            ITimeZoneService timeZoneService)
         {
             _applicationService = applicationService;
             _logger = logger;
             _configuration = configuration;
+            _timeZoneService = timeZoneService;
         }
 
         public async Task<IActionResult> OnGetAsync(string? task = null, string? weeks = null, string? key = null)
@@ -36,7 +39,7 @@ namespace ClashRoyaleWarTracker.Web.Pages
                         return new JsonResult(new { 
                             success = false, 
                             message = "Invalid or missing security key",
-                            timestamp = DateTime.Now
+                            timestamp = _timeZoneService.Now
                         });
                     }
                 }
@@ -79,7 +82,7 @@ namespace ClashRoyaleWarTracker.Web.Pages
                             return new JsonResult(new { 
                                 success = true, 
                                 message = result.Message,
-                                timestamp = DateTime.Now,
+                                timestamp = _timeZoneService.Now,
                                 weeksForPlayerAverages = numWeeksForPlayerAverages
                             });
                         }
@@ -89,7 +92,7 @@ namespace ClashRoyaleWarTracker.Web.Pages
                             return BadRequest(new { 
                                 success = false, 
                                 message = result.Message,
-                                timestamp = DateTime.Now,
+                                timestamp = _timeZoneService.Now,
                                 weeksForPlayerAverages = numWeeksForPlayerAverages
                             });
                         }
@@ -107,7 +110,7 @@ namespace ClashRoyaleWarTracker.Web.Pages
                 return StatusCode(500, new { 
                     success = false, 
                     message = "An unexpected error occurred during the scheduled task",
-                    timestamp = DateTime.Now
+                    timestamp = _timeZoneService.Now
                 });
             }
         }

@@ -1,3 +1,5 @@
+using ClashRoyaleWarTracker.Application.Interfaces;
+using ClashRoyaleWarTracker.Application.Services;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace ClashRoyaleWarTracker.Application
@@ -6,9 +8,16 @@ namespace ClashRoyaleWarTracker.Application
     {
         public static IServiceCollection AddApplication(this IServiceCollection services)
         {
-            // Register application services here
-            // Example: services.AddScoped<IPlayerService, PlayerService>();
-            
+            // Time Zone Service
+            services.AddSingleton<ITimeZoneService, CentralTimeZoneService>();
+
+            // Business/Domain Services
+            services.AddScoped<IClashRoyaleService, ClashRoyaleService>();
+            services.AddScoped<IApplicationService, ApplicationService>();
+
+            // User/Auth Services  
+            services.AddScoped<IUserRoleService, UserRoleService>();
+
             return services;
         }
     }

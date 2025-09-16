@@ -40,13 +40,6 @@ namespace ClashRoyaleWarTracker.Infrastructure
             services.AddHostedService<UserSeeder>();
 
             services.AddMemoryCache();
-
-            // Business/Domain Services
-            services.AddScoped<IClashRoyaleService, ClashRoyaleService>();
-            services.AddScoped<IApplicationService, ApplicationService>();
-            
-            // User/Auth Services  
-            services.AddScoped<IUserRoleService, UserRoleService>();
             
             // Repositories (Infrastructure)
             services.AddScoped<IClanRepository, ClanRepository>();

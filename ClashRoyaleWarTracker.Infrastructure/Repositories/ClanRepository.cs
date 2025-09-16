@@ -1,5 +1,6 @@
 ﻿using ClashRoyaleWarTracker.Application.Interfaces;
 using ClashRoyaleWarTracker.Application.Models;
+using ClashRoyaleWarTracker.Application.Services;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -10,11 +11,13 @@ namespace ClashRoyaleWarTracker.Infrastructure.Repositories
     {
         private readonly ApplicationDbContext _context;
         private readonly ILogger<ClanRepository> _logger;
+        private readonly ITimeZoneService _timeZoneService;
 
-        public ClanRepository(ApplicationDbContext context, ILogger<ClanRepository> logger)
+        public ClanRepository(ApplicationDbContext context, ILogger<ClanRepository> logger, ITimeZoneService timeZoneService)
         {
             _context = context;
             _logger = logger;
+            _timeZoneService = timeZoneService;
         }
 
         public async Task<bool> AddClanAsync(Clan clan)
@@ -26,11 +29,11 @@ namespace ClashRoyaleWarTracker.Infrastructure.Repositories
 
                 if (curClan == null)
                 {
-                    clan.LastUpdated = DateTime.Now;
+                    clan.LastUpdated = _timeZoneService.Now; // Use CST time
                     await _context.Clans.AddAsync(clan);
                     await _context.SaveChangesAsync();
 
-                    _logger.LogInformation($"Successfully added clan {clan.Name}");
+                    _logger.LogInformation($"Successfully added clan {clan.Name} at {clan.LastUpdated:yyyy-MM-dd HH:mm:ss} CST");
                     return true;
                 }
 
@@ -129,12 +132,12 @@ namespace ClashRoyaleWarTracker.Infrastructure.Repositories
 
                 curClan.Name = clan.Name;
                 curClan.WarTrophies = clan.WarTrophies;
-                curClan.LastUpdated = DateTime.Now;
+                curClan.LastUpdated = _timeZoneService.Now;
 
                 _context.Clans.Update(curClan);
                 await _context.SaveChangesAsync();
 
-                _logger.LogInformation($"Successfully updated clan {clan.Name}");
+                _logger.LogInformation($"Successfully updated clan {clan.Name} at {curClan.LastUpdated:yyyy-MM-dd HH:mm:ss} CST");
                 return true;
             }
             catch (Exception ex)
@@ -166,8 +169,9 @@ namespace ClashRoyaleWarTracker.Infrastructure.Repositories
                     if (existingHistory == null)
                     {
                         clanHistory.ClanID = curClan.ID;
+                        clanHistory.RecordedDate = _timeZoneService.Now; // Use CST time
                         await _context.ClanHistories.AddAsync(clanHistory);
-                        _logger.LogDebug($"Added new clan history for {clan.Name} - Season {clanHistory.SeasonID}, Week {clanHistory.WeekIndex}");
+                        _logger.LogDebug($"Added new clan history for {clan.Name} - Season {clanHistory.SeasonID}, Week {clanHistory.WeekIndex} at {clanHistory.RecordedDate:yyyy-MM-dd HH:mm:ss} CST");
                     }
                 }
 

@@ -332,7 +332,6 @@ namespace ClashRoyaleWarTracker.Application.Services
                             SeasonID = riverRace.SeasonId,
                             WeekIndex = riverRace.SectionIndex,
                             WarTrophies = clan.WarTrophies - runningTrophyDifference, // take current trophies and subtract difference
-                            RecordedDate = DateTime.Now
                         };
 
                         clanHistories.Add(clanHistory);
@@ -407,7 +406,6 @@ namespace ClashRoyaleWarTracker.Application.Services
                                         ClanID = clan.ID,
                                         Name = participant.Name,
                                         IsActive = true,
-                                        LastUpdated = DateTime.Now
                                     };
 
                                     playerID = await _playerRepository.AddPlayerAsync(newPlayer);

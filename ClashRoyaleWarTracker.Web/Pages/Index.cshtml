@@ -170,7 +170,7 @@
                                     <td><code>#@playerAverage.PlayerTag</code></td>
                                     <td>@(playerAverage.ClanName ?? "No Clan")</td>
                                     <td>
-                                        <span class="badge bg-@(playerAverage.FameAttackAverage >= 1200 ? "success" : playerAverage.FameAttackAverage >= 1000 ? "warning" : "danger")">
+                                        <span class="badge bg-@(playerAverage.FameAttackAverage >= 1200 ? "success" : playerAverage.FameAttackAverage >= 1000 ? "custom-orange" : "danger")">
                                             @playerAverage.FameAttackAverage.ToString("F2")
                                         </span>
                                     </td>

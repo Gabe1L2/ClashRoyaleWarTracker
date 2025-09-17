@@ -113,5 +113,53 @@ namespace ClashRoyaleWarTracker.Infrastructure.Repositories
                 throw new InvalidOperationException($"Failed to retrieve war histories for player tag {player.Tag} from the database", ex);
             }
         }
+
+        public async Task<List<PlayerWarHistoryExpanded>> GetAllPlayerWarHistoriesExpandedAsync(bool is5k)
+        {
+            try
+            {
+                _logger.LogDebug("Getting all Player War Histories (Expanded) from the database for {TrophyLevel} trophies", is5k ? "5k+" : "sub-5k");
+
+                var trophyCondition = is5k ? ">= 5000" : "< 5000";
+
+                var sql = $@"
+            SELECT 
+                pwh.ID,
+                pwh.PlayerID,
+                p.Tag as PlayerTag,
+                p.Name as PlayerName,
+                p.IsActive,
+                pwh.ClanHistoryID,
+                ch.SeasonID,
+                ch.WeekIndex,
+                ISNULL(c.ID, -1) as ClanID,
+                ISNULL(c.Name, 'Unknown Clan') as ClanName,
+                ch.WarTrophies,
+                pwh.Fame,
+                pwh.DecksUsed,
+                pwh.BoatAttacks,
+                pwh.UpdatedBy,
+                pwh.LastUpdated
+            FROM PlayerWarHistories pwh
+            INNER JOIN ClanHistories ch ON pwh.ClanHistoryID = ch.ID
+            INNER JOIN Players p ON pwh.PlayerID = p.ID
+            LEFT JOIN Clans c ON p.ClanID = c.ID
+            WHERE ch.WarTrophies {trophyCondition}
+            ORDER BY p.Name, ch.SeasonID DESC, ch.WeekIndex DESC";
+
+                var results = await _context.Database.SqlQueryRaw<PlayerWarHistoryExpanded>(sql).ToListAsync();
+
+                _logger.LogDebug("Retrieved {Count} Player War Histories (Expanded) from the database for {TrophyLevel} trophies",
+                    results.Count, is5k ? "5k+" : "sub-5k");
+
+                return results;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to retrieve expanded player war histories for {TrophyLevel} trophies from the database",
+                    is5k ? "5k+" : "sub-5k");
+                throw new InvalidOperationException("Failed to retrieve expanded player war histories from the database", ex);
+            }
+        }
     }
 }

@@ -517,5 +517,60 @@ namespace ClashRoyaleWarTracker.Application.Services
                 return ServiceResult<IEnumerable<PlayerAverageDTO>>.Failure("An unexpected error occurred while retrieving all player averages");
             }
         }
+
+        public async Task<ServiceResult<IEnumerable<GroupedPlayerWarHistoryDTO>>> GetAllGroupedPlayerWarHistoryDTOsAsync(bool is5k = true)
+        {
+            try
+            {
+                _logger.LogInformation("Retrieving grouped player war histories for {TrophyLevel} trophies", is5k ? "5k+" : "sub-5k");
+
+                var allPlayerWarHistories = await _warRepository.GetAllPlayerWarHistoriesExpandedAsync(is5k);
+                
+                if (allPlayerWarHistories == null || !allPlayerWarHistories.Any())
+                {
+                    _logger.LogWarning("No player war histories found for {TrophyLevel} trophies", is5k ? "5k+" : "sub-5k");
+                    return ServiceResult<IEnumerable<GroupedPlayerWarHistoryDTO>>.Successful(new List<GroupedPlayerWarHistoryDTO>());
+                }
+
+                // Clean clan tags
+                foreach (var pwh in allPlayerWarHistories)
+                {
+                    pwh.PlayerTag = Regex.Replace(pwh.PlayerTag, @"[^a-zA-Z0-9]", "");
+                }
+
+                // Group by PlayerID, SeasonID, and WeekIndex, then aggregate
+                var groupedResults = allPlayerWarHistories
+                    .GroupBy(pwh => new { pwh.PlayerID, pwh.SeasonID, pwh.WeekIndex })
+                    .Select(group => new GroupedPlayerWarHistoryDTO
+                    {
+                        PlayerWarHistoryIDs = group.Select(g => g.ID).ToList(),
+                        PlayerID = group.Key.PlayerID,
+                        PlayerTag = group.First().PlayerTag,
+                        PlayerName = group.First().PlayerName,
+                        IsActive = group.First().IsActive,
+                        SeasonID = group.Key.SeasonID,
+                        WeekIndex = group.Key.WeekIndex,
+                        Fame = group.Sum(g => g.Fame), // Aggregate fame
+                        DecksUsed = group.Sum(g => g.DecksUsed + g.BoatAttacks), // Aggregate decks used (attacks)
+                        ClanID = group.First().ClanID, // Most recent clan
+                        ClanName = group.First().ClanName, // Most recent clan name
+                        LastUpdated = group.Max(g => g.LastUpdated) // Latest update time
+                    })
+                    .OrderBy(dto => dto.PlayerName)
+                    .ThenByDescending(dto => dto.SeasonID)
+                    .ThenByDescending(dto => dto.WeekIndex)
+                    .ToList();
+
+                _logger.LogInformation("Successfully grouped {OriginalCount} player war histories into {GroupedCount} grouped records for {TrophyLevel} trophies", 
+                    allPlayerWarHistories.Count, groupedResults.Count, is5k ? "5k+" : "sub-5k");
+
+                return ServiceResult<IEnumerable<GroupedPlayerWarHistoryDTO>>.Successful(groupedResults);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "An unexpected error occurred while retrieving grouped player war histories for {TrophyLevel} trophies", is5k ? "5k+" : "sub-5k");
+                return ServiceResult<IEnumerable<GroupedPlayerWarHistoryDTO>>.Failure($"An unexpected error occurred while retrieving grouped player war histories for {(is5k ? "5k+" : "sub-5k")} trophies");
+            }
+        }
     }
 }

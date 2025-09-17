@@ -3,6 +3,25 @@ using System.Text.Json.Serialization;
 
 namespace ClashRoyaleWarTracker.Application.Models
 {
+    public class PlayerWarHistoryExpanded
+    {
+        public int ID { get; set; }
+        public int PlayerID { get; set; }
+        public string PlayerTag { get; set; } = string.Empty;
+        public string PlayerName { get; set; } = string.Empty;
+        public bool IsActive { get; set; }
+        public int ClanHistoryID { get; set; }
+        public int SeasonID { get; set; }
+        public int WeekIndex { get; set; }
+        public int ClanID { get; set; }
+        public string ClanName { get; set; } = string.Empty;
+        public int WarTrophies { get; set; }
+        public int Fame { get; set; }
+        public int DecksUsed { get; set; }
+        public int BoatAttacks { get; set; }
+        public string? UpdatedBy { get; set; }
+        public DateTime LastUpdated { get; set; }
+    }
 
     public class PlayerWarHistory
     {
@@ -15,6 +34,22 @@ namespace ClashRoyaleWarTracker.Application.Models
         public DateTime LastUpdated { get; set; }
         public bool IsModified { get; set; }
         public string? UpdatedBy { get; set; }
+    }
+
+    public class GroupedPlayerWarHistoryDTO
+    {
+        public List<int> PlayerWarHistoryIDs { get; set; } = new();
+        public int PlayerID { get; set; }
+        public string PlayerTag { get; set; } = string.Empty;
+        public string PlayerName { get; set; } = string.Empty;
+        public bool IsActive { get; set; }
+        public int SeasonID { get; set; }
+        public int WeekIndex { get; set; }
+        public int Fame { get; set; }
+        public int DecksUsed { get; set; } // Add DecksUsed and Boat Attacks
+        public int ClanID { get; set; } // Most recent ClanID from Player
+        public string ClanName { get; set; } = string.Empty; // Most recent ClanName from Player
+        public DateTime LastUpdated { get; set; }
     }
 
     public class RiverRaceLogResponse

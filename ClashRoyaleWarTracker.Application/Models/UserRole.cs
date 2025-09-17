@@ -29,6 +29,7 @@ namespace ClashRoyaleWarTracker.Application.Models
         public const string ViewStatistics = "ViewStatistics";
         public const string UpdateWarData = "UpdateWarData";
         public const string ModifyPlayerData = "ModifyPlayerData";
+        public const string ViewWarHistory = "ViewWarHistory";
     }
 
     /// <summary>
@@ -44,22 +45,26 @@ namespace ClashRoyaleWarTracker.Application.Models
                 Permissions.ViewStatistics,
                 Permissions.UpdateWarData,
                 Permissions.ManageUsers,
-                Permissions.ModifyPlayerData
+                Permissions.ModifyPlayerData,
+                Permissions.ViewWarHistory
             },
             [UserRole.Management] = new()
             {
                 Permissions.ViewStatistics,
                 Permissions.UpdateWarData,
-                Permissions.ModifyPlayerData
+                Permissions.ModifyPlayerData,
+                Permissions.ViewWarHistory
             },
             [UserRole.Coleader] = new()
             {
                 Permissions.ViewStatistics,
-                Permissions.ModifyPlayerData
+                Permissions.ModifyPlayerData,
+                Permissions.ViewWarHistory
             },
             [UserRole.Member] = new()
             {
                 Permissions.ViewStatistics,
+                Permissions.ViewWarHistory
             },
             [UserRole.Guest] = new()
             {

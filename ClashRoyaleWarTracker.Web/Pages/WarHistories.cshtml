@@ -1,0 +1,658 @@
+﻿@page
+@model ClashRoyaleWarTracker.Web.Pages.WarHistoriesModel
+@{
+    ViewData["Title"] = "War History";
+    Layout = "~/Pages/Shared/_FullWidthLayout.cshtml";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="display-4">War History Spreadsheet</h1>
+    <div>
+        <span class="badge bg-info fs-6 me-2">Total Players: @Model.PlayerRows.Count</span>
+
+        <button class="btn btn-primary" onclick="refreshData()">
+            <i class="fas fa-sync-alt"></i> Refresh Data
+        </button>
+    </div>
+</div>
+
+@if (TempData["SuccessMessage"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        @TempData["SuccessMessage"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+
+@if (TempData["ErrorMessage"] != null)
+{
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        @TempData["ErrorMessage"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+
+<!-- Filter Controls -->
+<div class="card mb-4">
+    <div class="card-body">
+        <div class="row g-3">
+            <div class="col-md-2">
+                <label class="form-label">Trophy Level</label>
+                <form method="post" asp-page-handler="ToggleTrophyLevel" style="display: inline;">
+                    <div class="btn-group w-100" role="group">
+                        <input type="radio" class="btn-check" name="Is5kTrophies" id="trophy5k" value="true" 
+                               @(Model.Is5kTrophies ? "checked" : "") onchange="this.form.submit()">
+                        <label class="btn btn-outline-success" for="trophy5k">5k+</label>
+
+                        <input type="radio" class="btn-check" name="Is5kTrophies" id="tropySub5k" value="false" 
+                               @(!Model.Is5kTrophies ? "checked" : "") onchange="this.form.submit()">
+                        <label class="btn btn-outline-warning" for="tropySub5k">Sub-5k</label>
+                    </div>
+                </form>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Clans</label>
+                <select id="clanFilter" class="form-select" onchange="filterTable()">
+                    <option value="">All Clans</option>
+                    @foreach (var clan in Model.AllClans)
+                    {
+                        <option value="@clan">@clan</option>
+                    }
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Active Status</label>
+                <select id="activeFilter" class="form-select" onchange="filterTable()">
+                    <option value="">All Players</option>
+                    <option value="true">Active Only</option>
+                    <option value="false">Inactive Only</option>
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">Search Player</label>
+                <input type="text" id="searchInput" class="form-control" placeholder="Search by name or tag..." onkeyup="filterTable()">
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">&nbsp;</label>
+                <button class="btn btn-outline-secondary w-100" onclick="clearFilters()">Clear Filters</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Full Width Spreadsheet Table -->
+@if (Model.PlayerRows.Any())
+{
+    <div class="table-responsive" style="max-height: 75vh; overflow: auto; border: 1px solid #dee2e6;">
+        <table id="warHistoryTable" class="table table-sm mb-0">
+            <thead class="table-dark sticky-top">
+                <tr>
+                    <!-- NEW: Row number column -->
+                    <th style="position: sticky; left: 0; background-color: var(--bs-dark); z-index: 10; min-width: 50px;">
+                        <div style="cursor: default; text-align: center;">
+                            #
+                        </div>
+                    </th>
+                    <!-- Fixed columns for player info - UPDATED POSITIONS -->
+                    <th style="position: sticky; left: 50px; background-color: var(--bs-dark); z-index: 10; min-width: 90px;">
+                        <div onclick="sortTable('tag')" style="cursor: pointer;">
+                            Tag <i class="fas fa-sort"></i>
+                        </div>
+                    </th>
+                    <th style="position: sticky; left: 140px; background-color: var(--bs-dark); z-index: 10; min-width: 120px;">
+                        <div onclick="sortTable('player')" style="cursor: pointer;">
+                            Player <i class="fas fa-sort"></i>
+                        </div>
+                    </th>
+                    <th style="position: sticky; left: 260px; background-color: var(--bs-dark); z-index: 10; min-width: 100px;">
+                        <div onclick="sortTable('clan')" style="cursor: pointer;">
+                            Last Clan <i class="fas fa-sort"></i>
+                        </div>
+                    </th>
+                    <th style="position: sticky; left: 360px; background-color: var(--bs-dark); z-index: 10; min-width: 80px;">
+                        <div onclick="sortTable('status')" style="cursor: pointer; text-align: center;">
+                            Fame / Atk. <i class="fas fa-sort"></i>
+                        </div>
+                    </th>
+                    
+                    <!-- Dynamic columns for each season/week -->
+                    @foreach (var seasonWeek in Model.SeasonWeekHeaders)
+                    {
+                        var parts = seasonWeek.Split('-');
+                        var season = parts[0];
+                        var week = parts[1];
+                        <th class="text-center season-week-column" data-season-week="@seasonWeek" style="min-width: 85px; text-align: center;">
+                            <div style="white-space: nowrap;">
+                                @season-@week
+                            </div>
+                        </th>
+                    }
+                </tr>
+            </thead>
+            <tbody>
+                @{
+                    var rowNumber = 1;
+                }
+                @foreach (var row in Model.PlayerRows)
+                {
+                    <tr data-player-name="@row.PlayerName.ToLower()" 
+                        data-player-tag="@row.PlayerTag.ToLower()" 
+                        data-clan-name="@row.ClanName.ToLower()" 
+                        data-active="@row.IsActive.ToString().ToLower()"
+                        data-original-index="@rowNumber"
+                        class="@(!row.IsActive ? "inactive-player" : "")">
+                        
+                        <!-- NEW: Row number column -->
+                        <td style="position: sticky; left: 0; z-index: 5;" class="row-number @(!row.IsActive ? "inactive-player" : "")">
+                            <strong class="text-muted">@rowNumber</strong>
+                        </td>
+                        <!-- Tag column - FIX THE SYNTAX -->
+                        <td style="position: sticky; left: 50px; z-index: 5;" class="@(!row.IsActive ? "inactive-player" : "")">
+                            <a href="https://royaleapi.com/player/@row.PlayerTag" target="_blank" class="text-decoration-none">
+                                <code>@row.PlayerTag</code>
+                                <i class="fas fa-external-link-alt ms-1" style="font-size: 0.7em;"></i>
+                            </a>
+                        </td>
+
+                        <!-- Player name column - FIX THE SYNTAX -->
+                        <td style="position: sticky; left: 140px; z-index: 5;" class="@(!row.IsActive ? "inactive-player" : "")">
+                            <strong>@row.PlayerName</strong>
+                        </td>
+
+                        <!-- Clan column - FIX THE SYNTAX -->
+                        <td style="position: sticky; left: 260px; z-index: 5;" class="@(!row.IsActive ? "inactive-player" : "")">
+                            <strong>@row.ClanName</strong>
+                        </td>
+
+                        <!-- Fame/Atk column - FIX THE SYNTAX -->
+                        <td style="position: sticky; left: 360px; z-index: 5; text-align: center" class="@(!row.IsActive ? "inactive-player" : "")">
+                            @{
+                                // Use PlayerAverage from database instead of calculating on-the-fly
+                                var playerAverage = Model.PlayerAverages.ContainsKey(row.PlayerID)
+                                ? Model.PlayerAverages[row.PlayerID]
+                                : null;
+
+                                var average = playerAverage?.FameAttackAverage ?? 0;
+                            }
+                            <strong class="text-center text-@(average >= 200 ? "success" : average >= 175 ? "custom-orange" : "dark-red")"
+                                    data-sort-value="@average.ToString("F1")">
+                                @average.ToString("F1")
+                            </strong>
+                        </td>
+                        
+                        <!-- Dynamic columns for each season/week -->
+                        @foreach (var seasonWeek in Model.SeasonWeekHeaders)
+                        {
+                            var cell = row.WarData.ContainsKey(seasonWeek) ? row.WarData[seasonWeek] : new PlayerWarDataCell();
+                            <td class="text-center season-week-column" data-season-week="@seasonWeek">
+                                @if (cell.HasData)
+                                {
+                                    var ratio = cell.DecksUsed > 0 ? (decimal)cell.Fame / cell.DecksUsed : 0;
+                                    var colorClass = ratio >= 200 ? "success" : ratio >= 175 ? "custom-orange" : "dark-red";
+
+                                    <div class="war-cell" 
+                                         data-bs-toggle="tooltip" 
+                                         title="Fame: @cell.Fame, Attacks: @cell.DecksUsed, Ratio: @ratio.ToString("F1")">
+                                        <div class="fame-value text-@colorClass">
+                                            @cell.Fame
+                                        </div>
+                                        <div class="attacks-value text-muted" style="font-size: 0.8em;">
+                                            @cell.DecksUsed
+                                        </div>
+                                    </div>
+                                }
+                                else
+                                {
+                                    <span class="text-muted">-</span>
+                                }
+                            </td>
+                        }
+                    </tr>
+                    rowNumber++;
+                }
+            </tbody>
+        </table>
+    </div>
+}
+else
+{
+    <div class="text-center py-5">
+        <i class="fas fa-chart-line fa-3x text-muted mb-3"></i>
+        <h5 class="text-muted">No war history data available</h5>
+        <p class="text-muted">Run a data update to populate war history information.</p>
+    </div>
+}
+
+@section Scripts {
+    <script>
+        let sortDirection = {};
+
+        function refreshData() {
+            location.reload();
+        }
+
+        function filterTable() {
+            const clanFilter = document.getElementById('clanFilter').value.toLowerCase();
+            const activeFilter = document.getElementById('activeFilter').value;
+            const searchInput = document.getElementById('searchInput').value.toLowerCase();
+            
+            const rows = document.querySelectorAll('#warHistoryTable tbody tr');
+            let visibleCount = 0;
+            let visibleRowNumber = 1;
+            
+            rows.forEach(row => {
+                const playerName = row.getAttribute('data-player-name');
+                const playerTag = row.getAttribute('data-player-tag');
+                const clanName = row.getAttribute('data-clan-name');
+                const isActive = row.getAttribute('data-active');
+                
+                let showRow = true;
+                
+                // Clan filter
+                if (clanFilter && !clanName.includes(clanFilter))
+                {
+                    showRow = false;
+                }
+                
+                // Active filter
+                if (activeFilter && isActive !== activeFilter)
+                {
+                    showRow = false;
+                }
+                
+                // Search filter
+                if (searchInput && !playerName.includes(searchInput) && !playerTag.includes(searchInput))
+                {
+                    showRow = false;
+                }
+                
+                row.style.display = showRow ? '' : 'none';
+                if (showRow) {
+                    visibleCount++;
+                    // Update the row number for visible rows
+                    const rowNumberCell = row.querySelector('.row-number strong');
+                    if (rowNumberCell) {
+                        rowNumberCell.textContent = visibleRowNumber;
+                    }
+                    visibleRowNumber++;
+                }
+            });
+        }
+
+        function sortTable(column)
+        {
+            const table = document.getElementById('warHistoryTable');
+            const tbody = table.tBodies[0];
+            const rows = Array.from(tbody.rows);
+            
+            // Determine sort direction
+            const isAscending = sortDirection[column] !== 'asc';
+            sortDirection[column] = isAscending ? 'asc' : 'desc';
+            
+            rows.sort((a, b) =>
+            {
+                let aVal, bVal;
+                
+                switch(column)
+                {
+                    case 'tag':
+                        aVal = a.getAttribute('data-player-tag');
+                        bVal = b.getAttribute('data-player-tag');
+                        break;
+                    case 'player':
+                        aVal = a.getAttribute('data-player-name');
+                        bVal = b.getAttribute('data-player-name');
+                        break;
+                    case 'clan':
+                        aVal = a.getAttribute('data-clan-name');
+                        bVal = b.getAttribute('data-clan-name');
+                        break;
+                    case 'status':
+                        const aCell = a.cells[4].querySelector('[data-sort-value]');
+                        const bCell = b.cells[4].querySelector('[data-sort-value]');
+
+                        aVal = aCell ? parseFloat(aCell.getAttribute('data-sort-value')) : 0;
+                        bVal = bCell ? parseFloat(bCell.getAttribute('data-sort-value')) : 0;
+
+                        return isAscending ? aVal - bVal : bVal - aVal;
+                    default:
+                        return 0;
+                }
+                
+                return isAscending ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
+            });
+            
+            // Re-append sorted rows
+            rows.forEach(row => tbody.appendChild(row));
+            
+            // Update row numbers after sorting
+            updateRowNumbers();
+            
+            // Update sort indicators
+            updateSortIndicators(column, isAscending);
+        }
+
+        function updateRowNumbers() {
+            const visibleRows = document.querySelectorAll('#warHistoryTable tbody tr:not([style*="display: none"])');
+            visibleRows.forEach((row, index) => {
+                const rowNumberCell = row.querySelector('.row-number strong');
+                if (rowNumberCell) {
+                    rowNumberCell.textContent = index + 1;
+                }
+            });
+        }
+
+        function updateSortIndicators(activeColumn, isAscending)
+        {
+            const headers = document.querySelectorAll('#warHistoryTable th i.fas');
+            headers.forEach((icon) => {
+                icon.className = 'fas fa-sort';
+            });
+            
+            // Find the active column header and update its icon
+            const activeHeader = document.querySelector(`[onclick="sortTable('${activeColumn}')"] i`);
+            if (activeHeader) {
+                activeHeader.className = `fas fa-sort-${isAscending ? 'up' : 'down'}`;
+            }
+        }
+
+        function clearFilters()
+        {
+            document.getElementById('clanFilter').value = '';
+            document.getElementById('activeFilter').value = '';
+            document.getElementById('searchInput').value = '';
+            filterTable();
+        }
+
+        // Initialize tooltips
+        document.addEventListener('DOMContentLoaded', function()
+        {
+            const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+            const tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+                return new bootstrap.Tooltip(tooltipTriggerEl);
+            });
+        });
+    </script>
+
+    <style>
+        /* REMOVE Bootstrap's default striping and create custom full-row striping */
+        #warHistoryTable tbody tr:nth-child(odd) {
+            background-color: white !important;
+        }
+        
+        #warHistoryTable tbody tr:nth-child(even) {
+            background-color: #f8f9fa !important; /* Bootstrap's light gray */
+        }
+        
+        /* Ensure sticky columns inherit the row background AND prevent bleed-through */
+        #warHistoryTable tbody tr:nth-child(odd) td[style*="position: sticky"] {
+            background-color: white !important;
+        }
+        
+        #warHistoryTable tbody tr:nth-child(even) td[style*="position: sticky"] {
+            background-color: #f8f9fa !important;
+        }
+        
+        #warHistoryTable tbody tr.inactive-player {
+            background-color: #fff1f3 !important; /* Light red background */
+        }
+
+        #warHistoryTable tbody tr.inactive-player:hover {
+            background-color: #ffeaed !important; /* Slightly darker red on hover */
+        }
+
+        /* Ensure inactive sticky columns also get the red background */
+        #warHistoryTable tbody tr.inactive-player td[style*="position: sticky"] {
+            background-color: #fff1f3 !important;
+        }
+
+        /* Also ensure ALL cells in inactive rows get the red background */
+        #warHistoryTable tbody tr.inactive-player td {
+            background-color: #fff1f3 !important;
+        }
+
+        #warHistoryTable tbody tr.inactive-player:hover td {
+            background-color: #ffeaed !important;
+        }
+
+        /* Consistent hover effects for ALL cells in non-inactive rows */
+        #warHistoryTable tbody tr:not(.inactive-player):hover td {
+            background-color: #e9ecef !important; /* Same hover color for ALL columns */
+        }
+   
+
+        .war-cell {
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+            line-height: 1.0;
+            white-space: normal !important;
+            overflow: visible !important;
+            text-overflow: unset !important;
+            height: auto !important;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            writing-mode: initial !important;
+            text-orientation: initial !important;
+            padding: 1px 0;
+        }
+        
+        .fame-value {
+            font-weight: bold;
+            font-size: 1.1em;
+            margin: 0;
+            padding: 0;
+            line-height: 0.9;
+            writing-mode: initial !important;
+            text-orientation: initial !important;
+        }
+        
+        .attacks-value {
+            margin: 0;
+            padding: 0;
+            line-height: 0.9;
+            font-size: 0.95em !important;
+            writing-mode: initial !important;
+            text-orientation: initial !important;
+        }
+        
+        .table-responsive {
+            width: 100%;
+            margin: 0;
+        }
+        
+        .sticky-top {
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+        
+        /* Dark theme styles for sticky headers */
+        .table-dark th {
+            border-color: #495057;
+        }
+        
+        /* Ensure text in sticky columns is readable */
+        td[style*="position: sticky"] {
+            box-shadow: 2px 0 5px rgba(0,0,0,0.1);
+        }
+        
+        /* UPDATED: Fixed column widths with new row number column */
+        #warHistoryTable th:nth-child(1),
+        #warHistoryTable td:nth-child(1) {
+            width: 50px;
+            min-width: 50px;
+            max-width: 50px;
+        }
+        
+        #warHistoryTable th:nth-child(2),
+        #warHistoryTable td:nth-child(2) {
+            width: 90px;
+            min-width: 90px;
+            max-width: 90px;
+        }
+        
+        #warHistoryTable th:nth-child(3),
+        #warHistoryTable td:nth-child(3) {
+            width: 120px;
+            min-width: 120px;
+            max-width: 120px;
+        }
+        
+        #warHistoryTable th:nth-child(4),
+        #warHistoryTable td:nth-child(4) {
+            width: 100px;
+            min-width: 100px;
+            max-width: 100px;
+        }
+        
+        #warHistoryTable th:nth-child(5),
+        #warHistoryTable td:nth-child(5) {
+            width: 80px;
+            min-width: 80px;
+            max-width: 80px;
+        }
+        
+        /* ALL Season/week columns - FIXED SIZE */
+        .season-week-column {
+            width: 85px !important;
+            min-width: 85px !important;
+            max-width: 85px !important;
+            padding: 0.1rem !important;
+        }
+        
+        /* COMPACT ROW HEIGHT */
+        #warHistoryTable tr {
+            height: 36px;
+        }
+        
+        #warHistoryTable td,
+        #warHistoryTable th {
+            height: 36px;
+            padding: 0.2rem 0.1rem !important;
+            vertical-align: middle;
+        }
+        
+        /* Header rows slightly taller for readability */
+        #warHistoryTable thead tr {
+            height: 42px;
+        }
+        
+        #warHistoryTable thead th {
+            height: 42px;
+            padding: 0.25rem 0.1rem !important;
+        }
+        
+        /* General text truncation - but NOT for war cells */
+        #warHistoryTable td:not(.season-week-column) {
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        
+        /* Season/week columns should allow stacked content */
+        #warHistoryTable td.season-week-column {
+            white-space: normal !important;
+            overflow: visible !important;
+            text-overflow: unset !important;
+        }
+        
+        /* Row number column styling */
+        .row-number {
+            text-align: center !important;
+            font-size: 0.75em;
+        }
+        
+        /* Compact text and elements */
+        code {
+            font-size: 0.75em;
+        }
+
+        /* Force table to use fixed layout */
+        #warHistoryTable {
+            table-layout: fixed;
+            width: auto;
+            min-width: auto;
+        }
+        
+        /* Smaller font sizes for compact display */
+        #warHistoryTable {
+            font-size: 0.75em;
+        }
+        
+        #warHistoryTable strong {
+            font-size: 0.85em;
+        }
+        
+        /* UPDATED: Adjust sticky column positions for new row number column */
+        #warHistoryTable th:nth-child(1),
+        #warHistoryTable td:nth-child(1) {
+            position: sticky;
+            left: 0;
+            z-index: 5;
+        }
+        
+        #warHistoryTable th:nth-child(2),
+        #warHistoryTable td:nth-child(2) {
+            position: sticky;
+            left: 50px;
+            z-index: 5;
+        }
+        
+        #warHistoryTable th:nth-child(3),
+        #warHistoryTable td:nth-child(3) {
+            position: sticky;
+            left: 140px;
+            z-index: 5;
+        }
+        
+        #warHistoryTable th:nth-child(4),
+        #warHistoryTable td:nth-child(4) {
+            position: sticky;
+            left: 260px;
+            z-index: 5;
+        }
+        
+        #warHistoryTable th:nth-child(5),
+        #warHistoryTable td:nth-child(5) {
+            position: sticky;
+            left: 360px;
+            z-index: 5;
+        }
+        
+        /* Header specific styling */
+        #warHistoryTable thead th {
+            background-color: var(--bs-dark) !important;
+            z-index: 10 !important;
+        }
+        
+        #warHistoryTable thead th.season-week-column > div:not(.war-cell) {
+            writing-mode: initial !important; /* Changed from vertical-lr */
+            text-orientation: initial !important; /* Changed from mixed */
+            white-space: nowrap;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .text-custom-orange {
+            color: #e67e22 !important;
+        }
+
+        .bg-custom-orange {
+            background-color: #e67e22 !important;
+            color: white !important;
+        }
+
+        .text-dark-red {
+            color: #c82333 !important;
+        }
+
+        .bg-dark-red {
+            background-color: #c82333 !important;
+            color: white !important;
+        }
+    </style>
+}

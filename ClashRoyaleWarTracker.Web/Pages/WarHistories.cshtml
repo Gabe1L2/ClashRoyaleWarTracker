@@ -8,8 +8,6 @@
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h1 class="display-4">War History Spreadsheet</h1>
     <div>
-        <span class="badge bg-info fs-6 me-2">Total Players: @Model.PlayerRows.Count</span>
-
         <button class="btn btn-primary" onclick="refreshData()">
             <i class="fas fa-sync-alt"></i> Refresh Data
         </button>
@@ -52,21 +50,67 @@
             </div>
             <div class="col-md-2">
                 <label class="form-label">Clans</label>
-                <select id="clanFilter" class="form-select" onchange="filterTable()">
-                    <option value="">All Clans</option>
-                    @foreach (var clan in Model.AllClans)
-                    {
-                        <option value="@clan">@clan</option>
-                    }
-                </select>
+                <div class="dropdown">
+                    <button class="btn btn-outline-secondary dropdown-toggle w-100 text-start" type="button" id="clanFilterDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                        <span id="clanFilterText">All Clans</span>
+                    </button>
+                    <ul class="dropdown-menu w-100" aria-labelledby="clanFilterDropdown" style="max-height: 250px; overflow-y: auto;">
+                        <li>
+                            <label class="dropdown-item">
+                                <input type="checkbox" id="selectAllClans" onchange="toggleAllClans()" class="me-2" checked>
+                                <strong>Select All</strong>
+                            </label>
+                        </li>
+                        <li><hr class="dropdown-divider"></li>
+                        @foreach (var clan in Model.AllClans)
+                        {
+                            <li>
+                                <label class="dropdown-item">
+                                    <input type="checkbox" class="clan-checkbox me-2" value="@clan" onchange="updateClanFilter()" checked>
+                                    @clan
+                                </label>
+                            </li>
+                        }
+                        @if (!Model.AllClans.Any())
+                        {
+                            <li>
+                                <span class="dropdown-item text-muted">No clans available</span>
+                            </li>
+                        }
+                    </ul>
+                </div>
             </div>
             <div class="col-md-2">
-                <label class="form-label">Active Status</label>
-                <select id="activeFilter" class="form-select" onchange="filterTable()">
-                    <option value="">All Players</option>
-                    <option value="true">Active Only</option>
-                    <option value="false">Inactive Only</option>
-                </select>
+                <label class="form-label">Status</label>
+                <div class="dropdown">
+                    <button class="btn btn-outline-secondary dropdown-toggle w-100 text-start" type="button" id="statusFilterDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                        <span id="statusFilterText">All Statuses</span>
+                    </button>
+                    <ul class="dropdown-menu w-100" aria-labelledby="statusFilterDropdown" style="max-height: 250px; overflow-y: auto;">
+                        <li>
+                            <label class="dropdown-item">
+                                <input type="checkbox" id="selectAllStatuses" onchange="toggleAllStatuses()" class="me-2" checked>
+                                <strong>Select All</strong>
+                            </label>
+                        </li>
+                        <li><hr class="dropdown-divider"></li>
+                        @foreach (var status in Model.AllStatuses)
+                        {
+                            <li>
+                                <label class="dropdown-item">
+                                    <input type="checkbox" class="status-checkbox me-2" value="@status" onchange="updateStatusFilter()" checked>
+                                    @status
+                                </label>
+                            </li>
+                        }
+                        @if (!Model.AllStatuses.Any())
+                        {
+                            <li>
+                                <span class="dropdown-item text-muted">No Statuses available</span>
+                            </li>
+                        }
+                    </ul>
+                </div>
             </div>
             <div class="col-md-4">
                 <label class="form-label">Search Player</label>
@@ -138,34 +182,41 @@
                     <tr data-player-name="@row.PlayerName.ToLower()" 
                         data-player-tag="@row.PlayerTag.ToLower()" 
                         data-clan-name="@row.ClanName.ToLower()" 
-                        data-active="@row.IsActive.ToString().ToLower()"
+                        data-status="@(row.Status?.ToLower() ?? "inactive")"
                         data-original-index="@rowNumber"
-                        class="@(!row.IsActive ? "inactive-player" : "")">
+                        data-player-id="@row.PlayerID"
+                        onclick="selectPlayer(@row.PlayerID, '@Html.Raw(Html.Encode(row.PlayerName))', '@row.PlayerTag')"
+                        style="cursor: pointer;"
+                        class="@(!string.Equals(row.Status, "Active", System.StringComparison.OrdinalIgnoreCase) ? "inactive-player" : "")">
                         
                         <!-- NEW: Row number column -->
-                        <td style="position: sticky; left: 0; z-index: 5;" class="row-number @(!row.IsActive ? "inactive-player" : "")">
+                        <td style="position: sticky; left: 0; z-index: 5;" class="row-number @(!string.Equals(row.Status, "Active", System.StringComparison.OrdinalIgnoreCase) ? "inactive-player" : "")">
                             <strong class="text-muted">@rowNumber</strong>
                         </td>
-                        <!-- Tag column - FIX THE SYNTAX -->
-                        <td style="position: sticky; left: 50px; z-index: 5;" class="@(!row.IsActive ? "inactive-player" : "")">
-                            <a href="https://royaleapi.com/player/@row.PlayerTag" target="_blank" class="text-decoration-none">
+                        <!-- Tag column -->
+                        <td style="position: sticky; left: 50px; z-index: 5;" class="@(!string.Equals(row.Status, "Active", System.StringComparison.OrdinalIgnoreCase) ? "inactive-player" : "")">
+                            <a href="https://royaleapi.com/player/@row.PlayerTag" target="_blank" class="text-decoration-none" onclick="event.stopPropagation();">
                                 <code>@row.PlayerTag</code>
                                 <i class="fas fa-external-link-alt ms-1" style="font-size: 0.7em;"></i>
                             </a>
                         </td>
 
-                        <!-- Player name column - FIX THE SYNTAX -->
-                        <td style="position: sticky; left: 140px; z-index: 5;" class="@(!row.IsActive ? "inactive-player" : "")">
+                        <!-- Player name column -->
+                        <td style="position: sticky; left: 140px; z-index: 5;" class="@(!string.Equals(row.Status, "Active", System.StringComparison.OrdinalIgnoreCase) ? "inactive-player" : "")">
                             <strong>@row.PlayerName</strong>
+                            @if (!string.Equals(row.Status, "Active", System.StringComparison.OrdinalIgnoreCase))
+                            {
+                                <span class="badge bg-secondary ms-1" style="font-size: 0.6em;">@row.Status</span>
+                            }
                         </td>
 
-                        <!-- Clan column - FIX THE SYNTAX -->
-                        <td style="position: sticky; left: 260px; z-index: 5;" class="@(!row.IsActive ? "inactive-player" : "")">
+                        <!-- Clan column -->
+                        <td style="position: sticky; left: 260px; z-index: 5;" class="@(!string.Equals(row.Status, "Active", System.StringComparison.OrdinalIgnoreCase) ? "inactive-player" : "")">
                             <strong>@row.ClanName</strong>
                         </td>
 
-                        <!-- Fame/Atk column - FIX THE SYNTAX -->
-                        <td style="position: sticky; left: 360px; z-index: 5; text-align: center" class="@(!row.IsActive ? "inactive-player" : "")">
+                        <!-- Fame/Atk column -->
+                        <td style="position: sticky; left: 360px; z-index: 5; text-align: center" class="@(!string.Equals(row.Status, "Active", System.StringComparison.OrdinalIgnoreCase) ? "inactive-player" : "")">
                             @{
                                 // Use PlayerAverage from database instead of calculating on-the-fly
                                 var playerAverage = Model.PlayerAverages.ContainsKey(row.PlayerID)
@@ -223,17 +274,372 @@ else
     </div>
 }
 
+<!-- Player Actions Modal -->
+<div class="modal fade" id="playerActionsModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Player Actions</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <h6 id="selectedPlayerName">Player Name</h6>
+                <p class="text-muted" id="selectedPlayerTag">
+                    <span>Tag: </span>
+                    <a id="playerTagLink" href="#" target="_blank" class="text-decoration-none">
+                        <span id="playerTagText"></span>
+                        <i class="fas fa-external-link-alt ms-1" style="font-size: 0.8em;"></i>
+                    </a>
+                </p>
+
+                <!-- Tab Navigation -->
+                <ul class="nav nav-tabs mb-3" id="playerActionTabs" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active" id="status-tab" data-bs-toggle="tab" data-bs-target="#status-pane" type="button" role="tab">
+                            <i class="fas fa-user-check me-2"></i>Status
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="history-tab" data-bs-toggle="tab" data-bs-target="#history-pane" type="button" role="tab" onclick="loadPlayerWarHistories()">
+                            <i class="fas fa-history me-2"></i>War History
+                        </button>
+                    </li>
+                </ul>
+
+                <!-- Tab Content -->
+                <div class="tab-content" id="playerActionTabContent">
+                    <!-- Status Tab -->
+                    <div class="tab-pane fade show active" id="status-pane" role="tabpanel">
+                        @if (Model.CanModifyPlayerData)
+                        {
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label class="form-label">Player Status</label>
+                                    <select id="playerStatusSelect" class="form-select">
+                                        <option value="Active">Active</option>
+                                        <option value="Inactive">Inactive</option>
+                                        <option value="L2W">L2W</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-6 d-flex align-items-end">
+                                    <button class="btn btn-primary w-100" onclick="updatePlayerStatus()">
+                                        <i class="fas fa-save"></i> Update Status
+                                    </button>
+                                </div>
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="alert alert-warning">
+                                <i class="fas fa-exclamation-triangle me-2"></i>
+                                You don't have permission to modify player data.
+                            </div>
+                        }
+                    </div>
+
+                    <!-- War History Tab -->
+                    <div class="tab-pane fade" id="history-pane" role="tabpanel">
+                        <div id="warHistoryLoading" class="text-center py-3 d-none">
+                            <i class="fas fa-spinner fa-spin"></i> Loading war histories...
+                        </div>
+                        <div id="warHistoryContent">
+                            <!-- War history will be loaded dynamically -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="editWarHistoryModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form id="editWarHistoryForm" onsubmit="return false;">
+                <div class="modal-header">
+                    <h5 class="modal-title">Edit War History</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="editWarHistoryId" />
+
+                    <div class="mb-3">
+                        <label for="editFame" class="form-label">Fame</label>
+                        <input type="number" id="editFame" class="form-control" min="0" max="3600" step="1" required />
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="editDecksUsed" class="form-label">Attacks (Decks Used)</label>
+                        <input type="number" id="editDecksUsed" class="form-control" min="0" max="16" step="1" required />
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="editBoatAttacks" class="form-label">Boat Attacks</label>
+                        <input type="number" id="editBoatAttacks" class="form-control" min="0" max="3600" step="1" required />
+                    </div>
+
+                    <div id="editWarHistoryError" class="alert alert-danger d-none" role="alert"></div>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button id="saveWarHistoryBtn" type="button" class="btn btn-primary" onclick="saveWarHistoryFromModal()">
+                        <i class="fas fa-save"></i> Save
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
 @section Scripts {
     <script>
         let sortDirection = {};
+        let selectedStatuses = new Set();
+        let selectedClans = new Set();
+        let selectedPlayerId = null;
+        let selectedPlayerName = '';
+        let selectedPlayerTag = '';
+
+        // User permissions
+        const canModifyPlayerData = @Model.CanModifyPlayerData.ToString().ToLower();
+
+        function selectPlayer(playerId, playerName, playerTag) {
+            selectedPlayerId = playerId;
+            selectedPlayerName = playerName;
+            selectedPlayerTag = playerTag;
+            
+            document.getElementById('selectedPlayerName').textContent = playerName;
+            document.getElementById('playerTagText').textContent = `#${playerTag}`;
+            document.getElementById('playerTagLink').href = `https://royaleapi.com/player/${playerTag}`;
+
+            // Reset tabs to status tab
+            const statusTab = document.getElementById('status-tab');
+            const historyTab = document.getElementById('history-tab');
+            const statusPane = document.getElementById('status-pane');
+            const historyPane = document.getElementById('history-pane');
+
+            statusTab.classList.add('active');
+            historyTab.classList.remove('active');
+            statusPane.classList.add('show', 'active');
+            historyPane.classList.remove('show', 'active');
+
+            var modal = new bootstrap.Modal(document.getElementById('playerActionsModal'));
+            modal.show();
+        }
+
+        async function updatePlayerStatus() {
+            const status = document.getElementById('playerStatusSelect').value;
+            
+            try {
+                const response = await fetch('/WarHistories?handler=UpdatePlayerStatus', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                        'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]').value
+                    },
+                    body: `playerId=${selectedPlayerId}&status=${encodeURIComponent(status)}`
+                });
+
+                if (response.ok) {
+                    location.reload(); // Reload to show updated status
+                } else {
+                    alert('Error updating player status');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Error updating player status');
+            }
+        }
+
+        async function loadPlayerWarHistories() {
+            const loadingDiv = document.getElementById('warHistoryLoading');
+            const contentDiv = document.getElementById('warHistoryContent');
+            
+            loadingDiv.classList.remove('d-none');
+            contentDiv.innerHTML = '';
+
+            try {
+                const response = await fetch(`/WarHistories?handler=PlayerWarHistories&playerId=${selectedPlayerId}`);
+                const result = await response.json();
+
+                if (result.success) {
+                    displayWarHistories(result.data);
+                } else {
+                    contentDiv.innerHTML = `<div class="alert alert-danger">${result.message}</div>`;
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                contentDiv.innerHTML = '<div class="alert alert-danger">Error loading war histories</div>';
+            } finally {
+                loadingDiv.classList.add('d-none');
+            }
+        }
+
+        function displayWarHistories(warHistories) {
+            const contentDiv = document.getElementById('warHistoryContent');
+            
+            if (!warHistories || warHistories.length === 0) {
+                contentDiv.innerHTML = '<div class="alert alert-info">No war history found for this player.</div>';
+                return;
+            }
+
+            let html = `
+                <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
+                    <table class="table table-sm table-striped">
+                        <thead class="table-dark sticky-top">
+                            <tr>
+                                <th>Season</th>
+                                <th>Week</th>
+                                <th>Clan</th>
+                                <th>Fame</th>
+                                <th>Attacks</th>
+                                <th>Boat Attacks</th>
+                                <th>Fame/Attack</th>
+                                ${canModifyPlayerData ? '<th>Actions</th>' : ''}
+                            </tr>
+                        </thead>
+                        <tbody>
+            `;
+
+            warHistories.forEach(history => {
+                const ratio = history.decksUsed > 0 ? (history.fame / history.decksUsed).toFixed(1) : '0.0';
+                const ratioColor = ratio >= 200 ? 'success' : ratio >= 175 ? 'warning' : 'danger';
+                
+                html += `
+                    <tr data-war-history-id="${history.id}">
+                        <td>${history.seasonID}</td>
+                        <td>${history.weekIndex}</td>
+                        <td>${history.clanName}</td>
+                        <td><span class="fw-bold">${history.fame}</span></td>
+                        <td><span class="fw-bold">${history.decksUsed}</span></td>
+                        <td><span class="fw-bold">${history.boatAttacks}</span></td>
+                        <td><span class="badge bg-${ratioColor}">${ratio}</span></td>
+                        ${canModifyPlayerData ? `<td><button class="btn btn-sm btn-outline-primary" onclick="editWarHistory(${history.id}, ${history.fame}, ${history.decksUsed}, ${history.boatAttacks}, ${history.seasonID}, ${history.weekIndex})"><i class="fas fa-edit"></i></button></td>` : ''}
+                    </tr>
+                `;
+            });
+
+            html += `
+                        </tbody>
+                    </table>
+                </div>
+            `;
+
+            contentDiv.innerHTML = html;
+        }
+
+        function editWarHistory(warHistoryId, currentFame, currentDecks, currentBoats, seasonID, weekIndex) {
+            // Prefill modal fields
+            document.getElementById('editWarHistoryId').value = warHistoryId;
+            document.getElementById('editFame').value = Number(currentFame) ?? 0;
+            document.getElementById('editDecksUsed').value = Number(currentDecks) ?? 0;
+            document.getElementById('editBoatAttacks').value = Number(currentBoats) ?? 0;
+            document.getElementById('editWarHistoryError').classList.add('d-none');
+            document.getElementById('editWarHistoryError').textContent = '';
+
+            const modalTitle = document.querySelector('#editWarHistoryModal .modal-title');
+            modalTitle.textContent = `Edit War History - ${seasonID}-${weekIndex}`;
+
+            const playerActionsEl = document.getElementById('playerActionsModal');
+            const editEl = document.getElementById('editWarHistoryModal');
+
+            // Fade the Player Actions modal
+            if (playerActionsEl) {
+                playerActionsEl.classList.add('faded-behind');
+            }
+
+            // Create edit modal instance with no backdrop so page isn't dimmed
+            const editModal = new bootstrap.Modal(editEl, { backdrop: false, keyboard: true });
+            editModal.show();
+
+            // When edit modal hides, remove faded class from player actions modal
+            const onHidden = () => {
+                if (playerActionsEl) {
+                    playerActionsEl.classList.remove('faded-behind');
+                }
+                editEl.removeEventListener('hidden.bs.modal', onHidden);
+            };
+            editEl.addEventListener('hidden.bs.modal', onHidden);
+        }
+
+        async function saveWarHistoryFromModal() {
+            const saveBtn = document.getElementById('saveWarHistoryBtn');
+            const errorEl = document.getElementById('editWarHistoryError');
+
+            const warHistoryId = parseInt(document.getElementById('editWarHistoryId').value, 10);
+            const fame = parseInt(document.getElementById('editFame').value, 10);
+            const decksUsed = parseInt(document.getElementById('editDecksUsed').value, 10);
+            const boatAttacks = parseInt(document.getElementById('editBoatAttacks').value, 10);
+
+            // Basic client validation (adjust ranges as needed)
+            if (Number.isNaN(fame) || fame < 0 || fame > 3600) {
+                showEditError('Fame must be a between 0 and 3600.');
+                return;
+            }
+            if (Number.isNaN(decksUsed) || decksUsed < 0 || decksUsed > 16) {
+                showEditError('Attacks (Decks Used) must be between 0 and 16.');
+                return;
+            }
+            if (Number.isNaN(boatAttacks) || boatAttacks < 0 || boatAttacks > 16) {
+                showEditError('Boat Attacks must be a non-negative integer.');
+                return;
+            }
+
+            saveBtn.disabled = true;
+            const originalHtml = saveBtn.innerHTML;
+            saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+
+            try {
+                const tokenInput = document.querySelector('input[name="__RequestVerificationToken"]');
+                const token = tokenInput ? tokenInput.value : '';
+
+                const body = `warHistoryId=${encodeURIComponent(warHistoryId)}&fame=${encodeURIComponent(fame)}&decksUsed=${encodeURIComponent(decksUsed)}&boatAttacks=${encodeURIComponent(boatAttacks)}`;
+
+                const response = await fetch('/WarHistories?handler=UpdateWarHistory', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                        'RequestVerificationToken': token
+                    },
+                    body
+                });
+
+                const result = await response.json();
+
+                if (response.ok && result.success) {
+                    // close edit modal (bootstrap modal instance created by editWarHistory)
+                    const modalEl = document.getElementById('editWarHistoryModal');
+                    const bsModal = bootstrap.Modal.getInstance(modalEl);
+                    if (bsModal) bsModal.hide();
+
+                    // refresh the war history list inside the Player Actions modal
+                    if (typeof loadPlayerWarHistories === 'function') {
+                        loadPlayerWarHistories();
+                    }
+                } else {
+                    showEditError(result?.message ?? 'Failed to update war history.');
+                }
+            } catch (err) {
+                console.error(err);
+                showEditError('An error occurred while updating the war history.');
+            } finally {
+                saveBtn.disabled = false;
+                saveBtn.innerHTML = originalHtml;
+            }
+        }
+
+        function showEditError(message) {
+            const errorEl = document.getElementById('editWarHistoryError');
+            errorEl.textContent = message;
+            errorEl.classList.remove('d-none');
+        }
 
         function refreshData() {
             location.reload();
         }
 
         function filterTable() {
-            const clanFilter = document.getElementById('clanFilter').value.toLowerCase();
-            const activeFilter = document.getElementById('activeFilter').value;
             const searchInput = document.getElementById('searchInput').value.toLowerCase();
             
             const rows = document.querySelectorAll('#warHistoryTable tbody tr');
@@ -244,32 +650,28 @@ else
                 const playerName = row.getAttribute('data-player-name');
                 const playerTag = row.getAttribute('data-player-tag');
                 const clanName = row.getAttribute('data-clan-name');
-                const isActive = row.getAttribute('data-active');
+                const status = row.getAttribute('data-status');
                 
                 let showRow = true;
                 
-                // Clan filter
-                if (clanFilter && !clanName.includes(clanFilter))
-                {
+                // Clan filter: if user selected any clans, require the row clan to be included
+                if (selectedClans.size > 0 && !selectedClans.has(clanName)) {
                     showRow = false;
                 }
                 
-                // Active filter
-                if (activeFilter && isActive !== activeFilter)
-                {
+                // Status filter: if user selected any statuses, require the row status to be included
+                if (selectedStatuses.size > 0 && !selectedStatuses.has(status.toLowerCase())) {
                     showRow = false;
                 }
                 
                 // Search filter
-                if (searchInput && !playerName.includes(searchInput) && !playerTag.includes(searchInput))
-                {
+                if (searchInput && !playerName.includes(searchInput) && !playerTag.includes(searchInput)) {
                     showRow = false;
                 }
                 
                 row.style.display = showRow ? '' : 'none';
                 if (showRow) {
                     visibleCount++;
-                    // Update the row number for visible rows
                     const rowNumberCell = row.querySelector('.row-number strong');
                     if (rowNumberCell) {
                         rowNumberCell.textContent = visibleRowNumber;
@@ -279,8 +681,119 @@ else
             });
         }
 
-        function sortTable(column)
-        {
+        // Clan filter functions
+        function toggleAllClans() {
+            const selectAllCheckbox = document.getElementById('selectAllClans');
+            const clanCheckboxes = document.querySelectorAll('.clan-checkbox');
+            const isChecked = selectAllCheckbox.checked;
+
+            selectedClans.clear();
+
+            clanCheckboxes.forEach(checkbox => {
+                checkbox.checked = isChecked;
+                if (isChecked) {
+                    selectedClans.add(checkbox.value.toLowerCase());
+                }
+            });
+
+            updateClanFilterText();
+            filterTable();
+        }
+
+        function updateClanFilter() {
+            const clanCheckboxes = document.querySelectorAll('.clan-checkbox');
+            const selectAllCheckbox = document.getElementById('selectAllClans');
+
+            selectedClans.clear();
+            let checkedCount = 0;
+
+            clanCheckboxes.forEach(checkbox => {
+                if (checkbox.checked) {
+                    selectedClans.add(checkbox.value.toLowerCase());
+                    checkedCount++;
+                }
+            });
+
+            // Update "Select All" checkbox state
+            selectAllCheckbox.checked = checkedCount === clanCheckboxes.length;
+            selectAllCheckbox.indeterminate = checkedCount > 0 && checkedCount < clanCheckboxes.length;
+
+            updateClanFilterText();
+            filterTable();
+        }
+
+        function updateClanFilterText() {
+            const clanFilterText = document.getElementById('clanFilterText');
+            const totalClans = document.querySelectorAll('.clan-checkbox').length;
+
+            if (selectedClans.size === 0) {
+                clanFilterText.textContent = 'No Clans Selected';
+            } else if (selectedClans.size === totalClans) {
+                clanFilterText.textContent = 'All Clans';
+            } else if (selectedClans.size === 1) {
+                clanFilterText.textContent = Array.from(selectedClans)[0];
+            } else {
+                clanFilterText.textContent = `${selectedClans.size} Clans Selected`;
+            }
+        }
+
+        // Status filter functions
+        function toggleAllStatuses() {
+            const selectAllCheckbox = document.getElementById('selectAllStatuses');
+            const statusCheckboxes = document.querySelectorAll('.status-checkbox');
+            const isChecked = selectAllCheckbox.checked;
+
+            selectedStatuses.clear();
+
+            statusCheckboxes.forEach(checkbox => {
+                checkbox.checked = isChecked;
+                if (isChecked) {
+                    selectedStatuses.add(checkbox.value.toLowerCase());
+                }
+            });
+
+            updateStatusFilterText();
+            filterTable();
+        }
+
+        function updateStatusFilter() {
+            const statusCheckboxes = document.querySelectorAll('.status-checkbox');
+            const selectAllCheckbox = document.getElementById('selectAllStatuses');
+
+            selectedStatuses.clear();
+            let checkedCount = 0;
+
+            statusCheckboxes.forEach(checkbox => {
+                if (checkbox.checked) {
+                    selectedStatuses.add(checkbox.value.toLowerCase());
+                    checkedCount++;
+                }
+            });
+
+            // Update "Select All" checkbox state
+            selectAllCheckbox.checked = checkedCount === statusCheckboxes.length;
+            selectAllCheckbox.indeterminate = checkedCount > 0 && checkedCount < statusCheckboxes.length;
+
+            updateStatusFilterText();
+            filterTable();
+        }
+
+        function updateStatusFilterText() {
+            const statusFilterText = document.getElementById('statusFilterText');
+            const totalStatuses = document.querySelectorAll('.status-checkbox').length;
+
+            if (selectedStatuses.size === 0) {
+                statusFilterText.textContent = 'No Status Selected';
+            } else if (selectedStatuses.size === totalStatuses) {
+                statusFilterText.textContent = 'All Statuses';
+            } else if (selectedStatuses.size === 1) {
+                statusFilterText.textContent = Array.from(selectedStatuses)[0];
+            } else {
+                statusFilterText.textContent = `${selectedStatuses.size} Statuses Selected`;
+            }
+        }
+
+        function sortTable(column) {
             const table = document.getElementById('warHistoryTable');
             const tbody = table.tBodies[0];
             const rows = Array.from(tbody.rows);
@@ -289,12 +802,10 @@ else
             const isAscending = sortDirection[column] !== 'asc';
             sortDirection[column] = isAscending ? 'asc' : 'desc';
             
-            rows.sort((a, b) =>
-            {
+            rows.sort((a, b) => {
                 let aVal, bVal;
                 
-                switch(column)
-                {
+                switch(column) {
                     case 'tag':
                         aVal = a.getAttribute('data-player-tag');
                         bVal = b.getAttribute('data-player-tag');
@@ -342,8 +853,7 @@ else
             });
         }
 
-        function updateSortIndicators(activeColumn, isAscending)
-        {
+        function updateSortIndicators(activeColumn, isAscending) {
             const headers = document.querySelectorAll('#warHistoryTable th i.fas');
             headers.forEach((icon) => {
                 icon.className = 'fas fa-sort';
@@ -356,17 +866,63 @@ else
             }
         }
 
-        function clearFilters()
-        {
-            document.getElementById('clanFilter').value = '';
-            document.getElementById('activeFilter').value = '';
+        function clearFilters() {
             document.getElementById('searchInput').value = '';
+            
+            // Reset clan filter to select all
+            const selectAllClansCheckbox = document.getElementById('selectAllClans');
+            const clanCheckboxes = document.querySelectorAll('.clan-checkbox');
+            
+            selectAllClansCheckbox.checked = true;
+            selectedClans.clear();
+            
+            clanCheckboxes.forEach(checkbox => {
+                checkbox.checked = true;
+                selectedClans.add(checkbox.value.toLowerCase());
+            });
+            
+            // Reset status filter to select all
+            const selectAllStatusCheckbox = document.getElementById('selectAllStatuses');
+            const statusCheckboxes = document.querySelectorAll('.status-checkbox');
+            
+            selectAllStatusCheckbox.checked = true;
+            selectedStatuses.clear();
+            
+            statusCheckboxes.forEach(checkbox => {
+                checkbox.checked = true;
+                selectedStatuses.add(checkbox.value.toLowerCase());
+            });
+            
+            updateClanFilterText();
+            updateStatusFilterText();
             filterTable();
         }
 
-        // Initialize tooltips
-        document.addEventListener('DOMContentLoaded', function()
-        {
+        function initializeFilters() {
+            // Initialize clan filter with all clans selected
+            const clanCheckboxes = document.querySelectorAll('.clan-checkbox');
+            clanCheckboxes.forEach(checkbox => {
+                selectedClans.add(checkbox.value.toLowerCase());
+            });
+            updateClanFilterText();
+            
+            // Initialize status filter with all statuses selected
+            const statusCheckboxes = document.querySelectorAll('.status-checkbox');
+            statusCheckboxes.forEach(checkbox => {
+                selectedStatuses.add(checkbox.value.toLowerCase());
+            });
+            updateStatusFilterText();
+        }
+
+        // Initialize when page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeFilters();
+
+            // Set initial sort indicator for Fame/Attack column (descending)
+            sortDirection['status'] = 'desc';
+            updateSortIndicators('status', false); // false = descending
+
+            // Initialize tooltips
             const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
             const tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
                 return new bootstrap.Tooltip(tooltipTriggerEl);
@@ -419,8 +975,16 @@ else
         #warHistoryTable tbody tr:not(.inactive-player):hover td {
             background-color: #e9ecef !important; /* Same hover color for ALL columns */
         }
-   
 
+        /* Add hover effect for clickable rows */
+        #warHistoryTable tbody tr:hover {
+            background-color: #e3f2fd !important; /* Light blue hover */
+        }
+
+        #warHistoryTable tbody tr:hover td {
+            background-color: #e3f2fd !important;
+        }
+   
         .war-cell {
             font-family: 'Courier New', monospace;
             font-size: 0.9em;
@@ -653,6 +1217,16 @@ else
         .bg-dark-red {
             background-color: #c82333 !important;
             color: white !important;
+        }
+
+        .modal.faded-behind {
+            filter: brightness(0.65) blur(1px);
+            pointer-events: none;
+            transition: filter .18s ease;
+        }
+
+        #editWarHistoryModal {
+            z-index: 11000; /* Higher than Bootstrap modal default */
         }
     </style>
 }

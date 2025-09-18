@@ -21,5 +21,9 @@ namespace ClashRoyaleWarTracker.Application.Interfaces
         Task<ServiceResult> UpdateAllActivePlayerAverages(int numOfWeeksToUse, bool aboveFiveThousandTrophies);
         Task<ServiceResult<IEnumerable<PlayerAverageDTO>>> GetAllPlayerAveragesAsync();
         Task<ServiceResult<IEnumerable<GroupedPlayerWarHistoryDTO>>> GetAllGroupedPlayerWarHistoryDTOsAsync(bool is5k = true);
+        Task<ServiceResult<Player>> GetPlayerByIdAsync(int playerId);
+        Task<ServiceResult> UpdatePlayerStatusAsync(int playerId, string status);
+        Task<ServiceResult<IEnumerable<PlayerWarHistoryExpanded>>> GetPlayerWarHistoriesByPlayerIdAsync(int playerId);
+        Task<ServiceResult> UpdatePlayerWarHistoryAsync(int warHistoryId, int fame, int decksUsed, int boatAttacks);
     }
 }

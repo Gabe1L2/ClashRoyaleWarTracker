@@ -23,6 +23,7 @@ namespace ClashRoyaleWarTracker.Web.Pages
         public List<PlayerSpreadsheetRow> PlayerRows { get; set; } = new();
         public List<string> SeasonWeekHeaders { get; set; } = new();
         public List<string> AllClans { get; set; } = new();
+        public List<string> AllStatuses { get; set; } = new();
         public int TotalRecords { get; set; }
 
         // ADD: Dictionary to store player averages
@@ -142,9 +143,15 @@ namespace ClashRoyaleWarTracker.Web.Pages
                 .OrderBy(name => name)
                 .ToList();
 
-            // Group by player and create rows
+            AllStatuses = GroupedPlayerWarHistories
+                .Select(g => g.Status)
+                .Where(status => !string.IsNullOrEmpty(status))
+                .Distinct()
+                .OrderBy(status => status)
+                .ToList();
+
             var playerGroups = GroupedPlayerWarHistories
-                .GroupBy(g => new { g.PlayerID, g.PlayerTag, g.PlayerName, g.IsActive })
+                .GroupBy(g => new { g.PlayerID, g.PlayerTag, g.PlayerName, g.Status })
                 .OrderBy(pg => pg.Key.PlayerName);
 
             PlayerRows = new List<PlayerSpreadsheetRow>();
@@ -156,7 +163,7 @@ namespace ClashRoyaleWarTracker.Web.Pages
                     PlayerID = playerGroup.Key.PlayerID,
                     PlayerTag = playerGroup.Key.PlayerTag,
                     PlayerName = playerGroup.Key.PlayerName,
-                    IsActive = playerGroup.Key.IsActive,
+                    Status = playerGroup.Key.Status,
                     ClanName = playerGroup.OrderByDescending(g => g.LastUpdated).First().ClanName,
                     WarData = new Dictionary<string, PlayerWarDataCell>()
                 };
@@ -190,6 +197,97 @@ namespace ClashRoyaleWarTracker.Web.Pages
 
                 PlayerRows.Add(row);
             }
+
+            // ADDED: Sort PlayerRows by Fame Attack Average descending (default sort)
+            PlayerRows = PlayerRows
+                .OrderByDescending(row => {
+                    // Get the fame attack average for this player
+                    if (PlayerAverages.ContainsKey(row.PlayerID))
+                    {
+                        return PlayerAverages[row.PlayerID].FameAttackAverage;
+                    }
+                    return 0; // Default to 0 if no average found
+                })
+                .ThenBy(row => row.PlayerName) // Secondary sort by name for consistency
+                .ToList();
+        }
+
+        public async Task<IActionResult> OnPostUpdatePlayerStatusAsync(int playerId, string status)
+        {
+            try
+            {
+                await LoadUserPermissionsAsync();
+                if (!CanModifyPlayerData)
+                {
+                    _logger.LogWarning("User {UserName} attempted to update player status without proper permissions", User.Identity?.Name);
+                    return Forbid();
+                }
+
+                var result = await _applicationService.UpdatePlayerStatusAsync(playerId, status);
+                if (result.Success)
+                {
+                    TempData["SuccessMessage"] = result.Message;
+                }
+                else
+                {
+                    TempData["ErrorMessage"] = result.Message;
+                }
+
+                return RedirectToPage("WarHistories", new { is5k = Is5kTrophies });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error updating player status");
+                TempData["ErrorMessage"] = "An error occurred while updating player status.";
+                return RedirectToPage("WarHistories", new { is5k = Is5kTrophies });
+            }
+        }
+
+        public async Task<JsonResult> OnGetPlayerWarHistoriesAsync(int playerId)
+        {
+            try
+            {
+                await LoadUserPermissionsAsync();
+                if (!CanViewWarHistory)
+                {
+                    return new JsonResult(new { success = false, message = "Access denied" }) { StatusCode = 403 };
+                }
+
+                var result = await _applicationService.GetPlayerWarHistoriesByPlayerIdAsync(playerId);
+                if (result.Success)
+                {
+                    return new JsonResult(new { success = true, data = result.Data });
+                }
+                else
+                {
+                    return new JsonResult(new { success = false, message = result.Message });
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving player war histories");
+                return new JsonResult(new { success = false, message = "An error occurred while retrieving war histories." });
+            }
+        }
+
+        public async Task<JsonResult> OnPostUpdateWarHistoryAsync(int warHistoryId, int fame, int decksUsed, int boatAttacks)
+        {
+            try
+            {
+                await LoadUserPermissionsAsync();
+                if (!CanModifyPlayerData)
+                {
+                    return new JsonResult(new { success = false, message = "Access denied" }) { StatusCode = 403 };
+                }
+
+                var result = await _applicationService.UpdatePlayerWarHistoryAsync(warHistoryId, fame, decksUsed, boatAttacks);
+                return new JsonResult(new { success = result.Success, message = result.Message });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error updating war history");
+                return new JsonResult(new { success = false, message = "An error occurred while updating war history." });
+            }
         }
     }
 
@@ -198,7 +296,7 @@ namespace ClashRoyaleWarTracker.Web.Pages
         public int PlayerID { get; set; }
         public string PlayerTag { get; set; } = string.Empty;
         public string PlayerName { get; set; } = string.Empty;
-        public bool IsActive { get; set; }
+        public string Status { get; set; } = string.Empty;
         public string ClanName { get; set; } = string.Empty;
         public Dictionary<string, PlayerWarDataCell> WarData { get; set; } = new();
     }

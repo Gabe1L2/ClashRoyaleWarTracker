@@ -11,7 +11,9 @@ namespace ClashRoyaleWarTracker.Application.Models
         public required string Tag { get; set; }
         [MaxLength(50)]
         public string? Name { get; set; }
-        public bool IsActive { get; set; }
+        [MaxLength(50)]
+        public string Status { get; set; } = "Active";
+
         public DateTime LastUpdated { get; set; }
     }
 
@@ -33,7 +35,9 @@ namespace ClashRoyaleWarTracker.Application.Models
         public int PlayerID { get; set; }
         public string PlayerName { get; set; } = string.Empty;
         public string PlayerTag { get; set; } = string.Empty;
-        public bool IsActive { get; set; }
+
+        public string Status { get; set; } = string.Empty;
+
         public int? ClanID { get; set; }
         public string? ClanName { get; set; }
         public string? ClanTag { get; set; }

@@ -96,6 +96,7 @@ namespace ClashRoyaleWarTracker.Infrastructure.Repositories
                             AND ch.WeekIndex = pww.WeekIndex
                         WHERE pwh.PlayerID = @playerId
                             AND ch.WarTrophies {trophyCondition}
+                            AND NOT (pwh.Fame = 0 AND pwh.DecksUsed = 0)
                         ORDER BY ch.SeasonID DESC, ch.WeekIndex DESC, pwh.Fame DESC";
 
                 var results = await _context.PlayerWarHistories
@@ -128,7 +129,7 @@ namespace ClashRoyaleWarTracker.Infrastructure.Repositories
                 pwh.PlayerID,
                 p.Tag as PlayerTag,
                 p.Name as PlayerName,
-                p.IsActive,
+                p.Status,
                 pwh.ClanHistoryID,
                 ch.SeasonID,
                 ch.WeekIndex,
@@ -145,6 +146,7 @@ namespace ClashRoyaleWarTracker.Infrastructure.Repositories
             INNER JOIN Players p ON pwh.PlayerID = p.ID
             LEFT JOIN Clans c ON p.ClanID = c.ID
             WHERE ch.WarTrophies {trophyCondition}
+                AND NOT (pwh.Fame = 0 AND pwh.DecksUsed = 0 AND pwh.BoatAttacks = 0)
             ORDER BY p.Name, ch.SeasonID DESC, ch.WeekIndex DESC";
 
                 var results = await _context.Database.SqlQueryRaw<PlayerWarHistoryExpanded>(sql).ToListAsync();
@@ -159,6 +161,82 @@ namespace ClashRoyaleWarTracker.Infrastructure.Repositories
                 _logger.LogError(ex, "Failed to retrieve expanded player war histories for {TrophyLevel} trophies from the database",
                     is5k ? "5k+" : "sub-5k");
                 throw new InvalidOperationException("Failed to retrieve expanded player war histories from the database", ex);
+            }
+        }
+
+        public async Task<List<PlayerWarHistoryExpanded>> GetPlayerWarHistoriesByPlayerIdAsync(int playerId)
+        {
+            try
+            {
+                _logger.LogDebug("Retrieving war histories for PlayerID {PlayerId}", playerId);
+
+                var warHistories = await _context.PlayerWarHistories
+                    .Join(_context.ClanHistories, pwh => pwh.ClanHistoryID, ch => ch.ID, (pwh, ch) => new { pwh, ch })
+                    .Join(_context.Players, combined => combined.pwh.PlayerID, p => p.ID, (combined, p) => new { combined.pwh, combined.ch, p })
+                    .GroupJoin(_context.Clans, combined => combined.ch.ClanID, c => c.ID, (combined, clans) => new { combined.pwh, combined.ch, combined.p, clans })
+                    .SelectMany(combined => combined.clans.DefaultIfEmpty(), (combined, c) => new PlayerWarHistoryExpanded
+                    {
+                        ID = combined.pwh.ID,
+                        PlayerID = combined.p.ID,
+                        PlayerTag = combined.p.Tag,
+                        PlayerName = combined.p.Name ?? "Unknown",
+                        Status = combined.p.Status,
+                        ClanHistoryID = combined.ch.ID,
+                        SeasonID = combined.ch.SeasonID,
+                        WeekIndex = combined.ch.WeekIndex,
+                        ClanID = combined.ch.ClanID,
+                        ClanName = c != null ? c.Name : "Unknown Clan",
+                        WarTrophies = c != null ? c.WarTrophies : 0,
+                        Fame = combined.pwh.Fame,
+                        DecksUsed = combined.pwh.DecksUsed,
+                        BoatAttacks = combined.pwh.BoatAttacks,
+                        UpdatedBy = combined.pwh.UpdatedBy,
+                        LastUpdated = combined.pwh.LastUpdated
+                    })
+                    .Where(pwhe => pwhe.PlayerID == playerId)
+                    .OrderByDescending(pwhe => pwhe.SeasonID)
+                    .ThenByDescending(pwhe => pwhe.WeekIndex)
+                    .ToListAsync();
+
+                _logger.LogDebug("Found {Count} war history records for PlayerID {PlayerId}", warHistories.Count, playerId);
+                return warHistories;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to retrieve war histories for PlayerID {PlayerId}", playerId);
+                throw new InvalidOperationException($"Failed to retrieve war histories for PlayerID {playerId}", ex);
+            }
+        }
+
+        public async Task<bool> UpdatePlayerWarHistoryAsync(int warHistoryId, int fame, int decksUsed, int boatAttacks)
+        {
+            try
+            {
+                _logger.LogDebug("Updating war history ID {WarHistoryId}", warHistoryId);
+
+                var warHistory = await _context.PlayerWarHistories.FirstOrDefaultAsync(pwh => pwh.ID == warHistoryId);
+                if (warHistory == null)
+                {
+                    _logger.LogWarning("War history with ID {WarHistoryId} not found", warHistoryId);
+                    return false;
+                }
+
+                warHistory.Fame = fame;
+                warHistory.DecksUsed = decksUsed;
+                warHistory.BoatAttacks = boatAttacks;
+                warHistory.LastUpdated = _timeZoneService.Now;
+                warHistory.IsModified = true;
+                warHistory.UpdatedBy = "Admin"; // Ideally, this should be set to the current user's name
+
+                await _context.SaveChangesAsync();
+
+                _logger.LogInformation("Successfully updated war history ID {WarHistoryId}", warHistoryId);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to update war history ID {WarHistoryId}", warHistoryId);
+                throw new InvalidOperationException($"Failed to update war history ID {warHistoryId}", ex);
             }
         }
     }

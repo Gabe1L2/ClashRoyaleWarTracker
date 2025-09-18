@@ -405,7 +405,7 @@ namespace ClashRoyaleWarTracker.Application.Services
                                         Tag = playerTag,
                                         ClanID = clan.ID,
                                         Name = participant.Name,
-                                        IsActive = true,
+                                        Status = "Active",
                                     };
 
                                     playerID = await _playerRepository.AddPlayerAsync(newPlayer);
@@ -547,7 +547,7 @@ namespace ClashRoyaleWarTracker.Application.Services
                         PlayerID = group.Key.PlayerID,
                         PlayerTag = group.First().PlayerTag,
                         PlayerName = group.First().PlayerName,
-                        IsActive = group.First().IsActive,
+                        Status = group.First().Status,
                         SeasonID = group.Key.SeasonID,
                         WeekIndex = group.Key.WeekIndex,
                         Fame = group.Sum(g => g.Fame), // Aggregate fame
@@ -570,6 +570,97 @@ namespace ClashRoyaleWarTracker.Application.Services
             {
                 _logger.LogError(ex, "An unexpected error occurred while retrieving grouped player war histories for {TrophyLevel} trophies", is5k ? "5k+" : "sub-5k");
                 return ServiceResult<IEnumerable<GroupedPlayerWarHistoryDTO>>.Failure($"An unexpected error occurred while retrieving grouped player war histories for {(is5k ? "5k+" : "sub-5k")} trophies");
+            }
+        }
+
+        public async Task<ServiceResult<Player>> GetPlayerByIdAsync(int playerId)
+        {
+            try
+            {
+                _logger.LogInformation("Getting player by ID: {PlayerId}", playerId);
+
+                var player = await _playerRepository.GetPlayerByIdAsync(playerId);
+                if (player == null)
+                {
+                    return ServiceResult<Player>.Failure($"Player with ID {playerId} not found");
+                }
+
+                return ServiceResult<Player>.Successful(player);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting player by ID: {PlayerId}", playerId);
+                return ServiceResult<Player>.Failure($"Error retrieving player: {ex.Message}");
+            }
+        }
+
+        public async Task<ServiceResult> UpdatePlayerStatusAsync(int playerId, string status)
+        {
+            try
+            {
+                _logger.LogInformation("Updating player status: PlayerID {PlayerId} to {Status}", playerId, status);
+
+                var success = await _playerRepository.UpdatePlayerStatusAsync(playerId, status);
+                if (!success)
+                {
+                    return ServiceResult.Failure($"Player with ID {playerId} not found");
+                }
+
+                return ServiceResult.Successful("Player status updated successfully");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error updating player status: PlayerID {PlayerId}", playerId);
+                return ServiceResult.Failure($"Error updating player status: {ex.Message}");
+            }
+        }
+
+        public async Task<ServiceResult<IEnumerable<PlayerWarHistoryExpanded>>> GetPlayerWarHistoriesByPlayerIdAsync(int playerId)
+        {
+            try
+            {
+                _logger.LogInformation("Getting war histories for PlayerID: {PlayerId}", playerId);
+
+                var warHistories = await _warRepository.GetPlayerWarHistoriesByPlayerIdAsync(playerId);
+
+                return ServiceResult<IEnumerable<PlayerWarHistoryExpanded>>.Successful(warHistories);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting war histories for PlayerID: {PlayerId}", playerId);
+                return ServiceResult<IEnumerable<PlayerWarHistoryExpanded>>.Failure($"Error retrieving war histories: {ex.Message}");
+            }
+        }
+
+        public async Task<ServiceResult> UpdatePlayerWarHistoryAsync(int warHistoryId, int fame, int decksUsed, int boatAttacks)
+        {
+            try
+            {
+                _logger.LogInformation("Updating war history: ID {WarHistoryId}", warHistoryId);
+
+                // Validate inputs
+                if (fame < 0 || decksUsed < 0 || boatAttacks < 0)
+                {
+                    return ServiceResult.Failure("Fame, decks used, and boat attacks must be non-negative values");
+                }
+
+                if (decksUsed > 16 || fame > 3600 || boatAttacks > 16)
+                {
+                    return ServiceResult.Failure("Invalid input for decksUsed, fame, or boatAttacks");
+                }
+
+                var updateSuccess = await _warRepository.UpdatePlayerWarHistoryAsync(warHistoryId, fame, decksUsed, boatAttacks);
+                if (!updateSuccess)
+                {
+                    return ServiceResult.Failure($"War history with ID {warHistoryId} not found");
+                }
+
+                return ServiceResult.Successful("War history updated successfully");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error updating war history: ID {WarHistoryId}", warHistoryId);
+                return ServiceResult.Failure($"Error updating war history: {ex.Message}");
             }
         }
     }

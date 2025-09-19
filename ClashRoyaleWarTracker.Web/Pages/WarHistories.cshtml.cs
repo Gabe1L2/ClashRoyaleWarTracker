@@ -22,7 +22,7 @@ namespace ClashRoyaleWarTracker.Web.Pages
         public List<GroupedPlayerWarHistoryDTO> GroupedPlayerWarHistories { get; set; } = new();
         public List<PlayerSpreadsheetRow> PlayerRows { get; set; } = new();
         public List<string> SeasonWeekHeaders { get; set; } = new();
-        public List<string> AllClans { get; set; } = new();
+        public IList<Clan> AllClans { get; set; } = new List<Clan>();
         public List<string> AllStatuses { get; set; } = new();
         public int TotalRecords { get; set; }
 
@@ -31,6 +31,8 @@ namespace ClashRoyaleWarTracker.Web.Pages
 
         [BindProperty]
         public bool Is5kTrophies { get; set; } = true;
+        [BindProperty]
+        public string ClanTag { get; set; } = string.Empty;
 
         public async Task<IActionResult> OnGetAsync(bool is5k = true)
         {
@@ -67,9 +69,21 @@ namespace ClashRoyaleWarTracker.Web.Pages
                     GroupedPlayerWarHistories = new List<GroupedPlayerWarHistoryDTO>();
                     PlayerRows = new List<PlayerSpreadsheetRow>();
                     SeasonWeekHeaders = new List<string>();
-                    AllClans = new List<string>();
+                    AllClans = new List<Clan>();
                     PlayerAverages = new Dictionary<int, PlayerAverageDTO>();
                     TotalRecords = 0;
+                }
+
+                // Load all clans for filtering
+                var clansResult = await _applicationService.GetAllClansAsync();
+                if (clansResult.Success && clansResult.Data != null)
+                {
+                    AllClans = clansResult.Data.ToList();
+                }
+                else
+                {
+                    _logger.LogWarning("Failed to load clans: {Message}", clansResult.Message);
+                    AllClans = new List<Clan>();
                 }
 
                 return Page();
@@ -80,7 +94,7 @@ namespace ClashRoyaleWarTracker.Web.Pages
                 GroupedPlayerWarHistories = new List<GroupedPlayerWarHistoryDTO>();
                 PlayerRows = new List<PlayerSpreadsheetRow>();
                 SeasonWeekHeaders = new List<string>();
-                AllClans = new List<string>();
+                AllClans = new List<Clan>();
                 PlayerAverages = new Dictionary<int, PlayerAverageDTO>();
                 TotalRecords = 0;
                 TempData["ErrorMessage"] = "An error occurred while loading the war histories.";
@@ -133,14 +147,6 @@ namespace ClashRoyaleWarTracker.Web.Pages
 
             SeasonWeekHeaders = allSeasonWeeks
                 .Select(sw => $"{sw.SeasonID}-{sw.WeekIndex}")
-                .ToList();
-
-            // Get all unique clans for filtering
-            AllClans = GroupedPlayerWarHistories
-                .Select(g => g.ClanName)
-                .Where(name => !string.IsNullOrEmpty(name))
-                .Distinct()
-                .OrderBy(name => name)
                 .ToList();
 
             AllStatuses = GroupedPlayerWarHistories
@@ -288,6 +294,138 @@ namespace ClashRoyaleWarTracker.Web.Pages
                 _logger.LogError(ex, "Error updating war history");
                 return new JsonResult(new { success = false, message = "An error occurred while updating war history." });
             }
+        }
+
+        public async Task<IActionResult> OnPostWeeklyUpdateAsync()
+        {
+            try
+            {
+                await LoadUserPermissionsAsync();
+
+                if (!CanUpdateWarData)
+                {
+                    TempData["ErrorMessage"] = "You don't have permission to update data.";
+                    return RedirectToPage();
+                }
+
+                var result = await _applicationService.DataUpdateAsync(1);
+                if (result.Success)
+                {
+                    _logger.LogInformation("Weekly update successful: {Message}", result.Message);
+                    TempData["SuccessMessage"] = result.Message;
+                }
+                else
+                {
+                    _logger.LogWarning("Weekly update failed: {Message}", result.Message);
+                    TempData["ErrorMessage"] = result.Message;
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error during weekly update");
+                TempData["ErrorMessage"] = "An unexpected error occurred during the weekly update.";
+            }
+
+            return RedirectToPage();
+        }
+
+        public async Task<IActionResult> OnPostBacklogUpdateAsync()
+        {
+            try
+            {
+                await LoadUserPermissionsAsync();
+
+                if (!CanUpdateWarData)
+                {
+                    TempData["ErrorMessage"] = "You don't have permission to update data.";
+                    return RedirectToPage();
+                }
+
+                var result = await _applicationService.DataUpdateAsync(10);
+                if (result.Success)
+                {
+                    TempData["SuccessMessage"] = result.Message;
+                }
+                else
+                {
+                    TempData["ErrorMessage"] = result.Message;
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error during backlog update");
+                TempData["ErrorMessage"] = "An unexpected error occurred during the backlog update.";
+            }
+
+            return RedirectToPage();
+        }
+
+        public async Task<IActionResult> OnPostAddClanAsync()
+        {
+            try
+            {
+                await LoadUserPermissionsAsync();
+
+                if (!CanManageClans)
+                {
+                    TempData["ErrorMessage"] = "You don't have permission to manage clans.";
+                    return RedirectToPage();
+                }
+
+                var result = await _applicationService.AddClanAsync(ClanTag ?? string.Empty);
+                if (result.Success)
+                {
+                    TempData["SuccessMessage"] = result.Message;
+                }
+                else
+                {
+                    TempData["ErrorMessage"] = result.Message;
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error adding clan with tag: {ClanTag}", ClanTag);
+                TempData["ErrorMessage"] = "An unexpected error occurred while adding the clan. Please try again.";
+            }
+
+            return RedirectToPage();
+        }
+
+        public async Task<IActionResult> OnPostDeleteClanAsync()
+        {
+            try
+            {
+                await LoadUserPermissionsAsync();
+
+                if (!CanManageClans)
+                {
+                    TempData["ErrorMessage"] = "You don't have permission to manage clans.";
+                    return RedirectToPage();
+                }
+
+                if (string.IsNullOrWhiteSpace(ClanTag))
+                {
+                    TempData["ErrorMessage"] = "Please select a clan to delete.";
+                    return RedirectToPage();
+                }
+
+                var result = await _applicationService.DeleteClanAsync(ClanTag);
+                if (result.Success)
+                {
+                    TempData["SuccessMessage"] = result.Message;
+                }
+                else
+                {
+                    TempData["ErrorMessage"] = result.Message;
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error deleting clan with tag: {ClanTag}", ClanTag);
+                TempData["ErrorMessage"] = "An unexpected error occurred while deleting the clan. Please try again.";
+            }
+
+            return RedirectToPage();
         }
     }
 

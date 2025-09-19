@@ -8,6 +8,18 @@
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h1 class="display-4">War History Spreadsheet</h1>
     <div>
+        @if (Model.CanManageClans)
+        {
+            <button class="btn btn-info" onclick="showManageClansModal()">
+                <i class="fas fa-cogs"></i> Manage Clans
+            </button>
+        }
+        @if (Model.CanUpdateWarData)
+        {
+            <button class="btn btn-success" onclick="showUpdateDataModal()">
+                <i class="fas fa-calendar-week"></i> Update Data
+            </button>
+        }
         <button class="btn btn-primary" onclick="refreshData()">
             <i class="fas fa-sync-alt"></i> Refresh Data
         </button>
@@ -66,8 +78,8 @@
                         {
                             <li>
                                 <label class="dropdown-item">
-                                    <input type="checkbox" class="clan-checkbox me-2" value="@clan" onchange="updateClanFilter()" checked>
-                                    @clan
+                                    <input type="checkbox" class="clan-checkbox me-2" value="@clan.Name" onchange="updateClanFilter()" checked>
+                                    @clan.Name
                                 </label>
                             </li>
                         }
@@ -181,86 +193,92 @@
                 {
                     <tr data-player-name="@row.PlayerName.ToLower()" 
                         data-player-tag="@row.PlayerTag.ToLower()" 
-                        data-clan-name="@row.ClanName.ToLower()" 
-                        data-status="@(row.Status?.ToLower() ?? "inactive")"
+                        data-clan-name="@row.ClanName" 
+                        data-status="@(row.Status ?? "Inactive")"
                         data-original-index="@rowNumber"
                         data-player-id="@row.PlayerID"
                         onclick="selectPlayer(@row.PlayerID, '@Html.Raw(Html.Encode(row.PlayerName))', '@row.PlayerTag')"
                         style="cursor: pointer;"
-                        class="@(!string.Equals(row.Status, "Active", System.StringComparison.OrdinalIgnoreCase) ? "inactive-player" : "")">
-                        
-                        <!-- NEW: Row number column -->
-                        <td style="position: sticky; left: 0; z-index: 5;" class="row-number @(!string.Equals(row.Status, "Active", System.StringComparison.OrdinalIgnoreCase) ? "inactive-player" : "")">
-                            <strong class="text-muted">@rowNumber</strong>
-                        </td>
-                        <!-- Tag column -->
-                        <td style="position: sticky; left: 50px; z-index: 5;" class="@(!string.Equals(row.Status, "Active", System.StringComparison.OrdinalIgnoreCase) ? "inactive-player" : "")">
-                            <a href="https://royaleapi.com/player/@row.PlayerTag" target="_blank" class="text-decoration-none" onclick="event.stopPropagation();">
-                                <code>@row.PlayerTag</code>
-                                <i class="fas fa-external-link-alt ms-1" style="font-size: 0.7em;"></i>
-                            </a>
-                        </td>
+                        class="@(string.Equals(row.Status, "L2W", System.StringComparison.OrdinalIgnoreCase) ? "l2w-player" : 
+                                (!string.Equals(row.Status, "Active", System.StringComparison.OrdinalIgnoreCase) ? "inactive-player" : ""))">
+        
+        <!-- NEW: Row number column -->
+        <td style="position: sticky; left: 0; z-index: 5;" class="row-number @(string.Equals(row.Status, "L2W", System.StringComparison.OrdinalIgnoreCase) ? "l2w-player" : 
+            (!string.Equals(row.Status, "Active", System.StringComparison.OrdinalIgnoreCase) ? "inactive-player" : ""))">
+            <strong class="text-muted">@rowNumber</strong>
+        </td>
+        <!-- Tag column -->
+        <td style="position: sticky; left: 50px; z-index: 5;" class="@(string.Equals(row.Status, "L2W", System.StringComparison.OrdinalIgnoreCase) ? "l2w-player" : 
+            (!string.Equals(row.Status, "Active", System.StringComparison.OrdinalIgnoreCase) ? "inactive-player" : ""))">
+            <a href="https://royaleapi.com/player/@row.PlayerTag" target="_blank" class="text-decoration-none" onclick="event.stopPropagation();">
+                <code>@row.PlayerTag</code>
+                <i class="fas fa-external-link-alt ms-1" style="font-size: 0.7em;"></i>
+            </a>
+        </td>
 
-                        <!-- Player name column -->
-                        <td style="position: sticky; left: 140px; z-index: 5;" class="@(!string.Equals(row.Status, "Active", System.StringComparison.OrdinalIgnoreCase) ? "inactive-player" : "")">
-                            <strong>@row.PlayerName</strong>
-                            @if (!string.Equals(row.Status, "Active", System.StringComparison.OrdinalIgnoreCase))
-                            {
-                                <span class="badge bg-secondary ms-1" style="font-size: 0.6em;">@row.Status</span>
-                            }
-                        </td>
+        <!-- Player name column -->
+        <td style="position: sticky; left: 140px; z-index: 5;" class="@(string.Equals(row.Status, "L2W", System.StringComparison.OrdinalIgnoreCase) ? "l2w-player" : 
+            (!string.Equals(row.Status, "Active", System.StringComparison.OrdinalIgnoreCase) ? "inactive-player" : ""))">
+            <strong>@row.PlayerName</strong>
+            @if (!string.Equals(row.Status, "Active", System.StringComparison.OrdinalIgnoreCase))
+            {
+                <span class="badge bg-secondary ms-1" style="font-size: 0.6em;">@row.Status</span>
+            }
+        </td>
 
-                        <!-- Clan column -->
-                        <td style="position: sticky; left: 260px; z-index: 5;" class="@(!string.Equals(row.Status, "Active", System.StringComparison.OrdinalIgnoreCase) ? "inactive-player" : "")">
-                            <strong>@row.ClanName</strong>
-                        </td>
+        <!-- Clan column -->
+        <td style="position: sticky; left: 260px; z-index: 5;" class="@(string.Equals(row.Status, "L2W", System.StringComparison.OrdinalIgnoreCase) ? "l2w-player" : 
+            (!string.Equals(row.Status, "Active", System.StringComparison.OrdinalIgnoreCase) ? "inactive-player" : ""))">
+            <strong>@row.ClanName</strong>
+        </td>
 
-                        <!-- Fame/Atk column -->
-                        <td style="position: sticky; left: 360px; z-index: 5; text-align: center" class="@(!string.Equals(row.Status, "Active", System.StringComparison.OrdinalIgnoreCase) ? "inactive-player" : "")">
-                            @{
-                                // Use PlayerAverage from database instead of calculating on-the-fly
-                                var playerAverage = Model.PlayerAverages.ContainsKey(row.PlayerID)
-                                ? Model.PlayerAverages[row.PlayerID]
-                                : null;
+        <!-- Fame/Atk column -->
+        <td style="position: sticky; left: 360px; z-index: 5; text-align: center" class="@(string.Equals(row.Status, "L2W", System.StringComparison.OrdinalIgnoreCase) ? "l2w-player" : 
+            (!string.Equals(row.Status, "Active", System.StringComparison.OrdinalIgnoreCase) ? "inactive-player" : ""))">
+            @{
+                // Use PlayerAverage from database instead of calculating on-the-fly
+                var playerAverage = Model.PlayerAverages.ContainsKey(row.PlayerID)
+                ? Model.PlayerAverages[row.PlayerID]
+                : null;
 
-                                var average = playerAverage?.FameAttackAverage ?? 0;
-                            }
-                            <strong class="text-center text-@(average >= 200 ? "success" : average >= 175 ? "custom-orange" : "dark-red")"
-                                    data-sort-value="@average.ToString("F1")">
-                                @average.ToString("F1")
-                            </strong>
-                        </td>
-                        
-                        <!-- Dynamic columns for each season/week -->
-                        @foreach (var seasonWeek in Model.SeasonWeekHeaders)
-                        {
-                            var cell = row.WarData.ContainsKey(seasonWeek) ? row.WarData[seasonWeek] : new PlayerWarDataCell();
-                            <td class="text-center season-week-column" data-season-week="@seasonWeek">
-                                @if (cell.HasData)
-                                {
-                                    var ratio = cell.DecksUsed > 0 ? (decimal)cell.Fame / cell.DecksUsed : 0;
-                                    var colorClass = ratio >= 200 ? "success" : ratio >= 175 ? "custom-orange" : "dark-red";
+                var average = playerAverage?.FameAttackAverage ?? 0;
+            }
+            <strong class="text-center text-@(average >= 200 ? "success" : average >= 175 ? "custom-orange" : "dark-red")"
+                    data-sort-value="@average.ToString("F1")">
+                @average.ToString("F1")
+            </strong>
+        </td>
+        
+        <!-- Dynamic columns for each season/week -->
+        @foreach (var seasonWeek in Model.SeasonWeekHeaders)
+        {
+            var cell = row.WarData.ContainsKey(seasonWeek) ? row.WarData[seasonWeek] : new PlayerWarDataCell();
+            <td class="text-center season-week-column" data-season-week="@seasonWeek">
+                @if (cell.HasData)
+                {
+                    var ratio = cell.DecksUsed > 0 ? (decimal)cell.Fame / cell.DecksUsed : 0;
+                    var colorClass = ratio >= 200 ? "success" : ratio >= 175 ? "custom-orange" : "dark-red";
 
-                                    <div class="war-cell" 
-                                         data-bs-toggle="tooltip" 
-                                         title="Fame: @cell.Fame, Attacks: @cell.DecksUsed, Ratio: @ratio.ToString("F1")">
-                                        <div class="fame-value text-@colorClass">
-                                            @cell.Fame
-                                        </div>
-                                        <div class="attacks-value text-muted" style="font-size: 0.8em;">
-                                            @cell.DecksUsed
-                                        </div>
-                                    </div>
-                                }
-                                else
-                                {
-                                    <span class="text-muted">-</span>
-                                }
-                            </td>
-                        }
-                    </tr>
-                    rowNumber++;
+                    <div class="war-cell" 
+                         data-bs-toggle="tooltip" 
+                         title="Fame: @cell.Fame, Attacks: @cell.DecksUsed, Ratio: @ratio.ToString("F1")">
+                        <div class="fame-value text-@colorClass">
+                            @cell.Fame
+                        </div>
+                        <div class="attacks-value text-muted" style="font-size: 0.8em;">
+                            @cell.DecksUsed
+                        </div>
+                    </div>
                 }
+                else
+                {
+                    <span class="text-muted">-</span>
+                }
+            </td>
+        }
+    </tr>
+    rowNumber++;
+}
             </tbody>
         </table>
     </div>
@@ -392,6 +410,176 @@ else
     </div>
 </div>
 
+<!-- Update Data Modal -->
+<div class="modal fade" id="updateDataModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-database"></i> Update Data Options
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-4">
+                    <h6>Choose Update Type:</h6>
+                    <p class="text-muted">Select how much data you want to update for all clans.</p>
+                </div>
+
+                <div class="d-grid gap-3">
+                    <div class="card border-primary">
+                        <div class="card-body">
+                            <h6 class="card-title">
+                                <i class="fas fa-calendar-week text-primary"></i> Weekly Update
+                            </h6>
+                            <p class="card-text text-muted mb-3">
+                                Updates clan data and fetches the <strong>last week</strong> of clan war data for all clans.
+                            </p>
+                            <form method="post" asp-page-handler="WeeklyUpdate" style="display: inline;">
+                                <button type="submit" class="btn btn-primary w-100" onclick="return confirmUpdate('weekly')">
+                                    <i class="fas fa-calendar-week"></i> Run Weekly Update
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+
+                    <div class="card border-warning">
+                        <div class="card-body">
+                            <h6 class="card-title">
+                                <i class="fas fa-history text-warning"></i> Update Backlog
+                            </h6>
+                            <p class="card-text text-muted mb-3">
+                                Updates clan data and fetches the <strong>last 10 weeks</strong> of clan war data for all clans. This will take longer.
+                            </p>
+                            <form method="post" asp-page-handler="BacklogUpdate" style="display: inline;">
+                                <button type="submit" class="btn btn-warning w-100" onclick="return confirmUpdate('backlog')">
+                                    <i class="fas fa-history"></i> Run Backlog Update
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    Cancel
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Manage Clans Modal (Admins only) -->
+<div class="modal fade" id="manageClansModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-cogs"></i> Manage Clans
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <!-- Navigation Tabs -->
+                <ul class="nav nav-tabs mb-4" id="clanManagementTabs" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active" id="add-clan-tab" data-bs-toggle="tab" data-bs-target="#add-clan" type="button" role="tab">
+                            <i class="fas fa-plus me-2"></i>Add Clan
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="delete-clan-tab" data-bs-toggle="tab" data-bs-target="#delete-clan" type="button" role="tab">
+                            <i class="fas fa-trash me-2"></i>Delete Clan
+                        </button>
+                    </li>
+                </ul>
+
+                <!-- Tab Content -->
+                <div class="tab-content" id="clanManagementTabContent">
+
+                    <!-- Add Clan Tab -->
+                    <div class="tab-pane fade show active" id="add-clan" role="tabpanel">
+                        <form method="post" asp-page-handler="AddClan" onsubmit="return validateClanTag()">
+                            <div class="mb-3">
+                                <label for="clanTagInput" class="form-label">
+                                    <i class="fas fa-tag me-2"></i>Clan Tag
+                                </label>
+                                <div class="input-group">
+                                    <span class="input-group-text">#</span>
+                                    <input type="text"
+                                           class="form-control"
+                                           id="clanTagInput"
+                                           name="ClanTag"
+                                           placeholder="Enter clan tag (without #)"
+                                           required
+                                           maxlength="32"
+                                           pattern="[A-Za-z0-9]+"
+                                           title="Clan tag should only contain letters and numbers">
+                                </div>
+                                <div class="form-text">
+                                    <i class="fas fa-info-circle me-1"></i>
+                                    Enter the clan tag without the # symbol. Example: 2Y9LPQG8
+                                </div>
+                                <div id="clanTagError" class="text-danger d-none"></div>
+                            </div>
+                            <div class="d-grid">
+                                <button type="submit" class="btn btn-success" id="addClanSubmitBtn">
+                                    <i class="fas fa-plus"></i> Add Clan
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <!-- Delete Clan Tab -->
+                    <div class="tab-pane fade" id="delete-clan" role="tabpanel">
+                        <form method="post" asp-page-handler="DeleteClan" onsubmit="return confirmDeleteClan()">
+                            <div class="mb-3">
+                                <label for="deleteClanSelect" class="form-label">
+                                    <i class="fas fa-exclamation-triangle me-2 text-warning"></i>Select Clan to Delete
+                                </label>
+                                <select class="form-select" id="deleteClanSelect" name="ClanTag" required>
+                                    <option value="">Choose a clan to delete...</option>
+                                    @foreach (var clan in Model.AllClans)
+                                    {
+                                        <option value="@clan.Tag" data-clan-name="@clan.Name">
+                                            @clan.Name (#@clan.Tag) - @clan.WarTrophies trophies
+                                        </option>
+                                    }
+                                </select>
+                                @if (!Model.AllClans.Any())
+                                {
+                                    <div class="text-muted mt-2">
+                                        <i class="fas fa-info-circle me-1"></i>No clans available to delete
+                                    </div>
+                                }
+                            </div>
+
+                            @if (Model.AllClans.Any())
+                            {
+                                <div class="alert alert-warning" role="alert">
+                                    <i class="fas fa-exclamation-triangle me-2"></i>
+                                    <strong>Warning:</strong> Deleting a clan will permanently remove all associated data including player war histories and statistics. This action cannot be undone.
+                                </div>
+
+                                <div class="d-grid">
+                                    <button type="submit" class="btn btn-danger" id="deleteClanSubmitBtn" disabled>
+                                        <i class="fas fa-trash"></i> Delete Selected Clan
+                                    </button>
+                                </div>
+                            }
+                        </form>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times"></i> Close
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 @section Scripts {
     <script>
         let sortDirection = {};
@@ -400,6 +588,7 @@ else
         let selectedPlayerId = null;
         let selectedPlayerName = '';
         let selectedPlayerTag = '';
+        let warHistoryWasEdited = false;
 
         // User permissions
         const canModifyPlayerData = @Model.CanModifyPlayerData.ToString().ToLower();
@@ -408,6 +597,8 @@ else
             selectedPlayerId = playerId;
             selectedPlayerName = playerName;
             selectedPlayerTag = playerTag;
+
+            warHistoryWasEdited = false;
             
             document.getElementById('selectedPlayerName').textContent = playerName;
             document.getElementById('playerTagText').textContent = `#${playerTag}`;
@@ -608,6 +799,7 @@ else
                 const result = await response.json();
 
                 if (response.ok && result.success) {
+                    warHistoryWasEdited = true;
                     // close edit modal (bootstrap modal instance created by editWarHistory)
                     const modalEl = document.getElementById('editWarHistoryModal');
                     const bsModal = bootstrap.Modal.getInstance(modalEl);
@@ -627,6 +819,100 @@ else
                 saveBtn.disabled = false;
                 saveBtn.innerHTML = originalHtml;
             }
+        }
+
+        function showUpdateDataModal()
+        {
+            var modal = new bootstrap.Modal(document.getElementById('updateDataModal'));
+            modal.show();
+        }
+
+        function confirmUpdate(type)
+        {
+            const messages = {
+                'weekly': 'This will run the weekly update process for all clans (last week of data). Continue?',
+                'backlog': 'This will run the backlog update process for all clans (last 10 weeks of data). This may take several minutes. Continue?'
+            };
+
+            return confirm(messages[type]);
+        }
+
+        function showManageClansModal()
+        {
+            // Clear any previous inputs and errors
+            document.getElementById('clanTagInput').value = '';
+            document.getElementById('clanTagError').classList.add('d-none');
+
+            // Reset the delete clan form
+            const deleteClanSelect = document.getElementById('deleteClanSelect');
+            if (deleteClanSelect)
+            {
+                deleteClanSelect.value = '';
+                updateDeleteButton();
+            }
+
+            // Show the add clan tab by default
+            const addClanTab = document.getElementById('add-clan-tab');
+            const addClanPane = document.getElementById('add-clan');
+            const deleteClanTab = document.getElementById('delete-clan-tab');
+            const deleteClanPane = document.getElementById('delete-clan');
+
+            addClanTab.classList.add('active');
+            addClanPane.classList.add('show', 'active');
+            deleteClanTab.classList.remove('active');
+            deleteClanPane.classList.remove('show', 'active');
+
+            var modal = new bootstrap.Modal(document.getElementById('manageClansModal'));
+            modal.show();
+        }
+
+        function updateDeleteButton()
+        {
+            const deleteClanSelect = document.getElementById('deleteClanSelect');
+            const deleteButton = document.getElementById('deleteClanSubmitBtn');
+
+            if (deleteClanSelect && deleteButton)
+            {
+                deleteButton.disabled = !deleteClanSelect.value;
+            }
+        }
+
+        function validateClanTag()
+        {
+            const clanTagInput = document.getElementById('clanTagInput');
+            const clanTagError = document.getElementById('clanTagError');
+            const submitBtn = document.getElementById('addClanSubmitBtn');
+
+            const clanTag = clanTagInput.value.trim().toUpperCase();
+
+            // Basic validation
+            if (!clanTag) {
+                clanTagError.textContent = 'Clan tag is required.';
+                clanTagError.classList.remove('d-none');
+                return false;
+            }
+
+            if (!/^[A-Z0-9]+$/.test(clanTag)) {
+                clanTagError.textContent = 'Clan tag should only contain letters and numbers.';
+                clanTagError.classList.remove('d-none');
+                return false;
+            }
+
+            if (clanTag.length < 3 || clanTag.length > 15) {
+                clanTagError.textContent = 'Clan tag should be between 3 and 15 characters.';
+                clanTagError.classList.remove('d-none');
+                return false;
+            }
+
+            // Update the input value to uppercase
+            clanTagInput.value = clanTag;
+
+            // Show loading state
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Adding...';
+            submitBtn.disabled = true;
+
+            clanTagError.classList.add('d-none');
+            return true;
         }
 
         function showEditError(message) {
@@ -660,7 +946,7 @@ else
                 }
                 
                 // Status filter: if user selected any statuses, require the row status to be included
-                if (selectedStatuses.size > 0 && !selectedStatuses.has(status.toLowerCase())) {
+                if (selectedStatuses.size > 0 && !selectedStatuses.has(status)) {
                     showRow = false;
                 }
                 
@@ -692,7 +978,7 @@ else
             clanCheckboxes.forEach(checkbox => {
                 checkbox.checked = isChecked;
                 if (isChecked) {
-                    selectedClans.add(checkbox.value.toLowerCase());
+                    selectedClans.add(checkbox.value);
                 }
             });
 
@@ -709,7 +995,7 @@ else
 
             clanCheckboxes.forEach(checkbox => {
                 if (checkbox.checked) {
-                    selectedClans.add(checkbox.value.toLowerCase());
+                    selectedClans.add(checkbox.value);
                     checkedCount++;
                 }
             });
@@ -748,7 +1034,7 @@ else
             statusCheckboxes.forEach(checkbox => {
                 checkbox.checked = isChecked;
                 if (isChecked) {
-                    selectedStatuses.add(checkbox.value.toLowerCase());
+                    selectedStatuses.add(checkbox.value);
                 }
             });
 
@@ -765,7 +1051,7 @@ else
 
             statusCheckboxes.forEach(checkbox => {
                 if (checkbox.checked) {
-                    selectedStatuses.add(checkbox.value.toLowerCase());
+                    selectedStatuses.add(checkbox.value);
                     checkedCount++;
                 }
             });
@@ -878,7 +1164,7 @@ else
             
             clanCheckboxes.forEach(checkbox => {
                 checkbox.checked = true;
-                selectedClans.add(checkbox.value.toLowerCase());
+                selectedClans.add(checkbox.value);
             });
             
             // Reset status filter to select all
@@ -890,7 +1176,7 @@ else
             
             statusCheckboxes.forEach(checkbox => {
                 checkbox.checked = true;
-                selectedStatuses.add(checkbox.value.toLowerCase());
+                selectedStatuses.add(checkbox.value);
             });
             
             updateClanFilterText();
@@ -902,14 +1188,14 @@ else
             // Initialize clan filter with all clans selected
             const clanCheckboxes = document.querySelectorAll('.clan-checkbox');
             clanCheckboxes.forEach(checkbox => {
-                selectedClans.add(checkbox.value.toLowerCase());
+                selectedClans.add(checkbox.value);
             });
             updateClanFilterText();
             
             // Initialize status filter with all statuses selected
             const statusCheckboxes = document.querySelectorAll('.status-checkbox');
             statusCheckboxes.forEach(checkbox => {
-                selectedStatuses.add(checkbox.value.toLowerCase());
+                selectedStatuses.add(checkbox.value);
             });
             updateStatusFilterText();
         }
@@ -928,6 +1214,18 @@ else
                 return new bootstrap.Tooltip(tooltipTriggerEl);
             });
         });
+
+        // Add event listener for player modal close
+        const playerActionsModal = document.getElementById('playerActionsModal');
+        if (playerActionsModal) {
+            playerActionsModal.addEventListener('hidden.bs.modal', function () {
+            // Only reload if war history was edited
+            if (warHistoryWasEdited) {
+                location.reload();
+            }
+        });
+    }
+        
     </script>
 
     <style>
@@ -971,19 +1269,53 @@ else
             background-color: #ffeaed !important;
         }
 
-        /* Consistent hover effects for ALL cells in non-inactive rows */
-        #warHistoryTable tbody tr:not(.inactive-player):hover td {
-            background-color: #e9ecef !important; /* Same hover color for ALL columns */
+        /* L2W */
+        #warHistoryTable tbody tr.l2w-player {
+            background-color: #fff9c4 !important; /* Light yellow background */
         }
 
-        /* Add hover effect for clickable rows */
+        #warHistoryTable tbody tr.l2w-player:hover {
+            background-color: #fff176 !important; /* Slightly darker yellow on hover */
+        }
+
+        /* Ensure L2W sticky columns also get the yellow background */
+        #warHistoryTable tbody tr.l2w-player td[style*="position: sticky"] {
+            background-color: #fff9c4 !important;
+        }
+
+        /* Also ensure ALL cells in L2W rows get the yellow background */
+        #warHistoryTable tbody tr.l2w-player td {
+            background-color: #fff9c4 !important;
+        }
+
+        #warHistoryTable tbody tr.l2w-player:hover td {
+            background-color: #fff176 !important;
+        }
+
+        /* Update the general hover effect to respect status-specific backgrounds */
+        #warHistoryTable tbody tr:not(.inactive-player):not(.l2w-player):hover td {
+            background-color: #e9ecef !important; /* Same hover color for ACTIVE players only */
+        }
+
+        /* Override the general hover for all rows to be more specific */
         #warHistoryTable tbody tr:hover {
-            background-color: #e3f2fd !important; /* Light blue hover */
+            background-color: unset !important; /* Remove general hover, let specific classes handle it */
         }
 
         #warHistoryTable tbody tr:hover td {
+            background-color: unset !important; /* Remove general hover, let specific classes handle it */
+        }
+
+        /* Active players hover effect */
+        #warHistoryTable tbody tr:not(.inactive-player):not(.l2w-player):hover {
             background-color: #e3f2fd !important;
         }
+
+        #warHistoryTable tbody tr:not(.inactive-player):not(.l2w-player):hover td {
+            background-color: #e3f2fd !important;
+        }
+        
+        
    
         .war-cell {
             font-family: 'Courier New', monospace;

@@ -220,10 +220,6 @@
         <td style="position: sticky; left: 140px; z-index: 5;" class="@(string.Equals(row.Status, "L2W", System.StringComparison.OrdinalIgnoreCase) ? "l2w-player" : 
             (!string.Equals(row.Status, "Active", System.StringComparison.OrdinalIgnoreCase) ? "inactive-player" : ""))">
             <strong>@row.PlayerName</strong>
-            @if (!string.Equals(row.Status, "Active", System.StringComparison.OrdinalIgnoreCase))
-            {
-                <span class="badge bg-secondary ms-1" style="font-size: 0.6em;">@row.Status</span>
-            }
         </td>
 
         <!-- Clan column -->
@@ -603,6 +599,24 @@ else
             document.getElementById('selectedPlayerName').textContent = playerName;
             document.getElementById('playerTagText').textContent = `#${playerTag}`;
             document.getElementById('playerTagLink').href = `https://royaleapi.com/player/${playerTag}`;
+
+            const clickedRow = document.querySelector(`tr[data-player-id="${playerId}"]`);
+            const currentStatus = clickedRow ? clickedRow.getAttribute('data-status') : 'Active';
+
+            // Set the status dropdown to the current player's status
+            const statusSelect = document.getElementById('playerStatusSelect');
+            if (statusSelect) {
+                // Normalize the status value to match the option values
+                let normalizedStatus = currentStatus;
+                if (currentStatus === 'Inactive') {
+                    normalizedStatus = 'Inactive';
+                } else if (currentStatus === 'L2W') {
+                    normalizedStatus = 'L2W';
+                } else {
+                    normalizedStatus = 'Active'; // Default fallback
+                }
+                statusSelect.value = normalizedStatus;
+            }
 
             // Reset tabs to status tab
             const statusTab = document.getElementById('status-tab');

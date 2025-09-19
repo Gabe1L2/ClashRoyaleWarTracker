@@ -64,7 +64,11 @@ namespace ClashRoyaleWarTracker.Infrastructure.Repositories
             try
             {
                 _logger.LogDebug("Retrieving all active players from database");
-                var players = await _context.Players.Where(p => p.IsActive).ToListAsync();
+
+                var players = await _context.Players
+                    .Where(p => p.Status == "Active")
+                    .ToListAsync();
+
                 _logger.LogDebug("Found {Count} active players", players.Count);
                 return players;
             }
@@ -131,7 +135,7 @@ namespace ClashRoyaleWarTracker.Infrastructure.Repositories
                         Attacks = x.pa.Attacks,
                         Is5k = x.pa.Is5k,
                         LastUpdated = x.pa.LastUpdated,
-                        IsActive = x.p.IsActive
+                        Status = x.p.Status
                     })
                     .OrderByDescending(dto => dto.FameAttackAverage)
                     .ToListAsync();
@@ -143,6 +147,57 @@ namespace ClashRoyaleWarTracker.Infrastructure.Repositories
             {
                 _logger.LogError(ex, "Failed to retrieve player averages from the database");
                 throw new InvalidOperationException("Failed to retrieve player averages from the database", ex);
+            }
+        }
+
+        public async Task<Player?> GetPlayerByIdAsync(int playerId)
+        {
+            try
+            {
+                _logger.LogDebug("Retrieving player with ID {PlayerId} from database", playerId);
+                var player = await _context.Players.FirstOrDefaultAsync(p => p.ID == playerId);
+                if (player != null)
+                {
+                    _logger.LogDebug("Found player {PlayerName} with ID {PlayerId}", player.Name, playerId);
+                }
+                else
+                {
+                    _logger.LogDebug("No player found with ID {PlayerId}", playerId);
+                }
+                return player;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to retrieve player with ID {PlayerId} from the database", playerId);
+                throw new InvalidOperationException($"Failed to retrieve player with ID {playerId} from the database", ex);
+            }
+        }
+
+        public async Task<bool> UpdatePlayerStatusAsync(int playerId, string status)
+        {
+            try
+            {
+                _logger.LogDebug("Updating player status for PlayerID {PlayerId} to {Status}", playerId, status);
+
+                var player = await _context.Players.FirstOrDefaultAsync(p => p.ID == playerId);
+                if (player == null)
+                {
+                    _logger.LogWarning("Player with ID {PlayerId} not found", playerId);
+                    return false;
+                }
+
+                player.Status = status;
+                player.LastUpdated = _timeZoneService.Now;
+
+                await _context.SaveChangesAsync();
+
+                _logger.LogInformation("Successfully updated player {PlayerName} status to {Status}", player.Name, status);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to update player status for PlayerID {PlayerId}", playerId);
+                throw new InvalidOperationException($"Failed to update player status for PlayerID {playerId}", ex);
             }
         }
     }

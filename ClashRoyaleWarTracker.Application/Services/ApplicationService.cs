@@ -405,7 +405,7 @@ namespace ClashRoyaleWarTracker.Application.Services
                                         Tag = playerTag,
                                         ClanID = clan.ID,
                                         Name = participant.Name,
-                                        IsActive = true,
+                                        Status = "Active",
                                     };
 
                                     playerID = await _playerRepository.AddPlayerAsync(newPlayer);
@@ -515,6 +515,152 @@ namespace ClashRoyaleWarTracker.Application.Services
             {
                 _logger.LogError(ex, "An unexpected error occurred while retrieving all player averages");
                 return ServiceResult<IEnumerable<PlayerAverageDTO>>.Failure("An unexpected error occurred while retrieving all player averages");
+            }
+        }
+
+        public async Task<ServiceResult<IEnumerable<GroupedPlayerWarHistoryDTO>>> GetAllGroupedPlayerWarHistoryDTOsAsync(bool is5k = true)
+        {
+            try
+            {
+                _logger.LogInformation("Retrieving grouped player war histories for {TrophyLevel} trophies", is5k ? "5k+" : "sub-5k");
+
+                var allPlayerWarHistories = await _warRepository.GetAllPlayerWarHistoriesExpandedAsync(is5k);
+                
+                if (allPlayerWarHistories == null || !allPlayerWarHistories.Any())
+                {
+                    _logger.LogWarning("No player war histories found for {TrophyLevel} trophies", is5k ? "5k+" : "sub-5k");
+                    return ServiceResult<IEnumerable<GroupedPlayerWarHistoryDTO>>.Successful(new List<GroupedPlayerWarHistoryDTO>());
+                }
+
+                // Clean clan tags
+                foreach (var pwh in allPlayerWarHistories)
+                {
+                    pwh.PlayerTag = Regex.Replace(pwh.PlayerTag, @"[^a-zA-Z0-9]", "");
+                }
+
+                // Group by PlayerID, SeasonID, and WeekIndex, then aggregate
+                var groupedResults = allPlayerWarHistories
+                    .GroupBy(pwh => new { pwh.PlayerID, pwh.SeasonID, pwh.WeekIndex })
+                    .Select(group => new GroupedPlayerWarHistoryDTO
+                    {
+                        PlayerWarHistoryIDs = group.Select(g => g.ID).ToList(),
+                        PlayerID = group.Key.PlayerID,
+                        PlayerTag = group.First().PlayerTag,
+                        PlayerName = group.First().PlayerName,
+                        Status = group.First().Status,
+                        SeasonID = group.Key.SeasonID,
+                        WeekIndex = group.Key.WeekIndex,
+                        Fame = group.Sum(g => g.Fame), // Aggregate fame
+                        DecksUsed = group.Sum(g => g.DecksUsed + g.BoatAttacks), // Aggregate decks used (attacks)
+                        ClanID = group.First().ClanID, // Most recent clan
+                        ClanName = group.First().ClanName, // Most recent clan name
+                        LastUpdated = group.Max(g => g.LastUpdated) // Latest update time
+                    })
+                    .OrderBy(dto => dto.PlayerName)
+                    .ThenByDescending(dto => dto.SeasonID)
+                    .ThenByDescending(dto => dto.WeekIndex)
+                    .ToList();
+
+                _logger.LogInformation("Successfully grouped {OriginalCount} player war histories into {GroupedCount} grouped records for {TrophyLevel} trophies", 
+                    allPlayerWarHistories.Count, groupedResults.Count, is5k ? "5k+" : "sub-5k");
+
+                return ServiceResult<IEnumerable<GroupedPlayerWarHistoryDTO>>.Successful(groupedResults);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "An unexpected error occurred while retrieving grouped player war histories for {TrophyLevel} trophies", is5k ? "5k+" : "sub-5k");
+                return ServiceResult<IEnumerable<GroupedPlayerWarHistoryDTO>>.Failure($"An unexpected error occurred while retrieving grouped player war histories for {(is5k ? "5k+" : "sub-5k")} trophies");
+            }
+        }
+
+        public async Task<ServiceResult<Player>> GetPlayerByIdAsync(int playerId)
+        {
+            try
+            {
+                _logger.LogInformation("Getting player by ID: {PlayerId}", playerId);
+
+                var player = await _playerRepository.GetPlayerByIdAsync(playerId);
+                if (player == null)
+                {
+                    return ServiceResult<Player>.Failure($"Player with ID {playerId} not found");
+                }
+
+                return ServiceResult<Player>.Successful(player);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting player by ID: {PlayerId}", playerId);
+                return ServiceResult<Player>.Failure($"Error retrieving player: {ex.Message}");
+            }
+        }
+
+        public async Task<ServiceResult> UpdatePlayerStatusAsync(int playerId, string status)
+        {
+            try
+            {
+                _logger.LogInformation("Updating player status: PlayerID {PlayerId} to {Status}", playerId, status);
+
+                var success = await _playerRepository.UpdatePlayerStatusAsync(playerId, status);
+                if (!success)
+                {
+                    return ServiceResult.Failure($"Player with ID {playerId} not found");
+                }
+
+                return ServiceResult.Successful("Player status updated successfully");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error updating player status: PlayerID {PlayerId}", playerId);
+                return ServiceResult.Failure($"Error updating player status: {ex.Message}");
+            }
+        }
+
+        public async Task<ServiceResult<IEnumerable<PlayerWarHistoryExpanded>>> GetPlayerWarHistoriesByPlayerIdAsync(int playerId)
+        {
+            try
+            {
+                _logger.LogInformation("Getting war histories for PlayerID: {PlayerId}", playerId);
+
+                var warHistories = await _warRepository.GetPlayerWarHistoriesByPlayerIdAsync(playerId);
+
+                return ServiceResult<IEnumerable<PlayerWarHistoryExpanded>>.Successful(warHistories);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting war histories for PlayerID: {PlayerId}", playerId);
+                return ServiceResult<IEnumerable<PlayerWarHistoryExpanded>>.Failure($"Error retrieving war histories: {ex.Message}");
+            }
+        }
+
+        public async Task<ServiceResult> UpdatePlayerWarHistoryAsync(int warHistoryId, int fame, int decksUsed, int boatAttacks)
+        {
+            try
+            {
+                _logger.LogInformation("Updating war history: ID {WarHistoryId}", warHistoryId);
+
+                // Validate inputs
+                if (fame < 0 || decksUsed < 0 || boatAttacks < 0)
+                {
+                    return ServiceResult.Failure("Fame, decks used, and boat attacks must be non-negative values");
+                }
+
+                if (decksUsed > 16 || fame > 3600 || boatAttacks > 16)
+                {
+                    return ServiceResult.Failure("Invalid input for decksUsed, fame, or boatAttacks");
+                }
+
+                var updateSuccess = await _warRepository.UpdatePlayerWarHistoryAsync(warHistoryId, fame, decksUsed, boatAttacks);
+                if (!updateSuccess)
+                {
+                    return ServiceResult.Failure($"War history with ID {warHistoryId} not found");
+                }
+
+                return ServiceResult.Successful("War history updated successfully");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error updating war history: ID {WarHistoryId}", warHistoryId);
+                return ServiceResult.Failure($"Error updating war history: {ex.Message}");
             }
         }
     }

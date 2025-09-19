@@ -99,11 +99,12 @@
                         </select>
                     </div>
                     <div class="col-md-3">
-                        <label class="form-label">Active Status</label>
+                        <label class="form-label">Status</label>
                         <select id="activeFilter" class="form-select" onchange="filterTable()">
                             <option value="">All</option>
-                            <option value="true">Active</option>
-                            <option value="false">Inactive</option>
+                            <option value="active">Active</option>
+                            <option value="inactive">Inactive</option>
+                            <option value="l2w">L2W</option>
                         </select>
                     </div>
                     <div class="col-md-3">
@@ -158,19 +159,23 @@
                                     style="cursor: pointer;" 
                                     data-player-id="@playerAverage.PlayerID"
                                     data-trophy-level="@(playerAverage.Is5k ? "5k+" : "Sub-5k")"
-                                    data-active="@playerAverage.IsActive.ToString().ToLower()"
+                                    data-status="@(playerAverage.Status?.ToLower() ?? "inactive")"
                                     data-clan-name="@(playerAverage.ClanName ?? "No Clan")">
                                     <td>
                                         <strong>@playerAverage.PlayerName</strong>
-                                        @if (!playerAverage.IsActive)
+                                        @if (!string.Equals(playerAverage.Status, "Active", System.StringComparison.OrdinalIgnoreCase))
                                         {
                                             <span class="badge bg-secondary ms-2">Inactive</span>
+                                        }
+                                        @if (!string.Equals(playerAverage.Status, "L2W", System.StringComparison.OrdinalIgnoreCase))
+                                        {
+                                            <span class="badge bg-secondary ms-2">L2W</span>
                                         }
                                     </td>
                                     <td><code>#@playerAverage.PlayerTag</code></td>
                                     <td>@(playerAverage.ClanName ?? "No Clan")</td>
                                     <td>
-                                        <span class="badge bg-@(playerAverage.FameAttackAverage >= 1200 ? "success" : playerAverage.FameAttackAverage >= 1000 ? "warning" : "danger")">
+                                        <span class="badge bg-@(playerAverage.FameAttackAverage >= 1200 ? "success" : playerAverage.FameAttackAverage >= 1000 ? "custom-orange" : "danger")">
                                             @playerAverage.FameAttackAverage.ToString("F2")
                                         </span>
                                     </td>
@@ -181,8 +186,8 @@
                                         </span>
                                     </td>
                                     <td>
-                                        <i class="fas fa-circle text-@(playerAverage.IsActive ? "success" : "danger")"></i>
-                                        @(playerAverage.IsActive ? "Active" : "Inactive")
+                                        <i class="fas fa-circle text-@(string.Equals(playerAverage.Status, "Active", System.StringComparison.OrdinalIgnoreCase) ? "success" : "danger")"></i>
+                                        @(string.Equals(playerAverage.Status, "Active", System.StringComparison.OrdinalIgnoreCase) ? "Active" : playerAverage.Status)
                                     </td>
                                     <td>@playerAverage.LastUpdated.ToString("MM/dd/yyyy HH:mm")</td>
                                 </tr>
@@ -733,7 +738,7 @@
             
             rows.forEach(row => {
                 const trophyLevel = row.getAttribute('data-trophy-level');
-                const isActive = row.getAttribute('data-active');
+                const status = row.getAttribute('data-status'); // now status string
                 const clanName = row.getAttribute('data-clan-name');
                 const playerName = row.cells[0].textContent.toLowerCase();
                 const playerTag = row.cells[1].textContent.toLowerCase();
@@ -746,8 +751,8 @@
                     showRow = false;
                 }
                 
-                // Active filter
-                if (activeFilter && isActive !== activeFilter)
+                // Status filter
+                if (activeFilter && status !== activeFilter)
                 {
                     showRow = false;
                 }

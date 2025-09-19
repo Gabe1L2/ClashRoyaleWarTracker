@@ -29,7 +29,7 @@ namespace ClashRoyaleWarTracker.Web.ViewComponents
                 model.CanManageUsers = RolePermissions.HasPermission(currentUserRole, Permissions.ManageUsers);
                 model.CanManageClans = RolePermissions.HasPermission(currentUserRole, Permissions.ManageClans);
                 model.CanUpdateWarData = RolePermissions.HasPermission(currentUserRole, Permissions.UpdateWarData);
-                
+                model.CanViewWarHistory = RolePermissions.HasPermission(currentUserRole, Permissions.ViewWarHistory);
             }
 
             return View("MainNavigation", model);
@@ -41,5 +41,6 @@ namespace ClashRoyaleWarTracker.Web.ViewComponents
         public bool CanManageUsers { get; set; }
         public bool CanManageClans { get; set; }
         public bool CanUpdateWarData { get; set; }
+        public bool CanViewWarHistory { get; set; }
     }
 }

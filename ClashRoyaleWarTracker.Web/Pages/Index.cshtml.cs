@@ -31,17 +31,7 @@ namespace ClashRoyaleWarTracker.Web.Pages
         {
             try
             {
-                // Get current user's role
-                var getUserRoleResult = await _userRoleService.GetUserRoleAsync(User);
-                if (getUserRoleResult.Success)
-                {
-                    CurrentUserRole = getUserRoleResult.Data;
-                }
-                else
-                {
-                    _logger.LogWarning("Failed to get user role: {Message}", getUserRoleResult.Message);
-                    CurrentUserRole = UserRole.Guest;
-                }
+                await LoadUserPermissionsAsync();
 
                 var playerAveragesResult = await _applicationService.GetAllPlayerAveragesAsync();
                 if (playerAveragesResult.Success && playerAveragesResult.Data != null)
@@ -71,21 +61,22 @@ namespace ClashRoyaleWarTracker.Web.Pages
                 PlayerAverages = new List<PlayerAverageDTO>();
                 AllClans = new List<Clan>();
                 CurrentUserRole = UserRole.Guest;
+                TempData["ErrorMessage"] = "An error occurred while loading the page.";
             }
         }
 
         public async Task<IActionResult> OnPostWeeklyUpdateAsync()
         {
-            // Check permission
-            var hasPermissionResult = await _userRoleService.HasPermissionAsync(User, Permissions.UpdateWarData);
-            if (!hasPermissionResult.Success || !hasPermissionResult.Data)
-            {
-                TempData["ErrorMessage"] = "You don't have permission to update data.";
-                return RedirectToPage();
-            }
-
             try
             {
+                await LoadUserPermissionsAsync();
+                
+                if (!CanUpdateWarData)
+                {
+                    TempData["ErrorMessage"] = "You don't have permission to update data.";
+                    return RedirectToPage();
+                }
+
                 var result = await _applicationService.DataUpdateAsync(1);
                 if (result.Success)
                 {
@@ -109,16 +100,16 @@ namespace ClashRoyaleWarTracker.Web.Pages
 
         public async Task<IActionResult> OnPostBacklogUpdateAsync()
         {
-            // Check permission
-            var hasPermissionResult = await _userRoleService.HasPermissionAsync(User, Permissions.UpdateWarData);
-            if (!hasPermissionResult.Success || !hasPermissionResult.Data)
-            {
-                TempData["ErrorMessage"] = "You don't have permission to update data.";
-                return RedirectToPage();
-            }
-
             try
             {
+                await LoadUserPermissionsAsync();
+                
+                if (!CanUpdateWarData)
+                {
+                    TempData["ErrorMessage"] = "You don't have permission to update data.";
+                    return RedirectToPage();
+                }
+
                 var result = await _applicationService.DataUpdateAsync(10);
                 if (result.Success)
                 {
@@ -140,16 +131,16 @@ namespace ClashRoyaleWarTracker.Web.Pages
 
         public async Task<IActionResult> OnPostAddClanAsync()
         {
-            // Check permission using the service
-            var hasPermissionResult = await _userRoleService.HasPermissionAsync(User, Permissions.ManageClans);
-            if (!hasPermissionResult.Success || !hasPermissionResult.Data)
-            {
-                TempData["ErrorMessage"] = "You don't have permission to update data.";
-                return RedirectToPage();
-            }
-
             try
             {
+                await LoadUserPermissionsAsync();
+                
+                if (!CanManageClans)
+                {
+                    TempData["ErrorMessage"] = "You don't have permission to manage clans.";
+                    return RedirectToPage();
+                }
+
                 var result = await _applicationService.AddClanAsync(ClanTag ?? string.Empty);
                 if (result.Success)
                 {
@@ -171,16 +162,16 @@ namespace ClashRoyaleWarTracker.Web.Pages
 
         public async Task<IActionResult> OnPostDeleteClanAsync()
         {
-            // Check permission using the service
-            var hasPermissionResult = await _userRoleService.HasPermissionAsync(User, Permissions.ManageClans);
-            if (!hasPermissionResult.Success || !hasPermissionResult.Data)
-            {
-                TempData["ErrorMessage"] = "You don't have permission to update data.";
-                return RedirectToPage();
-            }
-
             try
             {
+                await LoadUserPermissionsAsync();
+                
+                if (!CanManageClans)
+                {
+                    TempData["ErrorMessage"] = "You don't have permission to manage clans.";
+                    return RedirectToPage();
+                }
+
                 if (string.IsNullOrWhiteSpace(ClanTag))
                 {
                     TempData["ErrorMessage"] = "Please select a clan to delete.";

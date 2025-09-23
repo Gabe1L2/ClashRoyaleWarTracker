@@ -17,7 +17,6 @@ namespace ClashRoyaleWarTracker.Web.Pages.Shared
         public bool CanManageUsers => RolePermissions.HasPermission(CurrentUserRole, Permissions.ManageUsers);
         public bool CanManageClans => RolePermissions.HasPermission(CurrentUserRole, Permissions.ManageClans);
         public bool CanUpdateWarData => RolePermissions.HasPermission(CurrentUserRole, Permissions.UpdateWarData);
-        public bool CanViewStatistics => RolePermissions.HasPermission(CurrentUserRole, Permissions.ViewStatistics);
         public bool CanModifyPlayerData => RolePermissions.HasPermission(CurrentUserRole, Permissions.ModifyPlayerData);
         public bool CanViewWarHistory => RolePermissions.HasPermission(CurrentUserRole, Permissions.ViewWarHistory);
 

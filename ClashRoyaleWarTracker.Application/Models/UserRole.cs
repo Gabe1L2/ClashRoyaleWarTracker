@@ -26,7 +26,6 @@ namespace ClashRoyaleWarTracker.Application.Models
     {
         public const string ManageUsers = "ManageUsers";
         public const string ManageClans = "ManageClans";
-        public const string ViewStatistics = "ViewStatistics";
         public const string UpdateWarData = "UpdateWarData";
         public const string ModifyPlayerData = "ModifyPlayerData";
         public const string ViewWarHistory = "ViewWarHistory";
@@ -46,29 +45,25 @@ namespace ClashRoyaleWarTracker.Application.Models
                 Permissions.UpdateWarData,
                 Permissions.ModifyPlayerData,
                 Permissions.ViewWarHistory,
-                Permissions.ViewStatistics
             },
             [UserRole.Management] = new()
             {
                 Permissions.UpdateWarData,
                 Permissions.ModifyPlayerData,
                 Permissions.ViewWarHistory,
-                Permissions.ViewStatistics
             },
             [UserRole.Coleader] = new()
             {
                 Permissions.ModifyPlayerData,
                 Permissions.ViewWarHistory,
-                Permissions.ViewStatistics
             },
             [UserRole.Member] = new()
             {
                 Permissions.ViewWarHistory,
-                Permissions.ViewStatistics
             },
             [UserRole.Guest] = new()
             {
-                Permissions.ViewStatistics
+                Permissions.ViewWarHistory,
             }
         };
 

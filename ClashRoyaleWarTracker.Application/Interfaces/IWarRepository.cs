@@ -9,5 +9,7 @@ namespace ClashRoyaleWarTracker.Application.Interfaces
         Task<List<PlayerWarHistoryExpanded>> GetAllPlayerWarHistoriesExpandedAsync(bool is5k);
         Task<List<PlayerWarHistoryExpanded>> GetPlayerWarHistoriesByPlayerIdAsync(int playerId);
         Task<bool> UpdatePlayerWarHistoryAsync(int warHistoryId, int fame, int decksUsed, int boatAttacks);
+        Task<int?> GetPlayerIdFromWarHistoryAsync(int warHistoryId);
+
     }
 }

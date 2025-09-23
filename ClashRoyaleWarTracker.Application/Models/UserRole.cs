@@ -41,30 +41,30 @@ namespace ClashRoyaleWarTracker.Application.Models
         {
             [UserRole.Admin] = new()
             {
-                Permissions.ManageClans,
-                Permissions.ViewStatistics,
-                Permissions.UpdateWarData,
                 Permissions.ManageUsers,
+                Permissions.ManageClans,
+                Permissions.UpdateWarData,
                 Permissions.ModifyPlayerData,
-                Permissions.ViewWarHistory
+                Permissions.ViewWarHistory,
+                Permissions.ViewStatistics
             },
             [UserRole.Management] = new()
             {
-                Permissions.ViewStatistics,
                 Permissions.UpdateWarData,
                 Permissions.ModifyPlayerData,
-                Permissions.ViewWarHistory
+                Permissions.ViewWarHistory,
+                Permissions.ViewStatistics
             },
             [UserRole.Coleader] = new()
             {
-                Permissions.ViewStatistics,
                 Permissions.ModifyPlayerData,
-                Permissions.ViewWarHistory
+                Permissions.ViewWarHistory,
+                Permissions.ViewStatistics
             },
             [UserRole.Member] = new()
             {
-                Permissions.ViewStatistics,
-                Permissions.ViewWarHistory
+                Permissions.ViewWarHistory,
+                Permissions.ViewStatistics
             },
             [UserRole.Guest] = new()
             {

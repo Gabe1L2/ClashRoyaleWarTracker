@@ -1,8 +1,9 @@
-﻿using ClashRoyaleWarTracker.Application.Interfaces;
+﻿using ClashRoyaleWarTracker.Application.Helpers;
+using ClashRoyaleWarTracker.Application.Interfaces;
 using ClashRoyaleWarTracker.Application.Models;
 using Microsoft.Extensions.Logging;
+using System.Numerics;
 using System.Text.RegularExpressions;
-using ClashRoyaleWarTracker.Application.Helpers;
 
 namespace ClashRoyaleWarTracker.Application.Services
 {
@@ -107,7 +108,7 @@ namespace ClashRoyaleWarTracker.Application.Services
                 }
 
                 // Update all active player averages for sub-5k
-                var updateSub5kAveragesResult = await UpdateAllActivePlayerAverages(4, false);
+                var updateSub5kAveragesResult = await UpdateAllActivePlayerAverages(numWeeksPlayerAverages, false);
                 if (updateSub5kAveragesResult.Success)
                 {
                     _logger.LogInformation("Successfully updated sub-5k player averages");
@@ -463,33 +464,7 @@ namespace ClashRoyaleWarTracker.Application.Services
 
                 foreach (var player in players)
                 {
-                    int fame = 0;
-                    int decksUsed = 0;
-                    _logger.LogDebug("Grabbing last {NumOfWeeks} weeks of war history for player {PlayerName} ({PlayerTag})", numOfWeeksToUse, player.Name, player.Tag);
-                    var warHistoriesResult = await _warRepository.GetPlayerWarHistoriesAsync(player, numOfWeeksToUse, aboveFiveThousandTrophies); // As a reminder, this will not grab records with boat attacks
-                    if (warHistoriesResult == null || warHistoriesResult.Count == 0)
-                    {
-                        _logger.LogDebug("No war history found for player {PlayerName} ({PlayerTag})", player.Name, player.Tag);
-                        continue;
-                    }
-
-                    foreach (var warHistory in warHistoriesResult)
-                    {
-                        fame += warHistory.Fame;
-                        decksUsed += warHistory.DecksUsed;
-                    }
-
-                    int mostRecentClanID = await _clanRepository.GetMostRecentClanIDAsync(player, aboveFiveThousandTrophies);
-                    var newPlayerAverage = new PlayerAverage
-                    {
-                        PlayerID = player.ID,
-                        ClanID = mostRecentClanID,
-                        FameAttackAverage = decksUsed == 0 ? 0 : Math.Round((decimal)fame / decksUsed, 2),
-                        Attacks = decksUsed,
-                        Is5k = aboveFiveThousandTrophies,
-                    };
-
-                    await _playerRepository.UpsertPlayerAverageAsync(newPlayerAverage);
+                    await UpdatePlayerAverageForTrophyLevelAsync(player, numOfWeeksToUse, aboveFiveThousandTrophies);
                     _logger.LogInformation("Successfully updated player average for {PlayerName} ({PlayerTag})", player.Name, player.Tag);
                 }
 
@@ -500,6 +475,87 @@ namespace ClashRoyaleWarTracker.Application.Services
             {
                 _logger.LogError(ex, "An unexpected error occurred while updating player averages");
                 return ServiceResult.Failure($"An unexpected error occurred while updating player averages");
+            }
+        }
+
+        public async Task<ServiceResult> UpdatePlayerAverageAsync(int playerId, int numOfWeeksToUse = 4)
+        {
+            try
+            {
+                _logger.LogInformation("Updating player averages for PlayerID {PlayerId}", playerId);
+
+                var player = await _playerRepository.GetPlayerByIdAsync(playerId);
+                if (player == null)
+                {
+                    _logger.LogWarning("Player with ID {PlayerId} not found", playerId);
+                    return ServiceResult.Failure($"Player with ID {playerId} not found");
+                }
+
+                var average5kResult = await UpdatePlayerAverageForTrophyLevelAsync(player, numOfWeeksToUse, true);  // 5k+
+                if (!average5kResult.Success)
+                {
+                    _logger.LogWarning("Failed to update 5k+ average for player {PlayerName} ({PlayerTag}): {ErrorMessage}", player.Name, player.Tag, average5kResult.Message);
+                    return ServiceResult.Failure($"Failed to update 5k+ average for player {player.Name}: {average5kResult.Message}");
+                }
+
+                var average4kResult = await UpdatePlayerAverageForTrophyLevelAsync(player, numOfWeeksToUse, false); // sub-5k
+                if (!average4kResult.Success)
+                {
+                    _logger.LogWarning("Failed to update sub-5k average for player {PlayerName} ({PlayerTag}): {ErrorMessage}", player.Name, player.Tag, average4kResult.Message);
+                    return ServiceResult.Failure($"Failed to update sub-5k average for player {player.Name}: {average4kResult.Message}");
+                }
+
+                _logger.LogInformation("Successfully updated player averages for {PlayerName} ({PlayerTag})", player.Name, player.Tag);
+                return ServiceResult.Successful($"Player averages updated successfully for {player.Name}");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "An unexpected error occurred while updating player averages for PlayerID {PlayerId}", playerId);
+                return ServiceResult.Failure($"An unexpected error occurred while updating player averages for PlayerID {playerId}");
+            }
+        }
+
+        private async Task<ServiceResult> UpdatePlayerAverageForTrophyLevelAsync(Player player, int numOfWeeksToUse, bool aboveFiveThousandTrophies)
+        {
+            try
+            {
+                int fame = 0;
+                int decksUsed = 0;
+
+                _logger.LogDebug("Grabbing last {NumOfWeeks} weeks of war history for player {PlayerName} ({PlayerTag}) for {TrophyLevel}", numOfWeeksToUse, player.Name, player.Tag, aboveFiveThousandTrophies ? "5k+" : "sub-5k");
+
+                var warHistoriesResult = await _warRepository.GetPlayerWarHistoriesAsync(player, numOfWeeksToUse, aboveFiveThousandTrophies);
+                if (warHistoriesResult == null || warHistoriesResult.Count == 0)
+                {
+                    _logger.LogDebug($"No war history found for player {player.Name} ({player.Tag}) for {(aboveFiveThousandTrophies ? "5k+" : "sub-5k")} trophies");
+                    return ServiceResult.Successful($"No war history found for player {player.Name} ({player.Tag}) for {(aboveFiveThousandTrophies ? "5k+" : "sub-5k")} trophies");
+                }
+
+                foreach (var warHistory in warHistoriesResult)
+                {
+                    fame += warHistory.Fame;
+                    decksUsed += warHistory.DecksUsed;
+                }
+
+                int mostRecentClanID = await _clanRepository.GetMostRecentClanIDAsync(player, aboveFiveThousandTrophies);
+                var newPlayerAverage = new PlayerAverage
+                {
+                    PlayerID = player.ID,
+                    ClanID = mostRecentClanID,
+                    FameAttackAverage = decksUsed == 0 ? 0 : Math.Round((decimal)fame / decksUsed, 2),
+                    Attacks = decksUsed,
+                    Is5k = aboveFiveThousandTrophies,
+                };
+
+                await _playerRepository.UpsertPlayerAverageAsync(newPlayerAverage);
+
+                _logger.LogDebug("Successfully updated {TrophyLevel} player average for {PlayerName} ({PlayerTag})", aboveFiveThousandTrophies ? "5k+" : "sub-5k", player.Name, player.Tag);
+                return ServiceResult.Successful($"{(aboveFiveThousandTrophies ? "5k+" : "sub-5k")} player average updated successfully for {player.Name}");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error updating {TrophyLevel} average for player {PlayerName} ({PlayerTag})", aboveFiveThousandTrophies ? "5k+" : "sub-5k", player.Name, player.Tag);
+                return ServiceResult.Failure($"Error updating {(aboveFiveThousandTrophies ? "5k+" : "sub-5k")} average for player {player.Name}: {ex.Message}");
             }
         }
 
@@ -661,6 +717,64 @@ namespace ClashRoyaleWarTracker.Application.Services
             {
                 _logger.LogError(ex, "Error updating war history: ID {WarHistoryId}", warHistoryId);
                 return ServiceResult.Failure($"Error updating war history: {ex.Message}");
+            }
+        }
+
+        public async Task<ServiceResult> AddClanClanHistoryPlayerHistoryAsync(string clanTag, int numWeeksWarHistory)
+        {
+            try
+            {
+                var addClanResult = await AddClanAsync(clanTag);
+                if (!addClanResult.Success)
+                {
+                    return addClanResult; // Return failure reason from AddClanAsync
+                }
+
+                var getClanResult = await GetClanAsync(clanTag);
+                if (!getClanResult.Success || getClanResult.Data == null)
+                {
+                    return ServiceResult.Failure($"Failed to retrieve clan after adding: {getClanResult.Message}");
+                }
+
+                var populateClanHistoryResult = await PopulateClanHistoryAsync(getClanResult.Data);
+                if (!populateClanHistoryResult.Success)
+                {
+                    return ServiceResult.Failure($"Failed to populate clan history: {populateClanHistoryResult.Message}");
+                }
+
+                var populatePlayerWarHistoriesResult = await PopulatePlayerWarHistories(getClanResult.Data, numWeeksWarHistory);
+                if (!populatePlayerWarHistoriesResult.Success)
+                {
+                    return ServiceResult.Failure($"Failed to populate player war histories: {populatePlayerWarHistoriesResult.Message}");
+                }
+
+                return ServiceResult.Successful($"Successfully added clan, populated clan history, and populated player war histories for clan with tag {clanTag}");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "An unexpected error occurred while adding clan with history for tag {ClanTag}", clanTag);
+                return ServiceResult.Failure($"An unexpected error occurred while adding clan with history for tag {clanTag}");
+            }
+        }
+
+        public async Task<ServiceResult<int>> GetPlayerIdFromWarHistoryAsync(int warHistoryId)
+        {
+            try
+            {
+                _logger.LogInformation("Getting PlayerID for war history ID {WarHistoryId}", warHistoryId);
+
+                var playerId = await _warRepository.GetPlayerIdFromWarHistoryAsync(warHistoryId);
+                if (!playerId.HasValue)
+                {
+                    return ServiceResult<int>.Failure($"War history with ID {warHistoryId} not found");
+                }
+
+                return ServiceResult<int>.Successful(playerId.Value);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting PlayerID for war history ID {WarHistoryId}", warHistoryId);
+                return ServiceResult<int>.Failure($"Error getting PlayerID for war history ID {warHistoryId}");
             }
         }
     }

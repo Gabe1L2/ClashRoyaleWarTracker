@@ -144,7 +144,7 @@ namespace ClashRoyaleWarTracker.Infrastructure.Repositories
             FROM PlayerWarHistories pwh
             INNER JOIN ClanHistories ch ON pwh.ClanHistoryID = ch.ID
             INNER JOIN Players p ON pwh.PlayerID = p.ID
-            LEFT JOIN Clans c ON p.ClanID = c.ID
+            LEFT JOIN Clans c ON ch.ClanID = c.ID
             WHERE ch.WarTrophies {trophyCondition}
                 AND NOT (pwh.Fame = 0 AND pwh.DecksUsed = 0 AND pwh.BoatAttacks = 0)
             ORDER BY p.Name, ch.SeasonID DESC, ch.WeekIndex DESC";
@@ -237,6 +237,32 @@ namespace ClashRoyaleWarTracker.Infrastructure.Repositories
             {
                 _logger.LogError(ex, "Failed to update war history ID {WarHistoryId}", warHistoryId);
                 throw new InvalidOperationException($"Failed to update war history ID {warHistoryId}", ex);
+            }
+        }
+
+        public async Task<int?> GetPlayerIdFromWarHistoryAsync(int warHistoryId)
+        {
+            try
+            {
+                _logger.LogDebug("Getting PlayerID for war history ID {WarHistoryId}", warHistoryId);
+
+                var warHistory = await _context.PlayerWarHistories
+                    .Where(pwh => pwh.ID == warHistoryId)
+                    .Select(pwh => pwh.PlayerID)
+                    .FirstOrDefaultAsync();
+
+                if (warHistory == 0)
+                {
+                    _logger.LogWarning("War history with ID {WarHistoryId} not found", warHistoryId);
+                    return null;
+                }
+
+                return warHistory;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to get PlayerID for war history ID {WarHistoryId}", warHistoryId);
+                throw new InvalidOperationException($"Failed to get PlayerID for war history ID {warHistoryId}", ex);
             }
         }
     }

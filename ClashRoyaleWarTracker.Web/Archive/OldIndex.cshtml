@@ -1,0 +1,835 @@
+﻿@* @page
+ *@@using ClashRoyaleWarTracker.Application.Models
+
+<!-- Update the button section -->
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="display-4">Player Statistics</h1>
+    <div>
+        @if (Model.CanManageClans)
+        {
+            <button class="btn btn-info" onclick="showManageClansModal()">
+                <i class="fas fa-cogs"></i> Manage Clans
+            </button>
+        }
+        else if (Model.CurrentUserRole <= UserRole.Coleader)
+        {
+            <button class="btn btn-outline-info" style="opacity: 0.7; cursor: not-allowed;"
+                    onclick="showPermissionDeniedManageClansModal()"
+                    title="Admin permission required">
+                <i class="fas fa-lock me-1"></i>
+                <i class="fas fa-cogs"></i> Manage Clans
+            </button>
+        }
+        <button class="btn btn-primary" onclick="refreshData()">
+            <i class="fas fa-sync-alt"></i> Refresh Data
+        </button>
+        @if (Model.CanUpdateWarData)
+        {
+            <button class="btn btn-success" onclick="showUpdateModal()">
+                <i class="fas fa-calendar-week"></i> Update Data
+            </button>
+        }
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-12">
+        @if (TempData["SuccessMessage"] != null)
+        {
+            <div class="alert alert-success alert-dismissible fade show" role="alert">
+                @TempData["SuccessMessage"]
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        }
+
+        @if (TempData["ErrorMessage"] != null)
+        {
+            <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                @TempData["ErrorMessage"]
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        }
+
+        <!-- Filter Controls -->
+        <div class="card mb-4">
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-md-2">
+                        <label class="form-label">Clans</label>
+                        <div class="dropdown">
+                            <button class="btn btn-outline-secondary dropdown-toggle w-100 text-start" type="button" id="clanFilterDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                                <span id="clanFilterText">All Clans</span>
+                            </button>
+                            <ul class="dropdown-menu w-100" aria-labelledby="clanFilterDropdown" style="max-height: 250px; overflow-y: auto;">
+                                <li>
+                                    <label class="dropdown-item">
+                                        <input type="checkbox" id="selectAllClans" onchange="toggleAllClans()" class="me-2" checked>
+                                        <strong>Select All</strong>
+                                    </label>
+                                </li>
+                                <li><hr class="dropdown-divider"></li>
+                                @foreach (var clan in Model.AllClans)
+                                {
+                                    <li>
+                                        <label class="dropdown-item">
+                                            <input type="checkbox" class="clan-checkbox me-2" value="@clan.Name" data-clan-id="@clan.ID" onchange="updateClanFilter()" checked>
+                                            @clan.Name
+                                        </label>
+                                    </li>
+                                }
+                                @if (!Model.AllClans.Any())
+                                {
+                                    <li>
+                                        <span class="dropdown-item text-muted">No clans available</span>
+                                    </li>
+                                }
+                            </ul>
+                        </div>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">Clan Trophies</label>
+                        <select id="trophyFilter" class="form-select" onchange="filterTable()">
+                            <option value="">All</option>
+                            <option value="5k+">5k+ Trophies</option>
+                            <option value="Sub-5k">Sub-5k Trophies</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Status</label>
+                        <select id="activeFilter" class="form-select" onchange="filterTable()">
+                            <option value="">All</option>
+                            <option value="active">Active</option>
+                            <option value="inactive">Inactive</option>
+                            <option value="l2w">L2W</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Search Player</label>
+                        <input type="text" id="searchInput" class="form-control" placeholder="Search by name or tag..." onkeyup="filterTable()">
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">&nbsp;</label>
+                        <button class="btn btn-outline-secondary w-100" onclick="clearFilters()">Clear Filters</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Data Table -->
+        <div class="card">
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table id="playerTable" class="table table-striped table-hover">
+                        <thead class="table-dark">
+                            <tr>
+                                <th onclick="sortTable(0)" style="cursor: pointer;">
+                                    Player Name <i class="fas fa-sort"></i>
+                                </th>
+                                <th onclick="sortTable(1)" style="cursor: pointer;">
+                                    Player Tag <i class="fas fa-sort"></i>
+                                </th>
+                                <th onclick="sortTable(2)" style="cursor: pointer;">
+                                    Clan <i class="fas fa-sort"></i>
+                                </th>
+                                <th onclick="sortTable(3)" style="cursor: pointer;">
+                                    Fame/Attack Average <i class="fas fa-sort"></i>
+                                </th>
+                                <th onclick="sortTable(4)" style="cursor: pointer;">
+                                    Total Attacks <i class="fas fa-sort"></i>
+                                </th>
+                                <th onclick="sortTable(5)" style="cursor: pointer;">
+                                    Trophy Level <i class="fas fa-sort"></i>
+                                </th>
+                                <th onclick="sortTable(6)" style="cursor: pointer;">
+                                    Status <i class="fas fa-sort"></i>
+                                </th>
+                                <th onclick="sortTable(7)" style="cursor: pointer;">
+                                    Last Updated <i class="fas fa-sort"></i>
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var playerAverage in Model.PlayerAverages)
+                            {
+                                <tr onclick="selectPlayer(@playerAverage.PlayerID, '@playerAverage.PlayerName', '@playerAverage.PlayerTag')" 
+                                    style="cursor: pointer;" 
+                                    data-player-id="@playerAverage.PlayerID"
+                                    data-trophy-level="@(playerAverage.Is5k ? "5k+" : "Sub-5k")"
+                                    data-status="@(playerAverage.Status?.ToLower() ?? "inactive")"
+                                    data-clan-name="@(playerAverage.ClanName ?? "No Clan")">
+                                    <td>
+                                        <strong>@playerAverage.PlayerName</strong>
+                                        @if (!string.Equals(playerAverage.Status, "Active", System.StringComparison.OrdinalIgnoreCase))
+                                        {
+                                            <span class="badge bg-secondary ms-2">Inactive</span>
+                                        }
+                                        @if (!string.Equals(playerAverage.Status, "L2W", System.StringComparison.OrdinalIgnoreCase))
+                                        {
+                                            <span class="badge bg-secondary ms-2">L2W</span>
+                                        }
+                                    </td>
+                                    <td><code>#@playerAverage.PlayerTag</code></td>
+                                    <td>@(playerAverage.ClanName ?? "No Clan")</td>
+                                    <td>
+                                        <span class="badge bg-@(playerAverage.FameAttackAverage >= 1200 ? "success" : playerAverage.FameAttackAverage >= 1000 ? "custom-orange" : "danger")">
+                                            @playerAverage.FameAttackAverage.ToString("F2")
+                                        </span>
+                                    </td>
+                                    <td>@playerAverage.Attacks</td>
+                                    <td>
+                                        <span class="badge bg-@(playerAverage.Is5k ? "primary" : "info")">
+                                            @(playerAverage.Is5k ? "5k+" : "Sub-5k")
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <i class="fas fa-circle text-@(string.Equals(playerAverage.Status, "Active", System.StringComparison.OrdinalIgnoreCase) ? "success" : "danger")"></i>
+                                        @(string.Equals(playerAverage.Status, "Active", System.StringComparison.OrdinalIgnoreCase) ? "Active" : playerAverage.Status)
+                                    </td>
+                                    <td>@playerAverage.LastUpdated.ToString("MM/dd/yyyy HH:mm")</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+                
+                @if (!Model.PlayerAverages.Any())
+                {
+                    <div class="text-center py-5">
+                        <i class="fas fa-users fa-3x text-muted mb-3"></i>
+                        <h5 class="text-muted">No player data available</h5>
+                        <p class="text-muted">Run the weekly update to populate player statistics.</p>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Player Actions Modal -->
+<div class="modal fade" id="playerActionsModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Player Actions</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <h6 id="selectedPlayerName">Player Name</h6>
+                <p class="text-muted" id="selectedPlayerTag">
+                    <span>Tag: </span>
+                    <a id="playerTagLink" href="#" target="_blank" class="text-decoration-none">
+                        <span id="playerTagText"></span>
+                        <i class="fas fa-external-link-alt ms-1" style="font-size: 0.8em;"></i>
+                    </a>
+                </p>
+                <div class="d-grid gap-2">
+                    <button class="btn btn-primary" onclick="updatePlayerAverages()">
+                        <i class="fas fa-chart-line"></i> Update Player Averages
+                    </button>
+                    <button class="btn btn-info" onclick="viewPlayerHistory()">
+                        <i class="fas fa-history"></i> View War History
+                    </button>
+                    <button class="btn btn-warning" onclick="togglePlayerStatus()">
+                        <i class="fas fa-user-check"></i> Toggle Active Status
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Manage Clans Modal (Admins only) -->
+<div class="modal fade" id="manageClansModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-cogs"></i> Manage Clans
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <!-- Navigation Tabs -->
+                <ul class="nav nav-tabs mb-4" id="clanManagementTabs" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active" id="add-clan-tab" data-bs-toggle="tab" data-bs-target="#add-clan" type="button" role="tab">
+                            <i class="fas fa-plus me-2"></i>Add Clan
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="delete-clan-tab" data-bs-toggle="tab" data-bs-target="#delete-clan" type="button" role="tab">
+                            <i class="fas fa-trash me-2"></i>Delete Clan
+                        </button>
+                    </li>
+                </ul>
+
+                <!-- Tab Content -->
+                <div class="tab-content" id="clanManagementTabContent">
+                    
+                    <!-- Add Clan Tab -->
+                    <div class="tab-pane fade show active" id="add-clan" role="tabpanel">
+                        <form method="post" asp-page-handler="AddClan" onsubmit="return validateClanTag()">
+                            <div class="mb-3">
+                                <label for="clanTagInput" class="form-label">
+                                    <i class="fas fa-tag me-2"></i>Clan Tag
+                                </label>
+                                <div class="input-group">
+                                    <span class="input-group-text">#</span>
+                                    <input type="text" 
+                                           class="form-control" 
+                                           id="clanTagInput" 
+                                           name="ClanTag" 
+                                           placeholder="Enter clan tag (without #)" 
+                                           required 
+                                           maxlength="32"
+                                           pattern="[A-Za-z0-9]+"
+                                           title="Clan tag should only contain letters and numbers">
+                                </div>
+                                <div class="form-text">
+                                    <i class="fas fa-info-circle me-1"></i>
+                                    Enter the clan tag without the # symbol. Example: 2Y9LPQG8
+                                </div>
+                                <div id="clanTagError" class="text-danger d-none"></div>
+                            </div>
+                            <div class="d-grid">
+                                <button type="submit" class="btn btn-success" id="addClanSubmitBtn">
+                                    <i class="fas fa-plus"></i> Add Clan
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <!-- Delete Clan Tab -->
+                    <div class="tab-pane fade" id="delete-clan" role="tabpanel">
+                        <form method="post" asp-page-handler="DeleteClan" onsubmit="return confirmDeleteClan()">
+                            <div class="mb-3">
+                                <label for="deleteClanSelect" class="form-label">
+                                    <i class="fas fa-exclamation-triangle me-2 text-warning"></i>Select Clan to Delete
+                                </label>
+                                <select class="form-select" id="deleteClanSelect" name="ClanTag" required>
+                                    <option value="">Choose a clan to delete...</option>
+                                    @foreach (var clan in Model.AllClans)
+                                    {
+                                        <option value="@clan.Tag" data-clan-name="@clan.Name">
+                                            @clan.Name (#@clan.Tag) - @clan.WarTrophies trophies
+                                        </option>
+                                    }
+                                </select>
+                                @if (!Model.AllClans.Any())
+                                {
+                                    <div class="text-muted mt-2">
+                                        <i class="fas fa-info-circle me-1"></i>No clans available to delete
+                                    </div>
+                                }
+                            </div>
+                            
+                            @if (Model.AllClans.Any())
+                            {
+                                <div class="alert alert-warning" role="alert">
+                                    <i class="fas fa-exclamation-triangle me-2"></i>
+                                    <strong>Warning:</strong> Deleting a clan will permanently remove all associated data including player war histories and statistics. This action cannot be undone.
+                                </div>
+                                
+                                <div class="d-grid">
+                                    <button type="submit" class="btn btn-danger" id="deleteClanSubmitBtn" disabled>
+                                        <i class="fas fa-trash"></i> Delete Selected Clan
+                                    </button>
+                                </div>
+                            }
+                        </form>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times"></i> Close
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Permission Denied Modal (for non-Admins) -->
+<div class="modal fade" id="permissionDeniedManageClansModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title">
+                    <i class="fas fa-exclamation-triangle"></i> Permission Required
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body text-center py-4">
+                <div class="mb-4">
+                    <i class="fas fa-shield-alt fa-4x text-danger mb-3"></i>
+                    <h5 class="text-danger">Access Denied</h5>
+                </div>
+                <p class="lead">You must have <strong>Admin permissions</strong> to add a clan.</p>
+                <p class="text-muted">
+                    Please contact your administrator if you need access to this feature.
+                </p>
+            </div>
+            <div class="modal-footer justify-content-center">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times"></i> Close
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Update Data Modal -->
+<div class="modal fade" id="updateDataModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-database"></i> Update Data Options
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-4">
+                    <h6>Choose Update Type:</h6>
+                    <p class="text-muted">Select how much data you want to update for all clans.</p>
+                </div>
+                
+                <div class="d-grid gap-3">
+                    <div class="card border-primary">
+                        <div class="card-body">
+                            <h6 class="card-title">
+                                <i class="fas fa-calendar-week text-primary"></i> Weekly Update
+                            </h6>
+                            <p class="card-text text-muted mb-3">
+                                Updates clan data and fetches the <strong>last week</strong> of clan war data for all clans.
+                            </p>
+                            <form method="post" asp-page-handler="WeeklyUpdate" style="display: inline;">
+                                <button type="submit" class="btn btn-primary w-100" onclick="return confirmUpdate('weekly')">
+                                    <i class="fas fa-calendar-week"></i> Run Weekly Update
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+
+                    <div class="card border-warning">
+                        <div class="card-body">
+                            <h6 class="card-title">
+                                <i class="fas fa-history text-warning"></i> Update Backlog
+                            </h6>
+                            <p class="card-text text-muted mb-3">
+                                Updates clan data and fetches the <strong>last 10 weeks</strong> of clan war data for all clans. This will take longer.
+                            </p>
+                            <form method="post" asp-page-handler="BacklogUpdate" style="display: inline;">
+                                <button type="submit" class="btn btn-warning w-100" onclick="return confirmUpdate('backlog')">
+                                    <i class="fas fa-history"></i> Run Backlog Update
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    Cancel
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        let selectedPlayerId = null;
+        let selectedPlayerName = '';
+        let selectedPlayerTag = '';
+        let selectedClans = new Set();
+        
+        // Store user permissions from server
+        const userRole = '@Model.CurrentUserRole';
+        const canManageClans = @Model.CanManageClans.ToString().ToLower();
+        const canUpdateWarData = @Model.CanUpdateWarData.ToString().ToLower();
+        const canModifyPlayerData = @Model.CanModifyPlayerData.ToString().ToLower();
+
+        function selectPlayer(playerId, playerName, playerTag)
+        {
+            selectedPlayerId = playerId;
+            selectedPlayerName = playerName;
+            selectedPlayerTag = playerTag;
+            
+            document.getElementById('selectedPlayerName').textContent = playerName;
+            // Player tag with API link
+            document.getElementById('playerTagText').textContent = `#${playerTag}`;
+            document.getElementById('playerTagLink').href = `https://royaleapi.com/player/${playerTag}`;
+
+            var modal = new bootstrap.Modal(document.getElementById('playerActionsModal'));
+            modal.show();
+        }
+
+        function showManageClansModal()
+        {
+            // Clear any previous inputs and errors
+            document.getElementById('clanTagInput').value = '';
+            document.getElementById('clanTagError').classList.add('d-none');
+
+            // Reset the delete clan form
+            const deleteClanSelect = document.getElementById('deleteClanSelect');
+            if (deleteClanSelect)
+            {
+                deleteClanSelect.value = '';
+                updateDeleteButton();
+            }
+
+            // Show the add clan tab by default
+            const addClanTab = document.getElementById('add-clan-tab');
+            const addClanPane = document.getElementById('add-clan');
+            const deleteClanTab = document.getElementById('delete-clan-tab');
+            const deleteClanPane = document.getElementById('delete-clan');
+
+            addClanTab.classList.add('active');
+            addClanPane.classList.add('show', 'active');
+            deleteClanTab.classList.remove('active');
+            deleteClanPane.classList.remove('show', 'active');
+
+            var modal = new bootstrap.Modal(document.getElementById('manageClansModal'));
+            modal.show();
+        }
+
+        function confirmDeleteClan()
+        {
+            const deleteClanSelect = document.getElementById('deleteClanSelect');
+            const selectedOption = deleteClanSelect.options[deleteClanSelect.selectedIndex];
+
+            if (!selectedOption || !selectedOption.value) {
+                alert('Please select a clan to delete.');
+                return false;
+            }
+
+            const clanName = selectedOption.getAttribute('data-clan-name');
+            const clanTag = selectedOption.value;
+
+            const confirmMessage = `Are you sure you want to delete the clan "${clanName}" (#${clanTag})?\n\n` +
+                                  `This will permanently remove:\n` +
+                                  `• All clan data\n` +
+                                  `• All player war histories\n` +
+                                  `• All associated statistics\n\n` +
+                                  `This action CANNOT be undone!\n\n` +
+                                  `Type "DELETE" to confirm:`;
+
+            const userInput = prompt(confirmMessage);
+
+            if (userInput !== "DELETE")
+            {
+                if (userInput !== null)
+                {
+                    alert('Deletion cancelled. You must type "DELETE" exactly to confirm.');
+                }
+                return false;
+            }
+
+            // Show loading state
+            const submitBtn = document.getElementById('deleteClanSubmitBtn');
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Deleting...';
+            submitBtn.disabled = true;
+
+            return true;
+        }
+
+        function updateDeleteButton()
+        {
+            const deleteClanSelect = document.getElementById('deleteClanSelect');
+            const deleteButton = document.getElementById('deleteClanSubmitBtn');
+
+            if (deleteClanSelect && deleteButton)
+            {
+                deleteButton.disabled = !deleteClanSelect.value;
+            }
+        }
+
+        function showPermissionDeniedManageClansModal()
+        {
+            var modal = new bootstrap.Modal(document.getElementById('permissionDeniedManageClansModal'));
+            modal.show();
+        }
+
+        function showUpdateModal()
+        {
+            var modal = new bootstrap.Modal(document.getElementById('updateDataModal'));
+            modal.show();
+        }
+
+        function confirmUpdate(type)
+        {
+            const messages = {
+                'weekly': 'This will run the weekly update process for all clans (last week of data). Continue?',
+                'backlog': 'This will run the backlog update process for all clans (last 10 weeks of data). This may take several minutes. Continue?'
+            };
+            
+            return confirm(messages[type]);
+        }
+
+        function validateClanTag()
+        {
+            const clanTagInput = document.getElementById('clanTagInput');
+            const clanTagError = document.getElementById('clanTagError');
+            const submitBtn = document.getElementById('addClanSubmitBtn');
+            
+            const clanTag = clanTagInput.value.trim().toUpperCase();
+            
+            // Basic validation
+            if (!clanTag) {
+                clanTagError.textContent = 'Clan tag is required.';
+                clanTagError.classList.remove('d-none');
+                return false;
+            }
+            
+            if (!/^[A-Z0-9]+$/.test(clanTag)) {
+                clanTagError.textContent = 'Clan tag should only contain letters and numbers.';
+                clanTagError.classList.remove('d-none');
+                return false;
+            }
+            
+            if (clanTag.length < 3 || clanTag.length > 15) {
+                clanTagError.textContent = 'Clan tag should be between 3 and 15 characters.';
+                clanTagError.classList.remove('d-none');
+                return false;
+            }
+            
+            // Update the input value to uppercase
+            clanTagInput.value = clanTag;
+            
+            // Show loading state
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Adding...';
+            submitBtn.disabled = true;
+            
+            clanTagError.classList.add('d-none');
+            return true;
+        }
+
+        function sortTable(columnIndex)
+        {
+            const table = document.getElementById('playerTable');
+            const tbody = table.tBodies[0];
+            const rows = Array.from(tbody.rows);
+            
+            // Determine sort direction
+            const isAscending = table.getAttribute('data-sort-dir') !== 'asc';
+            table.setAttribute('data-sort-dir', isAscending ? 'asc' : 'desc');
+            
+            rows.sort((a, b) => {
+                const aVal = a.cells[columnIndex].textContent.trim();
+                const bVal = b.cells[columnIndex].textContent.trim();
+                
+                // Handle numeric columns
+                if (columnIndex === 3 || columnIndex === 4) { // Fame average and attacks
+                    const aNum = parseFloat(aVal) || 0;
+                    const bNum = parseFloat(bVal) || 0;
+                    return isAscending ? aNum - bNum : bNum - aNum;
+                }
+                
+                // Handle date column
+                if (columnIndex === 7) {
+                    const aDate = new Date(aVal);
+                    const bDate = new Date(bVal);
+                    return isAscending ? aDate - bDate : bDate - aDate;
+                }
+                
+                // Handle text columns
+                return isAscending ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
+            });
+            
+            // Re-append sorted rows
+            rows.forEach(row => tbody.appendChild(row));
+            
+            // Update sort indicators
+            updateSortIndicators(columnIndex, isAscending);
+        }
+
+        function initializeClanFilter()
+        {
+            // Initialize with all clans selected
+            const clanCheckboxes = document.querySelectorAll('.clan-checkbox');
+            clanCheckboxes.forEach(checkbox => {
+                selectedClans.add(checkbox.value);
+            });
+            updateClanFilterText();
+        }
+
+        function toggleAllClans()
+        {
+            const selectAllCheckbox = document.getElementById('selectAllClans');
+            const clanCheckboxes = document.querySelectorAll('.clan-checkbox');
+            const isChecked = selectAllCheckbox.checked;
+
+            selectedClans.clear();
+
+            clanCheckboxes.forEach(checkbox => {
+                checkbox.checked = isChecked;
+                if (isChecked) {
+                    selectedClans.add(checkbox.value);
+                }
+            });
+
+            updateClanFilterText();
+            filterTable();
+        }
+
+        function updateClanFilter()
+        {
+            const clanCheckboxes = document.querySelectorAll('.clan-checkbox');
+            const selectAllCheckbox = document.getElementById('selectAllClans');
+
+            selectedClans.clear();
+            let checkedCount = 0;
+
+            clanCheckboxes.forEach(checkbox => {
+                if (checkbox.checked) {
+                    selectedClans.add(checkbox.value);
+                    checkedCount++;
+                }
+            });
+
+            // Update "Select All" checkbox state
+            selectAllCheckbox.checked = checkedCount === clanCheckboxes.length;
+            selectAllCheckbox.indeterminate = checkedCount > 0 && checkedCount < clanCheckboxes.length;
+
+            updateClanFilterText();
+            filterTable();
+        }
+
+        function updateClanFilterText()
+        {
+            const clanFilterText = document.getElementById('clanFilterText');
+            const totalClans = document.querySelectorAll('.clan-checkbox').length;
+
+            if (selectedClans.size === 0) {
+                clanFilterText.textContent = 'No Clans Selected';
+            } else if (selectedClans.size === totalClans) {
+                clanFilterText.textContent = 'All Clans';
+            } else if (selectedClans.size === 1) {
+                clanFilterText.textContent = Array.from(selectedClans)[0];
+            } else {
+                clanFilterText.textContent = `${selectedClans.size} Clans Selected`;
+            }
+        }
+
+        function updateSortIndicators(activeColumn, isAscending)
+        {
+            const headers = document.querySelectorAll('#playerTable th i.fas');
+            headers.forEach((icon, index) => {
+                if (index === activeColumn) {
+                    icon.className = `fas fa-sort-${isAscending ? 'up' : 'down'}`;
+                } else {
+                    icon.className = 'fas fa-sort';
+                }
+            });
+        }
+
+        function filterTable()
+        {
+            const trophyFilter = document.getElementById('trophyFilter').value;
+            const activeFilter = document.getElementById('activeFilter').value;
+            const searchInput = document.getElementById('searchInput').value.toLowerCase();
+            
+            const rows = document.querySelectorAll('#playerTable tbody tr');
+            
+            rows.forEach(row => {
+                const trophyLevel = row.getAttribute('data-trophy-level');
+                const status = row.getAttribute('data-status'); // now status string
+                const clanName = row.getAttribute('data-clan-name');
+                const playerName = row.cells[0].textContent.toLowerCase();
+                const playerTag = row.cells[1].textContent.toLowerCase();
+                
+                let showRow = true;
+                
+                // Trophy filter
+                if (trophyFilter && trophyLevel !== trophyFilter)
+                {
+                    showRow = false;
+                }
+                
+                // Status filter
+                if (activeFilter && status !== activeFilter)
+                {
+                    showRow = false;
+                }
+                // Clan filter
+                if (selectedClans.size > 0 && !selectedClans.has(clanName))
+                {
+                    showRow = false;
+                }
+                
+                // Search filter
+                if (searchInput && !playerName.includes(searchInput) && !playerTag.includes(searchInput))
+                {
+                    showRow = false;
+                }
+                
+                row.style.display = showRow ? '' : 'none';
+            });
+        }
+
+        function clearFilters()
+        {
+            document.getElementById('trophyFilter').value = '';
+            document.getElementById('activeFilter').value = '';
+            document.getElementById('searchInput').value = '';
+
+            // Reset clan filter
+            const selectAllCheckbox = document.getElementById('selectAllClans');
+            const clanCheckboxes = document.querySelectorAll('.clan-checkbox');
+
+            selectAllCheckbox.checked = true;
+            selectedClans.clear();
+
+            clanCheckboxes.forEach(checkbox => {
+                checkbox.checked = true;
+                selectedClans.add(checkbox.value);
+            });
+
+            updateClanFilterText();
+            filterTable();
+        }
+
+        async function refreshData()
+        {
+            location.reload();
+        }
+
+        async function updatePlayerAverages()
+        {
+            // Implement API call to update specific player averages
+            alert(`Update averages for ${selectedPlayerName} - Feature coming soon!`);
+        }
+
+        function viewPlayerHistory()
+        {
+            // Navigate to player history page
+            window.location.href = `/Players/${selectedPlayerId}/History`;
+        }
+
+        function togglePlayerStatus()
+        {
+            // Implement API call to toggle player active status
+            alert(`Toggle status for ${selectedPlayerName} - Feature coming soon!`);
+        }
+
+        // Initialize clan filter when page loads
+        document.addEventListener('DOMContentLoaded', function()
+        {
+            initializeClanFilter();
+        });
+
+        // Add event listener for delete clan dropdown
+        document.addEventListener('DOMContentLoaded', function()
+        {
+            initializeClanFilter();
+
+            // Add change listener for delete clan dropdown
+            const deleteClanSelect = document.getElementById('deleteClanSelect');
+            if (deleteClanSelect)
+            {
+                deleteClanSelect.addEventListener('change', updateDeleteButton);
+            }
+        });
+    </script>
+}

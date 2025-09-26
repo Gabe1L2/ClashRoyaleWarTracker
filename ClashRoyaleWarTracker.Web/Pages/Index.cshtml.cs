@@ -159,7 +159,7 @@ namespace ClashRoyaleWarTracker.Web.Pages
                 .ToList();
 
             var playerGroups = GroupedPlayerWarHistories
-                .GroupBy(g => new { g.PlayerID, g.PlayerTag, g.PlayerName, g.Status })
+                .GroupBy(g => new { g.PlayerID, g.PlayerTag, g.PlayerName, g.Status, g.Notes })
                 .OrderBy(pg => pg.Key.PlayerName);
 
             PlayerRows = new List<PlayerSpreadsheetRow>();
@@ -172,6 +172,7 @@ namespace ClashRoyaleWarTracker.Web.Pages
                     PlayerTag = playerGroup.Key.PlayerTag,
                     PlayerName = playerGroup.Key.PlayerName,
                     Status = playerGroup.Key.Status,
+                    Notes = playerGroup.Key.Notes,
                     ClanName = playerGroup.OrderByDescending(g => g.LastUpdated).First().ClanName,
                     WarData = new Dictionary<string, PlayerWarDataCell>()
                 };
@@ -499,6 +500,7 @@ namespace ClashRoyaleWarTracker.Web.Pages
         public string PlayerTag { get; set; } = string.Empty;
         public string PlayerName { get; set; } = string.Empty;
         public string Status { get; set; } = string.Empty;
+        public string? Notes { get; set; }
         public string ClanName { get; set; } = string.Empty;
         public Dictionary<string, PlayerWarDataCell> WarData { get; set; } = new();
     }

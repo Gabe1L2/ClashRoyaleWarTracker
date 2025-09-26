@@ -7,6 +7,14 @@
             <i class="fas me-1"></i>Home
         </a>
     </li>
+    @if (Model.CanModifyPlayerData)
+    {
+        <li class="nav-item">
+            <a class="nav-link text-dark" href="/Rosters">
+                <i class="fas me-1"></i>Player Data
+            </a>
+        </li>
+    }
     @if (Model.CanManageUsers)
     {
         <li class="nav-item">

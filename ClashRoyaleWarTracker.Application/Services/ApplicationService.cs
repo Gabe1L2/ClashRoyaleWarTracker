@@ -604,6 +604,7 @@ namespace ClashRoyaleWarTracker.Application.Services
                         PlayerTag = group.First().PlayerTag,
                         PlayerName = group.First().PlayerName,
                         Status = group.First().Status,
+                        Notes = group.First().Notes,
                         SeasonID = group.Key.SeasonID,
                         WeekIndex = group.Key.WeekIndex,
                         Fame = group.Sum(g => g.Fame), // Aggregate fame

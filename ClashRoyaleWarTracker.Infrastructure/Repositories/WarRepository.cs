@@ -130,6 +130,7 @@ namespace ClashRoyaleWarTracker.Infrastructure.Repositories
                 p.Tag as PlayerTag,
                 p.Name as PlayerName,
                 p.Status,
+                p.Notes,
                 pwh.ClanHistoryID,
                 ch.SeasonID,
                 ch.WeekIndex,

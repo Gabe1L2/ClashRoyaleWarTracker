@@ -10,6 +10,7 @@ namespace ClashRoyaleWarTracker.Application.Models
         public string PlayerTag { get; set; } = string.Empty;
         public string PlayerName { get; set; } = string.Empty;
         public string Status { get; set; } = string.Empty;
+        public string? Notes { get; set; }
 
         public int ClanHistoryID { get; set; }
         public int SeasonID { get; set; }
@@ -44,6 +45,7 @@ namespace ClashRoyaleWarTracker.Application.Models
         public string PlayerTag { get; set; } = string.Empty;
         public string PlayerName { get; set; } = string.Empty;
         public string Status { get; set; } = string.Empty;
+        public string? Notes { get; set; }
         public int SeasonID { get; set; }
         public int WeekIndex { get; set; }
         public int Fame { get; set; }

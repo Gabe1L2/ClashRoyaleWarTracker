@@ -14,7 +14,7 @@
                 <i class="fas fa-cogs"></i> Manage Clans
             </button>
         }
-        @if (Model.CanUpdateWarData)
+        @if (Model.CanModifyPlayerData)
         {
             <button class="btn btn-success" onclick="showUpdateDataModal()">
                 <i class="fas fa-calendar-week"></i> Update Data
@@ -194,6 +194,7 @@
                     <tr data-player-name="@row.PlayerName.ToLower()"
                         data-player-tag="@row.PlayerTag.ToLower()"
                         data-clan-name="@row.ClanName"
+                        data-player-notes="@Html.Raw(Html.Encode(row.Notes ?? ""))"
                         data-status="@(row.Status ?? "Inactive")"
                         data-original-index="@rowNumber"
                         data-player-id="@row.PlayerID"
@@ -215,6 +216,12 @@
                 <!-- Player name column -->
                 <td style="position: sticky; left: 140px; z-index: 5;" class="@(string.Equals(row.Status, "L2W", System.StringComparison.OrdinalIgnoreCase) ? "l2w-player" : (!string.Equals(row.Status, "Active", System.StringComparison.OrdinalIgnoreCase) ? "inactive-player" : ""))">
                     <strong>@row.PlayerName</strong>
+                    @if (!string.IsNullOrWhiteSpace(row.Notes))
+                    {
+                        <span class="ms-1 text-muted" data-bs-toggle="tooltip" title="@Html.Raw(Html.Encode(row.Notes))">
+                            <i class="fas fa-sticky-note"></i>
+                        </span>
+                    }
                 </td>
                 <!-- Clan column -->
                 <td style="position: sticky; left: 260px; z-index: 5;" class="@(string.Equals(row.Status, "L2W", System.StringComparison.OrdinalIgnoreCase) ? "l2w-player" : (!string.Equals(row.Status, "Active", System.StringComparison.OrdinalIgnoreCase) ? "inactive-player" : ""))">
@@ -411,56 +418,56 @@ else
             <div class="modal-body">
                 <div class="mb-4">
                     <h6>Choose Update Type:</h6>
-                    <p class="text-muted">Select how much data you want to update for all clans.</p>
+                    <p class="text-muted">Select an option to update the data for all clans.</p>
                 </div>
-
                 <div class="d-grid gap-3">
-                    <div class="card border-primary">
+                    <div class="card border-secondary">
                         <div class="card-body">
                             <h6 class="card-title">
-                                <i class="fas fa-calendar-week text-primary"></i> Weekly Update
+                                <i class="fas fa-chart-bar text-secondary"></i> Update Fame/Attack Averages
                             </h6>
                             <p class="card-text text-muted mb-3">
-                                Updates clan data and fetches the <strong>last week</strong> of clan war data for all clans.
+                                Updates the calculated fame/attack averages for all <strong>active @(Model.Is5kTrophies ? "5k+" : "sub-5k")</strong> players based on existing war history data. No new war data is fetched.
                             </p>
-                            <form method="post" asp-page-handler="WeeklyUpdate" style="display: inline;">
-                                <button type="submit" class="btn btn-primary w-100" onclick="return confirmUpdate('weekly')">
-                                    <i class="fas fa-calendar-week"></i> Run Weekly Update
+                            <form method="post" asp-page-handler="PlayerAveragesUpdate" style="display: inline;">
+                                <input type="hidden" name="Is5kTrophies" value="@Model.Is5kTrophies.ToString().ToLower()" />
+                                <button type="submit" class="btn btn-secondary w-100">
+                                    <i class="fas fa-chart-bar"></i> Update @(Model.Is5kTrophies ? "5k+" : "Sub-5k") Averages
                                 </button>
                             </form>
                         </div>
                     </div>
-
-                    <div class="card border-warning">
-                        <div class="card-body">
-                            <h6 class="card-title">
-                                <i class="fas fa-history text-warning"></i> Update Backlog
-                            </h6>
-                            <p class="card-text text-muted mb-3">
-                                Updates clan data and fetches the <strong>last 10 weeks</strong> of clan war data for all clans. This will take longer.
-                            </p>
-                            <form method="post" asp-page-handler="BacklogUpdate" style="display: inline;">
-                                <button type="submit" class="btn btn-warning w-100" onclick="return confirmUpdate('backlog')">
-                                    <i class="fas fa-history"></i> Run Backlog Update
-                                </button>
-                            </form>
-                        </div>
-                    </div>
-
-                    @if (Model.CanModifyPlayerData)
+                    @if (Model.CanUpdateWarData)
                     {
-                        <div class="card border-secondary">
+                        <div class="card border-primary">
                             <div class="card-body">
                                 <h6 class="card-title">
-                                    <i class="fas fa-chart-bar text-secondary"></i> Update Fame/Attack Averages
+                                    <i class="fas fa-calendar-week text-primary"></i> Weekly Update
                                 </h6>
                                 <p class="card-text text-muted mb-3">
-                                    Updates the calculated fame/attack averages for all <strong>active @(Model.Is5kTrophies ? "5k+" : "sub-5k")</strong> players based on existing war history data. No new war data is fetched.
+                                    Updates clan data and fetches the <strong>last week</strong> of clan war data for all clans. (This should happen automatically)
                                 </p>
-                                <form method="post" asp-page-handler="PlayerAveragesUpdate" style="display: inline;">
-                                    <input type="hidden" name="Is5kTrophies" value="@Model.Is5kTrophies.ToString().ToLower()" />
-                                    <button type="submit" class="btn btn-secondary w-100">
-                                        <i class="fas fa-chart-bar"></i> Update @(Model.Is5kTrophies ? "5k+" : "Sub-5k") Averages
+                                <form method="post" asp-page-handler="WeeklyUpdate" style="display: inline;">
+                                    <button type="submit" class="btn btn-primary w-100" onclick="return confirmUpdate('weekly')">
+                                        <i class="fas fa-calendar-week"></i> Run Weekly Update
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+                    }
+                    @if (Model.CanManageClans)
+                    {
+                        <div class="card border-danger">
+                            <div class="card-body">
+                                <h6 class="card-title">
+                                    <i class="fas fa-history text-danger"></i> Update Backlog
+                                </h6>
+                                <p class="card-text text-muted mb-3">
+                                    Updates clan data and fetches the <strong>last 10 weeks</strong> of clan war data for all clans. This will take longer.
+                                </p>
+                                <form method="post" asp-page-handler="BacklogUpdate" style="display: inline;">
+                                    <button type="submit" class="btn btn-danger w-100" onclick="return confirmUpdate('backlog')">
+                                        <i class="fas fa-history"></i> Run Backlog Update
                                     </button>
                                 </form>
                             </div>

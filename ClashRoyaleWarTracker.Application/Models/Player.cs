@@ -13,6 +13,8 @@ namespace ClashRoyaleWarTracker.Application.Models
         public string? Name { get; set; }
         [MaxLength(50)]
         public string Status { get; set; } = "Active";
+        [MaxLength(100)]
+        public string? Notes { get; set; }
 
         public DateTime LastUpdated { get; set; }
     }

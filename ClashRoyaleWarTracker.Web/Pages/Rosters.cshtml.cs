@@ -63,16 +63,15 @@ namespace ClashRoyaleWarTracker.Web.Pages
             public int? AssignedClanId { get; set; }
         }
 
-        public async Task<IActionResult> OnPostUpdateRosterByFameAverageAsync()
-        {
-            await LoadUserPermissionsAsync();
-            if (!CanModifyPlayerData)
-            {
-                return Forbid();
-            }
+        //public async Task<IActionResult> OnPostUpdateRosterByFameAverageAsync()
+        //{
+        //    await LoadUserPermissionsAsync();
+        //    if (!CanModifyPlayerData)
+        //    {
+        //        return Forbid();
+        //    }
 
-            var 
-        }
+        //}
 
         public async Task<JsonResult> OnPostUpdateRowAsync([FromBody] RosterUpdateModel model)
         {

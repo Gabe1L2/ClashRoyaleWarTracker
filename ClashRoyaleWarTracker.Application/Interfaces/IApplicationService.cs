@@ -31,7 +31,7 @@ namespace ClashRoyaleWarTracker.Application.Interfaces
         Task<ServiceResult> UpdatePlayerNotesAsync(int playerId, string? notes);
         Task<ServiceResult<IEnumerable<RosterAssignmentDTO>>> GetAllRosterAssignmentDTOsAsync();
         Task<ServiceResult> UpdateRosterByFameAverageAsync();
-        Task<ServiceResult<IEnumerable<PlayerAverage>>> GetAllPlayerAveragesAsync(bool is5k);
+        Task<ServiceResult<IEnumerable<PlayerAverage>>> GetAllActivePlayerAveragesAsync(bool is5k);
 
     }
 }

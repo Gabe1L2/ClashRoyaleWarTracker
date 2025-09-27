@@ -1,4 +1,5 @@
 ﻿using ClashRoyaleWarTracker.Application.Models;
+using System.ComponentModel;
 using System.Numerics;
 
 namespace ClashRoyaleWarTracker.Application.Interfaces
@@ -11,6 +12,9 @@ namespace ClashRoyaleWarTracker.Application.Interfaces
         Task<List<Player>> GetAllActivePlayersAsync();
         Task<bool> UpdatePlayerStatusAsync(int playerId, string status);
         Task UpsertPlayerAverageAsync(PlayerAverage playerAverage);
-        Task<List<PlayerAverageDTO>> GetAllPlayerAveragesAsync();
+        Task<List<PlayerAverageDTO>> GetAllPlayerAverageDTOsAsync();
+        Task<bool> UpdatePlayerNotesAsync(int playerId, string? notes);
+        Task<IEnumerable<RosterAssignmentDTO>> GetAllRosterAssignmentDTOsAsync();
+        Task<IEnumerable<PlayerAverage>> GetAllActivePlayerAveragesAsync(bool is5k);
     }
 }

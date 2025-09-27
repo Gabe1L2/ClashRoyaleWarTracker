@@ -20,7 +20,7 @@ namespace ClashRoyaleWarTracker.Application.Interfaces
         Task<ServiceResult> PopulatePlayerWarHistories(Clan clan, int numOfRiverRaces);
         Task<ServiceResult> UpdateAllActivePlayerAverages(int numOfWeeksToUse, bool aboveFiveThousandTrophies);
         Task<ServiceResult> UpdatePlayerAverageAsync(int playerId, int numOfWeeksToUse = 4);
-        Task<ServiceResult<IEnumerable<PlayerAverageDTO>>> GetAllPlayerAveragesAsync();
+        Task<ServiceResult<IEnumerable<PlayerAverageDTO>>> GetAllPlayerAverageDTOsAsync();
         Task<ServiceResult<IEnumerable<GroupedPlayerWarHistoryDTO>>> GetAllGroupedPlayerWarHistoryDTOsAsync(bool is5k = true);
         Task<ServiceResult<Player>> GetPlayerByIdAsync(int playerId);
         Task<ServiceResult> UpdatePlayerStatusAsync(int playerId, string status);
@@ -28,5 +28,10 @@ namespace ClashRoyaleWarTracker.Application.Interfaces
         Task<ServiceResult> UpdatePlayerWarHistoryAsync(int warHistoryId, int fame, int decksUsed, int boatAttacks);
         Task<ServiceResult> AddClanClanHistoryPlayerHistoryAsync(string clanTag, int numWeeksWarHistory);
         Task<ServiceResult<int>> GetPlayerIdFromWarHistoryAsync(int warHistoryId);
+        Task<ServiceResult> UpdatePlayerNotesAsync(int playerId, string? notes);
+        Task<ServiceResult<IEnumerable<RosterAssignmentDTO>>> GetAllRosterAssignmentDTOsAsync();
+        Task<ServiceResult> UpdateRosterByFameAverageAsync();
+        Task<ServiceResult<IEnumerable<PlayerAverage>>> GetAllPlayerAveragesAsync(bool is5k);
+
     }
 }

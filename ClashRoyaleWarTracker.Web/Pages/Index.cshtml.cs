@@ -26,8 +26,6 @@ namespace ClashRoyaleWarTracker.Web.Pages
         public IList<Clan> AllClans { get; set; } = new List<Clan>();
         public List<string> AllStatuses { get; set; } = new();
         public int TotalRecords { get; set; }
-
-        // ADD: Dictionary to store player averages
         public Dictionary<int, PlayerAverageDTO> PlayerAverages { get; set; } = new();
 
         [BindProperty]
@@ -114,7 +112,7 @@ namespace ClashRoyaleWarTracker.Web.Pages
         {
             try
             {
-                var averagesResult = await _applicationService.GetAllPlayerAveragesAsync();
+                var averagesResult = await _applicationService.GetAllPlayerAverageDTOsAsync();
                 if (averagesResult.Success && averagesResult.Data != null)
                 {
                     // Filter by trophy level and create dictionary for quick lookup
@@ -491,6 +489,38 @@ namespace ClashRoyaleWarTracker.Web.Pages
             }
 
             return RedirectToPage("Index", new { is5k = Is5kTrophies });
+        }
+
+        public async Task<JsonResult> OnPostUpdatePlayerNotesAsync(int playerId, string? notes)
+        {
+            try
+            {
+                await LoadUserPermissionsAsync();
+                if (!CanModifyPlayerData)
+                {
+                    return new JsonResult(new { success = false, message = "Access denied" }) { StatusCode = 403 };
+                }
+
+                if (!string.IsNullOrEmpty(notes) && notes.Length > 100)
+                {
+                    return new JsonResult(new { success = false, message = "Notes must be 100 characters or fewer." });
+                }
+
+                var result = await _applicationService.UpdatePlayerNotesAsync(playerId, notes);
+                if (result.Success)
+                {
+                    return new JsonResult(new { success = true, message = result.Message });
+                }
+                else
+                {
+                    return new JsonResult(new { success = false, message = result.Message });
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error updating player notes for PlayerID {PlayerId}", playerId);
+                return new JsonResult(new { success = false, message = "An unexpected error occurred while updating notes." });
+            }
         }
     }
 

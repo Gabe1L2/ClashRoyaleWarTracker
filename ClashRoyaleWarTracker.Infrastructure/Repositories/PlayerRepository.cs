@@ -114,7 +114,7 @@ namespace ClashRoyaleWarTracker.Infrastructure.Repositories
             }
         }
 
-        public async Task<List<PlayerAverageDTO>> GetAllPlayerAveragesAsync()
+        public async Task<List<PlayerAverageDTO>> GetAllPlayerAverageDTOsAsync()
         {
             try
             {
@@ -198,6 +198,117 @@ namespace ClashRoyaleWarTracker.Infrastructure.Repositories
             {
                 _logger.LogError(ex, "Failed to update player status for PlayerID {PlayerId}", playerId);
                 throw new InvalidOperationException($"Failed to update player status for PlayerID {playerId}", ex);
+            }
+        }
+
+        public async Task<bool> UpdatePlayerNotesAsync(int playerId, string? notes)
+        {
+            try
+            {
+                _logger.LogDebug("Updating notes for PlayerID {PlayerId}", playerId);
+
+                var player = await _context.Players.FirstOrDefaultAsync(p => p.ID == playerId);
+                if (player == null)
+                {
+                    _logger.LogWarning("Player with ID {PlayerId} not found", playerId);
+                    return false;
+                }
+
+                var trimmed = notes?.Trim();
+                if (!string.IsNullOrEmpty(trimmed) && trimmed.Length > 100)
+                {
+                    trimmed = trimmed[..100];
+                }
+
+                player.Notes = trimmed;
+                player.LastUpdated = _timeZoneService.Now;
+
+                _context.Players.Update(player);
+                await _context.SaveChangesAsync();
+
+                _logger.LogInformation("Updated notes for player {PlayerName} ({PlayerId})", player.Name, playerId);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to update notes for PlayerID {PlayerId}", playerId);
+                throw new InvalidOperationException($"Failed to update notes for player {playerId}", ex);
+            }
+        }
+
+        public async Task<IEnumerable<RosterAssignmentDTO>> GetAllRosterAssignmentDTOsAsync()
+        {
+            try
+            {
+                _logger.LogDebug("Getting all Roster Assignments");
+
+                var sql = @"
+                            SELECT
+                                r.ID,
+                                r.SeasonID,
+                                r.WeekIndex,
+                                r.PlayerID,
+                                p.Tag AS PlayerTag,
+                                ISNULL(p.Name, '') AS PlayerName,
+                                p.Status,
+                                p.Notes,
+                                CAST(ISNULL(pa.FameAttackAverage, 0.00) AS decimal(5,2)) AS FameAttackAverage,
+                                CAST(ISNULL(pa.Is5k, 0) AS bit) AS Is5k,
+                                r.ClanID,
+                                c.Name AS ClanName,
+                                c.Tag  AS ClanTag,
+                                r.IsInClan,
+                                r.LastUpdated,
+                                r.UpdatedBy
+                            FROM RosterAssignments r
+                            INNER JOIN Players p ON r.PlayerID = p.ID
+                            LEFT JOIN Clans c ON r.ClanID = c.ID
+                            OUTER APPLY (
+                                -- if roster.ClanID IS NULL => treat as 5k bracket (Is5k = 1)
+                                -- otherwise choose bracket based on the clan's WarTrophies
+                                SELECT TOP 1 pa2.FameAttackAverage, pa2.Is5k
+                                FROM PlayerAverages pa2
+                                WHERE pa2.PlayerID = p.ID
+                                  AND pa2.Is5k = CASE 
+                                                    WHEN r.ClanID IS NULL THEN CAST(1 AS bit)
+                                                    WHEN ISNULL(c.WarTrophies, 0) >= 5000 THEN CAST(1 AS bit)
+                                                    ELSE CAST(0 AS bit)
+                                                 END
+                                ORDER BY pa2.LastUpdated DESC
+                            ) pa
+                            ORDER BY r.LastUpdated DESC;";
+
+                var result = await _context.Database.SqlQueryRaw<RosterAssignmentDTO>(sql).ToListAsync();
+
+                _logger.LogDebug("Retrieved {Count} roster assignment DTOs", result.Count);
+                return result;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to retrieve roster assignments via raw SQL");
+                throw;
+            }
+        }
+
+        public async Task<IEnumerable<PlayerAverage>> GetAllActivePlayerAveragesAsync(bool is5k)
+        {
+            try
+            {
+                _logger.LogDebug("Retrieving all active player averages for {TrophyLevel}", is5k ? "5k+" : "sub-5k");
+
+                var playerAverages = await _context.PlayerAverages
+                    .Join(_context.Players, pa => pa.PlayerID, p => p.ID, (pa, p) => new { pa, p })
+                    .Where(x => x.p.Status == "Active" && x.pa.Is5k == is5k)
+                    .Select(x => x.pa)
+                    .ToListAsync();
+
+                _logger.LogDebug("Found {Count} active player averages for {TrophyLevel}", playerAverages.Count, is5k ? "5k+" : "sub-5k");
+                return playerAverages;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to retrieve active player averages for {TrophyLevel}", is5k ? "5k+" : "sub-5k");
+                throw;
             }
         }
     }

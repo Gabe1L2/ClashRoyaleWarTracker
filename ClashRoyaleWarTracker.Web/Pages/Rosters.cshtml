@@ -1,4 +1,345 @@
 ﻿@page
 @model ClashRoyaleWarTracker.Web.Pages.RostersModel
 @{
+    ViewData["Title"] = "Rosters";
+}
+
+<h1 class="mb-3">Rosters</h1>
+
+<div class="mb-3 d-flex gap-2 align-items-center">
+    <input id="searchInput" class="form-control" style="width: 220px;" placeholder="Search by name or tag..." />
+    <label class="form-check-label ms-2">
+        <input id="unassignedOnly" type="checkbox" class="form-check-input me-1" /> Show only unassigned
+    </label>
+    <div class="ms-auto">
+        <button class="btn btn-info me-1" type="button" onclick="showAutoRosterModal()">
+            <i class="fas fa-magic"></i> Auto Roster
+        </button>
+        <button class="btn btn-secondary me-1" type="button" onclick="copyPreviousWeek()">Copy Previous Week</button>
+        <button class="btn btn-success" type="button" onclick="saveAll()">Save All</button>
+    </div>
+</div>
+
+<form id="rosterForm">
+    @Html.AntiForgeryToken()
+    <div id="rosterContainer">
+        @foreach (var group in Model.RosterAssignments
+            .GroupBy(r => r.ClanID)
+            .OrderByDescending(g => {
+                var clan = Model.Clans.FirstOrDefault(c => c.ID == g.Key);
+                return clan?.WarTrophies ?? 0;
+            }))
+        {
+            var clan = Model.Clans.FirstOrDefault(c => c.ID == group.Key);
+            var clanName = clan?.Name ?? "Unassigned";
+            var groupKey = group.Key?.ToString() ?? "unassigned";
+            <div class="card mb-3">
+                <div class="card-header d-flex justify-content-between align-items-center" data-bs-toggle="collapse" data-bs-target="#clan-@groupKey" style="cursor:pointer;">
+                    <div>
+                        <strong>@clanName</strong>
+                        @if (clan != null)
+                        {
+                            <small class="text-muted ms-2">(@clan.WarTrophies trophies)</small>
+                        }
+                        <span class="badge bg-primary ms-2">@group.Count()</span>
+                    </div>
+                    <div>
+                        <input type="checkbox" onclick="toggleSelectAll(this,'@groupKey')" /> Select all
+                    </div>
+                </div>
+
+                <div id="clan-@groupKey" class="collapse show">
+                    <div class="table-responsive">
+                        <table class="table table-sm mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th style="width:40px">#</th>
+                                    <th>Player</th>
+                                    <th>Tag</th>
+                                    <th style="width:220px">Assigned Clan</th>
+                                    <th style="width:90px">In Clan</th>
+                                    <th style="width:100px">Fame / Atk</th>
+                                    <th style="width:120px">Select</th>
+                                    <th style="width:120px">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @{
+                                    var idx = 1;
+                                }
+                                @foreach (var roster in group.OrderBy(r => r.PlayerName))
+                                {
+                                    <tr data-player-id="@roster.PlayerID" data-roster-id="@roster.ID">
+                                        <td>@idx</td>
+                                        <td>@roster.PlayerName</td>
+                                        <td><code>@roster.PlayerTag</code></td>
+                                        <td>
+                                            <select class="form-select form-select-sm assigned-clan" data-roster-id="@roster.ID">
+                                                <option value="">Unassigned</option>
+                                                @foreach (var c in Model.Clans.OrderByDescending(c => c.WarTrophies))
+                                                {
+                                                    <option value="@c.ID" selected="@(roster.ClanID.HasValue && roster.ClanID.Value == c.ID ? "selected" : null)">@c.Name (@c.WarTrophies)</option>
+                                                }
+                                            </select>
+                                        </td>
+                                        <td class="text-center">
+                                            <input type="checkbox" class="in-clan-checkbox" data-roster-id="@roster.ID" @(roster.IsInClan ? "checked" : "") />
+                                        </td>
+                                        <td class="text-center">
+                                            <strong class="@((roster.FameAttackAverage ?? 0) >= 200 ? "text-success" : (roster.FameAttackAverage ?? 0) >= 175 ? "text-warning" : "text-danger")">
+                                                @((roster.FameAttackAverage ?? 0).ToString("F1"))
+                                            </strong>
+                                        </td>
+                                        <td class="text-center">
+                                            <input type="checkbox" class="bulk-select" data-roster-id="@roster.ID" />
+                                        </td>
+                                        <td>
+                                            <button type="button" class="btn btn-sm btn-primary" onclick="saveRow(@roster.ID)">Save</button>
+                                        </td>
+                                    </tr>
+                                    idx++;
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+
+    <div class="d-flex gap-2">
+        <button type="button" class="btn btn-info" onclick="bulkAssign()">Assign Selected to Clan</button>
+        <button type="button" class="btn btn-warning" onclick="bulkToggleInClan()">Toggle InClan for Selected</button>
+        <button type="button" class="btn btn-success" onclick="saveAll()">Save All</button>
+    </div>
+</form>
+
+<!-- Auto Roster Modal -->
+<div class="modal fade" id="autoRosterModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-magic"></i> Auto Roster Options
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-4">
+                    <h6>Choose Auto Roster Type:</h6>
+                    <p class="text-muted">Select an option to automatically create roster assignments.</p>
+                </div>
+                <div class="d-grid gap-3">
+                    <div class="card border-primary">
+                        <div class="card-body">
+                            <h6 class="card-title">
+                                <i class="fas fa-sort-amount-down text-primary"></i> Create Roster by Fame Attack Average
+                            </h6>
+                            <p class="card-text text-muted mb-3">
+                                Automatically assigns players to clans based on their <strong>fame attack average</strong>, with the highest performers assigned to higher trophy clans.
+                            </p>
+                            <form method="post" asp-page-handler="AutoRosterByFameAverage" style="display: inline;">
+                                <button type="submit" class="btn btn-primary w-100" onclick="return confirmAutoRoster('fameAverage')">
+                                    <i class="fas fa-magic"></i> Create Roster by Fame Average
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    Cancel
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+    // Basic client-side filtering
+    document.getElementById('searchInput').addEventListener('input', function () {
+        const q = this.value.toLowerCase();
+        document.querySelectorAll('#rosterContainer tbody tr').forEach(tr => {
+            const name = tr.children[1].textContent.toLowerCase();
+            const tag = tr.children[2].textContent.toLowerCase();
+            tr.style.display = (name.includes(q) || tag.includes(q)) ? '' : 'none';
+        });
+    });
+
+    document.getElementById('unassignedOnly').addEventListener('change', function () {
+        const showOnlyUnassigned = this.checked;
+        document.querySelectorAll('#rosterContainer tbody tr').forEach(tr => {
+            const sel = tr.querySelector('select.assigned-clan');
+            if (showOnlyUnassigned) {
+                tr.style.display = (sel && sel.value === '') ? '' : 'none';
+            } else {
+                tr.style.display = '';
+            }
+        });
+    });
+
+    function toggleSelectAll(cb, groupKey) {
+        const container = document.getElementById('clan-' + (groupKey === 'unassigned' ? 'unassigned' : groupKey));
+        if (!container) return;
+        container.querySelectorAll('.bulk-select').forEach(c => c.checked = cb.checked);
+    }
+
+    function getAntiForgeryToken() {
+        const t = document.querySelector('input[name="__RequestVerificationToken"]');
+        return t ? t.value : '';
+    }
+
+    function showAutoRosterModal() {
+        var modal = new bootstrap.Modal(document.getElementById('autoRosterModal'));
+        modal.show();
+    }
+
+    function confirmAutoRoster(type) {
+        const messages = {
+            'fameAverage': 'This will automatically assign all players to clans based on their fame attack average. Existing assignments will be overwritten. Continue?'
+        };
+
+        return confirm(messages[type]);
+    }
+
+    async function saveRow(rosterId) {
+        const sel = document.querySelector('select.assigned-clan[data-roster-id="' + rosterId + '"]');
+        const inClan = document.querySelector('input.in-clan-checkbox[data-roster-id="' + rosterId + '"]').checked;
+        const assignedClanId = sel ? (sel.value || null) : null;
+
+        const payload = { id: rosterId, assignedClanId: assignedClanId, isInClan: inClan };
+
+        try {
+            const resp = await fetch('?handler=UpdateRow', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'RequestVerificationToken': getAntiForgeryToken()
+                },
+                body: JSON.stringify(payload)
+            });
+            const json = await resp.json();
+            if (resp.ok && json.success) {
+                alert('Saved');
+                location.reload();
+            } else {
+                alert(json?.message ?? 'Failed to save row');
+            }
+        } catch (err) {
+            console.error(err);
+            alert('Error saving row');
+        }
+    }
+
+    async function saveAll() {
+        const updates = [];
+        document.querySelectorAll('#rosterContainer tbody tr').forEach(tr => {
+            const rosterId = tr.getAttribute('data-roster-id');
+            if (!rosterId) return;
+            const sel = tr.querySelector('select.assigned-clan');
+            const inClan = tr.querySelector('input.in-clan-checkbox').checked;
+            updates.push({ id: parseInt(rosterId, 10), assignedClanId: sel ? (sel.value || null) : null, isInClan: inClan });
+        });
+
+        try {
+            const resp = await fetch('?handler=SaveAll', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'RequestVerificationToken': getAntiForgeryToken()
+                },
+                body: JSON.stringify(updates)
+            });
+            const json = await resp.json();
+            if (resp.ok && json.success) {
+                alert('All saved');
+                location.reload();
+            } else {
+                alert(json?.message ?? 'Save all failed');
+            }
+        } catch (err) {
+            console.error(err);
+            alert('Error saving all');
+        }
+    }
+
+    async function bulkAssign() {
+        const selected = Array.from(document.querySelectorAll('.bulk-select:checked')).map(cb => cb.getAttribute('data-roster-id'));
+        if (selected.length === 0) { alert('No players selected'); return; }
+
+        const clanId = prompt('Enter clan id to assign (numeric clan ID). Leave blank to unassign:');
+        const payload = { rosterIds: selected.map(x => parseInt(x, 10)), assignedClanId: clanId ? parseInt(clanId,10) : null };
+
+        try {
+            const resp = await fetch('?handler=BulkAssign', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'RequestVerificationToken': getAntiForgeryToken()
+                },
+                body: JSON.stringify(payload)
+            });
+            const json = await resp.json();
+            if (resp.ok && json.success) {
+                alert('Bulk assign completed');
+                location.reload();
+            } else {
+                alert(json?.message ?? 'Bulk assign failed');
+            }
+        } catch (err) {
+            console.error(err);
+            alert('Error performing bulk assign');
+        }
+    }
+
+    async function bulkToggleInClan() {
+        const selected = Array.from(document.querySelectorAll('.bulk-select:checked')).map(cb => cb.getAttribute('data-roster-id'));
+        if (selected.length === 0) { alert('No players selected'); return; }
+
+        try {
+            const resp = await fetch('?handler=BulkToggleInClan', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'RequestVerificationToken': getAntiForgeryToken()
+                },
+                body: JSON.stringify({ rosterIds: selected.map(x => parseInt(x, 10)) })
+            });
+            const json = await resp.json();
+            if (resp.ok && json.success) {
+                alert('Toggled InClan for selected');
+                location.reload();
+            } else {
+                alert(json?.message ?? 'Toggle failed');
+            }
+        } catch (err) {
+            console.error(err);
+            alert('Error toggling InClan');
+        }
+    }
+
+    async function copyPreviousWeek() {
+        if (!confirm('Copy previous week roster into current week?')) return;
+        try {
+            const resp = await fetch('?handler=CopyPreviousWeek', {
+                method: 'POST',
+                headers: {
+                    'RequestVerificationToken': getAntiForgeryToken()
+                }
+            });
+            const json = await resp.json();
+            if (resp.ok && json.success) {
+                alert('Copied previous week');
+                location.reload();
+            } else {
+                alert(json?.message ?? 'Copy previous week failed');
+            }
+        } catch (err) {
+            console.error(err);
+            alert('Error copying previous week');
+        }
+    }
+</script>
 }

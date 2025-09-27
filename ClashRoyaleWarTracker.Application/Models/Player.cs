@@ -48,4 +48,36 @@ namespace ClashRoyaleWarTracker.Application.Models
         public bool Is5k { get; set; }
         public DateTime LastUpdated { get; set; }
     }
+
+    public class RosterAssignment
+    {
+        public int ID { get; set; }
+        public int SeasonID { get; set; }
+        public int WeekIndex { get; set; }
+        public int PlayerID { get; set; }
+        public int? ClanID { get; set; }
+        public bool IsInClan { get; set; }
+        public DateTime LastUpdated { get; set; }
+        public string? UpdatedBy { get; set; }
+    }
+
+    public class RosterAssignmentDTO
+    {
+        public int ID { get; set; }
+        public int SeasonID { get; set; }
+        public int WeekIndex { get; set; }
+        public int PlayerID { get; set; }
+        public string PlayerTag { get; set; } = string.Empty;
+        public string PlayerName { get; set; } = string.Empty;
+        public string Status { get; set; } = string.Empty;
+        public string? Notes { get; set; }
+        public decimal? FameAttackAverage { get; set; }
+        public bool? Is5k { get; set; }
+        public int? ClanID { get; set; }
+        public string? ClanName { get; set; }
+        public string? ClanTag { get; set; }
+        public bool IsInClan { get; set; }
+        public DateTime LastUpdated { get; set; }
+        public string? UpdatedBy { get; set; }
+    }
 }

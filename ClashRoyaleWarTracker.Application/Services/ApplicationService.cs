@@ -559,12 +559,12 @@ namespace ClashRoyaleWarTracker.Application.Services
             }
         }
 
-        public async Task<ServiceResult<IEnumerable<PlayerAverageDTO>>> GetAllPlayerAveragesAsync()
+        public async Task<ServiceResult<IEnumerable<PlayerAverageDTO>>> GetAllPlayerAverageDTOsAsync()
         {
             try
             {
                 _logger.LogInformation("Retrieving all player averages from database");
-                var data = await _playerRepository.GetAllPlayerAveragesAsync();
+                var data = await _playerRepository.GetAllPlayerAverageDTOsAsync();
                 return ServiceResult<IEnumerable<PlayerAverageDTO>>.Successful(data);
             }
             catch (Exception ex)
@@ -762,7 +762,7 @@ namespace ClashRoyaleWarTracker.Application.Services
         {
             try
             {
-                _logger.LogInformation("Getting PlayerID for war history ID {WarHistoryId}", warHistoryId);
+                _logger.LogDebug("Getting PlayerID for war history ID {WarHistoryId}", warHistoryId);
 
                 var playerId = await _warRepository.GetPlayerIdFromWarHistoryAsync(warHistoryId);
                 if (!playerId.HasValue)
@@ -776,6 +776,124 @@ namespace ClashRoyaleWarTracker.Application.Services
             {
                 _logger.LogError(ex, "Error getting PlayerID for war history ID {WarHistoryId}", warHistoryId);
                 return ServiceResult<int>.Failure($"Error getting PlayerID for war history ID {warHistoryId}");
+            }
+        }
+
+        public async Task<ServiceResult> UpdatePlayerNotesAsync(int playerId, string? notes)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(notes))
+                {
+                    notes = null;
+                }
+                else if (notes.Length > 100)
+                {
+                    return ServiceResult.Failure("Notes must be 100 characters or fewer.");
+                }
+
+                var success = await _playerRepository.UpdatePlayerNotesAsync(playerId, notes);
+                if (!success)
+                {
+                    return ServiceResult.Failure($"Player with ID {playerId} not found");
+                }
+
+                return ServiceResult.Successful("Player notes updated successfully");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error updating notes for PlayerID {PlayerId}", playerId);
+                return ServiceResult.Failure($"Error updating notes: {ex.Message}");
+            }
+        }
+        public async Task<ServiceResult<IEnumerable<RosterAssignmentDTO>>> GetAllRosterAssignmentDTOsAsync()
+        {
+            try
+            {
+                _logger.LogDebug("Retrieving roster assignments DTOs from repository");
+                var data = await _playerRepository.GetAllRosterAssignmentDTOsAsync();
+                return ServiceResult<IEnumerable<RosterAssignmentDTO>>.Successful(data);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to retrieve roster assignments DTOs");
+                return ServiceResult<IEnumerable<RosterAssignmentDTO>>.Failure("An unexpected error occurred while retrieving roster assignments");
+            }
+        }
+
+        public async Task<ServiceResult> UpdateRosterByFameAverageAsync()
+        {
+            try
+            {
+                _logger.LogInformation("Updating roster assignments based on fame averages");
+
+                var fiveKResult = await GetAllActivePlayerAveragesAsync(true);
+                if (!fiveKResult.Success || fiveKResult.Data == null)
+                {
+                    _logger.LogWarning("Failed to retrieve 5k+ player averages: {Message}", fiveKResult.Message);
+                    return ServiceResult.Failure($"Failed to retrieve 5k+ player averages: {fiveKResult.Message}");
+                }
+
+                var subFiveKResult = await GetAllActivePlayerAveragesAsync(false);
+                if (!subFiveKResult.Success || subFiveKResult.Data == null)
+                {
+                    _logger.LogWarning("Failed to retrieve sub-5k player averages: {Message}", subFiveKResult.Message);
+                    return ServiceResult.Failure($"Failed to retrieve sub-5k player averages: {subFiveKResult.Message}");
+                }
+
+                var fiveKPlayers = fiveKResult.Data.ToList();
+                var subFiveKPlayers = subFiveKResult.Data.ToList();
+
+                _logger.LogInformation("Retrieved {FiveKCount} 5k+ players and {SubFiveKCount} sub-5k players",
+                    fiveKPlayers.Count, subFiveKPlayers.Count);
+
+                // Get PlayerIDs that exist in both lists
+                var fiveKPlayerIds = fiveKPlayers.Select(p => p.PlayerID).ToHashSet();
+                var duplicatePlayerIds = subFiveKPlayers
+                    .Where(p => fiveKPlayerIds.Contains(p.PlayerID))
+                    .Select(p => p.PlayerID)
+                    .ToList();
+
+                if (duplicatePlayerIds.Any())
+                {
+                    _logger.LogInformation("Found {DuplicateCount} players in both lists. Removing from sub-5k list: {PlayerIds}",
+                        duplicatePlayerIds.Count, string.Join(", ", duplicatePlayerIds));
+
+                    // Remove duplicates from sub-5k list
+                    subFiveKPlayers = subFiveKPlayers
+                        .Where(p => !fiveKPlayerIds.Contains(p.PlayerID))
+                        .ToList();
+                }
+
+                var allPlayerAverages = fiveKPlayers.Concat(subFiveKPlayers).ToList();
+
+                _logger.LogInformation("Combined player lists: {TotalCount} players ({FiveKCount} from 5k+, {SubFiveKCount} from sub-5k after deduplication)",
+                    allPlayerAverages.Count, fiveKPlayers.Count, subFiveKPlayers.Count);
+
+                // TODO: Implement the actual roster assignment logic based on fame averages
+                // For now, just return success with the combined list info
+
+                return ServiceResult.Successful($"Successfully processed {allPlayerAverages.Count} players for roster assignment by fame average");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "An unexpected error occurred while updating roster by fame average");
+                return ServiceResult.Failure("An unexpected error occurred while updating roster by fame average");
+            }
+        }
+
+        public async Task<ServiceResult<IEnumerable<PlayerAverage>>> GetAllActivePlayerAveragesAsync(bool is5k)
+        {
+            try
+            {
+                _logger.LogInformation("Retrieving all active player averages for {TrophyLevel}", is5k ? "5k+" : "sub-5k");
+                var playerAverages = await _playerRepository.GetAllActivePlayerAveragesAsync(is5k);
+                return ServiceResult<IEnumerable<PlayerAverage>>.Successful(playerAverages);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "An unexpected error occurred while retrieving active player averages for {TrophyLevel}", is5k ? "5k+" : "sub-5k");
+                return ServiceResult<IEnumerable<PlayerAverage>>.Failure($"An unexpected error occurred while retrieving active player averages for {(is5k ? "5k+" : "sub-5k")}");
             }
         }
     }

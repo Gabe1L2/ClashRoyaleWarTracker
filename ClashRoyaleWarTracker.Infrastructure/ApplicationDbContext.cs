@@ -24,6 +24,9 @@ namespace ClashRoyaleWarTracker.Infrastructure
         public DbSet<PlayerAverage> PlayerAverages { get; set; } = null!;
         public DbSet<PlayerWarHistory> PlayerWarHistories { get; set; } = null!;
 
+        // New roster assignments table
+        public DbSet<RosterAssignment> RosterAssignments { get; set; } = null!;
+
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
@@ -94,6 +97,29 @@ namespace ClashRoyaleWarTracker.Infrastructure
             modelBuilder.Entity<PlayerWarHistory>()
                 .HasIndex(pwh => new { pwh.PlayerID, pwh.ClanHistoryID })
                 .IsUnique();
+
+            // Configure RosterAssignment
+            modelBuilder.Entity<RosterAssignment>(eb =>
+            {
+                eb.HasKey(r => r.ID);
+
+                eb.HasIndex(r => new { r.SeasonID, r.WeekIndex });
+                eb.HasIndex(r => new { r.ClanID, r.SeasonID, r.WeekIndex });
+
+                eb.HasIndex(r => new { r.SeasonID, r.WeekIndex, r.PlayerID }).IsUnique();
+
+                eb.HasOne<Player>()
+                    .WithMany()
+                    .HasForeignKey(r => r.PlayerID)
+                    .HasPrincipalKey(p => p.ID)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                eb.HasOne<Clan>()
+                    .WithMany()
+                    .HasForeignKey(r => r.ClanID)
+                    .HasPrincipalKey(c => c.ID)
+                    .OnDelete(DeleteBehavior.SetNull);
+            });
         }
     }
 }

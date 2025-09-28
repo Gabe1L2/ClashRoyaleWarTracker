@@ -97,7 +97,7 @@ namespace ClashRoyaleWarTracker.Application.Services
                 }
 
                 // Update all active player averages for 5k+
-                var update5kAveragesResult = await UpdateAllActivePlayerAverages(numWeeksPlayerAverages, true);
+                var update5kAveragesResult = await UpdateAllPlayerAveragesAsync(numWeeksPlayerAverages, true);
                 if (update5kAveragesResult.Success)
                 {
                     _logger.LogInformation("Successfully updated 5k+ player averages");
@@ -108,7 +108,7 @@ namespace ClashRoyaleWarTracker.Application.Services
                 }
 
                 // Update all active player averages for sub-5k
-                var updateSub5kAveragesResult = await UpdateAllActivePlayerAverages(numWeeksPlayerAverages, false);
+                var updateSub5kAveragesResult = await UpdateAllPlayerAveragesAsync(numWeeksPlayerAverages, false);
                 if (updateSub5kAveragesResult.Success)
                 {
                     _logger.LogInformation("Successfully updated sub-5k player averages");
@@ -827,6 +827,7 @@ namespace ClashRoyaleWarTracker.Application.Services
             {
                 _logger.LogInformation("Updating roster assignments based on fame averages");
 
+                // Get 5k+ and sub-5k player averages, combine and deduplicate
                 var fiveKResult = await GetAllActivePlayerAveragesAsync(true);
                 if (!fiveKResult.Success || fiveKResult.Data == null)
                 {
@@ -847,7 +848,7 @@ namespace ClashRoyaleWarTracker.Application.Services
                 _logger.LogInformation("Retrieved {FiveKCount} 5k+ players and {SubFiveKCount} sub-5k players",
                     fiveKPlayers.Count, subFiveKPlayers.Count);
 
-                // Get PlayerIDs that exist in both lists
+                // Remove duplicates from sub-5k list (prioritize 5k+ list)
                 var fiveKPlayerIds = fiveKPlayers.Select(p => p.PlayerID).ToHashSet();
                 var duplicatePlayerIds = subFiveKPlayers
                     .Where(p => fiveKPlayerIds.Contains(p.PlayerID))
@@ -859,21 +860,109 @@ namespace ClashRoyaleWarTracker.Application.Services
                     _logger.LogInformation("Found {DuplicateCount} players in both lists. Removing from sub-5k list: {PlayerIds}",
                         duplicatePlayerIds.Count, string.Join(", ", duplicatePlayerIds));
 
-                    // Remove duplicates from sub-5k list
                     subFiveKPlayers = subFiveKPlayers
                         .Where(p => !fiveKPlayerIds.Contains(p.PlayerID))
                         .ToList();
                 }
 
-                var allPlayerAverages = fiveKPlayers.Concat(subFiveKPlayers).ToList();
+                // Combine and sort by fame attack average (descending)
+                var allPlayerAverages = fiveKPlayers
+                    .Concat(subFiveKPlayers)
+                    .OrderByDescending(p => p.Is5k) // 5k+ players first (true > false)
+                    .ThenByDescending(p => p.FameAttackAverage) // Then by fame average descending
+                    .ToList();
 
-                _logger.LogInformation("Combined player lists: {TotalCount} players ({FiveKCount} from 5k+, {SubFiveKCount} from sub-5k after deduplication)",
-                    allPlayerAverages.Count, fiveKPlayers.Count, subFiveKPlayers.Count);
+                _logger.LogInformation("Combined and sorted {TotalCount} players by fame average", allPlayerAverages.Count);
 
-                // TODO: Implement the actual roster assignment logic based on fame averages
-                // For now, just return success with the combined list info
+                var clansResult = await GetAllClansAsync();
+                if (!clansResult.Success || clansResult.Data == null)
+                {
+                    _logger.LogWarning("Failed to retrieve clans: {Message}", clansResult.Message);
+                    return ServiceResult.Failure($"Failed to retrieve clans: {clansResult.Message}");
+                }
 
-                return ServiceResult.Successful($"Successfully processed {allPlayerAverages.Count} players for roster assignment by fame average");
+                var clans = clansResult.Data.ToList();
+                _logger.LogInformation("Found {ClanCount} clans for roster assignment", clans.Count);
+
+                if (clans.Count == 0)
+                {
+                    return ServiceResult.Failure("No clans available for roster assignment");
+                }
+
+                var rosterAssignments = new List<RosterAssignment>();
+                var currentClanIndex = 0;
+                var playersPerClan = 50;
+                var playersInCurrentClan = 0;
+                var totalClanCapacity = clans.Count * playersPerClan;
+                var unassignedCount = 0;
+
+                foreach (var playerAverage in allPlayerAverages)
+                {
+                    RosterAssignment rosterAssignment;
+
+                    if (rosterAssignments.Count >= totalClanCapacity)
+                    {
+                        // Assign remaining players to ClanID = null
+                        rosterAssignment = new RosterAssignment
+                        {
+                            SeasonID = 999, // Current season placeholder
+                            WeekIndex = 999, // Current week placeholder
+                            PlayerID = playerAverage.PlayerID,
+                            ClanID = null, // Unassigned
+                            IsInClan = false,
+                            UpdatedBy = "system"
+                        };
+
+                        unassignedCount++;
+                        _logger.LogDebug("Assigned PlayerID {PlayerId} to unassigned (excess capacity)", playerAverage.PlayerID);
+                    }
+                    else
+                    {
+                        // Move to next clan if current clan is full
+                        if (playersInCurrentClan >= playersPerClan && currentClanIndex < clans.Count - 1)
+                        {
+                            currentClanIndex++;
+                            playersInCurrentClan = 0;
+                        }
+
+                        var assignedClan = clans[currentClanIndex];
+
+                        rosterAssignment = new RosterAssignment
+                        {
+                            SeasonID = 999, // Current season placeholder
+                            WeekIndex = 999, // Current week placeholder
+                            PlayerID = playerAverage.PlayerID,
+                            ClanID = assignedClan.ID,
+                            IsInClan = false,
+                            UpdatedBy = "system"
+                        };
+
+                        playersInCurrentClan++;
+                        _logger.LogDebug("Assigned PlayerID {PlayerId} to {ClanName} ({PlayersInClan}/{MaxPlayers})",
+                            playerAverage.PlayerID, assignedClan.Name, playersInCurrentClan, playersPerClan);
+                    }
+
+                    rosterAssignments.Add(rosterAssignment);
+                }
+
+                var bulkUpsertResult = await _playerRepository.BulkUpsertRosterAssignmentsAsync(rosterAssignments);
+                if (!bulkUpsertResult)
+                {
+                    return ServiceResult.Failure("Failed to save roster assignments to database");
+                }
+
+                var assignedToClanCount = rosterAssignments.Count - unassignedCount;
+
+                _logger.LogInformation("Successfully created {Count} roster assignments: {AssignedCount} assigned to {ClanCount} clans, {UnassignedCount} unassigned",
+                    rosterAssignments.Count, assignedToClanCount, clans.Count, unassignedCount);
+
+                var message = $"Successfully created {rosterAssignments.Count} roster assignments for season 999, week 999";
+                if (unassignedCount > 0)
+                {
+                    message += $" ({assignedToClanCount} assigned to clans, {unassignedCount} unassigned due to capacity limits)";
+                }
+
+                return ServiceResult.Successful(message);
             }
             catch (Exception ex)
             {
@@ -894,6 +983,293 @@ namespace ClashRoyaleWarTracker.Application.Services
             {
                 _logger.LogError(ex, "An unexpected error occurred while retrieving active player averages for {TrophyLevel}", is5k ? "5k+" : "sub-5k");
                 return ServiceResult<IEnumerable<PlayerAverage>>.Failure($"An unexpected error occurred while retrieving active player averages for {(is5k ? "5k+" : "sub-5k")}");
+            }
+        }
+
+        public async Task<ServiceResult> UpdateAllPlayerAveragesAsync(int numOfWeeksToUse, bool aboveFiveThousandTrophies)
+        {
+            try
+            {
+                _logger.LogInformation("Updating player averages for all players {TrophyLevel} 5000 trophies", aboveFiveThousandTrophies ? "above" : "below");
+                var players = await _playerRepository.GetAllPlayersAsync();
+                if (players == null || players.Count == 0)
+                {
+                    _logger.LogWarning("No players found in database");
+                    return ServiceResult.Failure("No players found in database");
+                }
+
+                foreach (var player in players)
+                {
+                    await UpdatePlayerAverageForTrophyLevelAsync(player, numOfWeeksToUse, aboveFiveThousandTrophies);
+                    _logger.LogInformation("Successfully updated player average for {PlayerName} ({PlayerTag})", player.Name, player.Tag);
+                }
+
+                _logger.LogInformation("Successfully updated player averages for all players");
+                return ServiceResult.Successful("Player averages successfully updated!");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "An unexpected error occurred while updating player averages");
+                return ServiceResult.Failure($"An unexpected error occurred while updating player averages");
+            }
+        }
+
+        public async Task<ServiceResult> UpdateRosterInClanStatusAsync()
+        {
+            try
+            {
+                _logger.LogInformation("Starting roster IsInClan status update for all clans");
+
+                var clansResult = await GetAllClansAsync();
+                if (!clansResult.Success || clansResult.Data == null)
+                {
+                    _logger.LogWarning("Failed to retrieve clans for IsInClan status update: {Message}", clansResult.Message);
+                    return ServiceResult.Failure($"Failed to retrieve clans for IsInClan status update: {clansResult.Message}");
+                }
+
+                var clans = clansResult.Data.ToList();
+                _logger.LogInformation("Found {ClanCount} clans to update IsInClan status for", clans.Count);
+
+                // Get unique clan IDs from roster assignments by calling a lightweight method
+                // We'll determine unique clans by calling the clan-specific method with each clan ID
+                var uniqueClanIds = new List<int?>();
+                
+                // Add all existing clan IDs
+                uniqueClanIds.AddRange(clans.Select(c => (int?)c.ID));
+                
+                // Add null for unassigned players
+                uniqueClanIds.Add(null);
+
+                _logger.LogInformation("Found {UniqueClansCount} unique clan assignments to process", uniqueClanIds.Count);
+
+                var overallSuccess = true;
+                var clanResults = new List<(int? ClanId, ServiceResult Result)>();
+                var totalUpdatedCount = 0;
+                var totalProcessedCount = 0;
+
+                // Process each clan separately
+                foreach (var clanId in uniqueClanIds)
+                {
+                    var clanName = clanId.HasValue 
+                        ? clans.FirstOrDefault(c => c.ID == clanId)?.Name ?? $"ClanID {clanId}" 
+                        : "Unassigned";
+
+                    _logger.LogInformation("Processing IsInClan status update for {ClanName} (ClanID: {ClanId})", clanName, clanId);
+
+                    var result = await UpdateRosterInClanStatusForClanAsync(clanId);
+                    clanResults.Add((clanId, result));
+
+                    if (result.Success)
+                    {
+                        _logger.LogInformation("Successfully completed IsInClan update for {ClanName}: {Message}", clanName, result.Message);
+                        
+                        // Extract counts from the result message for aggregation
+                        if (result.Message.Contains("Total: "))
+                        {
+                            // Parse the counts from the message (format: "Total: X, Updated: Y, ...")
+                            var parts = result.Message.Split(',').Select(p => p.Trim()).ToArray();
+                            foreach (var part in parts)
+                            {
+                                if (part.StartsWith("Total: "))
+                                {
+                                    if (int.TryParse(part.Substring("Total: ".Length), out var count))
+                                        totalProcessedCount += count;
+                                }
+                                else if (part.StartsWith("Updated: "))
+                                {
+                                    var updatedPart = part.Substring("Updated: ".Length);
+                                    // Handle format "Updated: X (Assigned: Y, Unassigned: Z)"
+                                    var spaceIndex = updatedPart.IndexOf(' ');
+                                    var countStr = spaceIndex > 0 ? updatedPart.Substring(0, spaceIndex) : updatedPart;
+                                    if (int.TryParse(countStr, out var count))
+                                        totalUpdatedCount += count;
+                                }
+                            }
+                        }
+                    }
+                    else
+                    {
+                        _logger.LogWarning("Failed IsInClan update for {ClanName}: {Message}", clanName, result.Message);
+                        overallSuccess = false;
+                    }
+                }
+
+                // Compile overall results
+                var successfulClans = clanResults.Count(r => r.Result.Success);
+                var failedClans = clanResults.Count(r => !r.Result.Success);
+
+                var summaryMessage = $"IsInClan status update completed for all clans. " +
+                                   $"Clans processed: {uniqueClanIds.Count}, " +
+                                   $"Successful: {successfulClans}, " +
+                                   $"Failed: {failedClans}, " +
+                                   $"Total players processed: {totalProcessedCount}, " +
+                                   $"Total players updated: {totalUpdatedCount}";
+
+                _logger.LogInformation(summaryMessage);
+
+                if (failedClans == 0)
+                {
+                    return ServiceResult.Successful(summaryMessage);
+                }
+                else if (successfulClans > 0)
+                {
+                    return ServiceResult.Successful($"Partial success: {summaryMessage}");
+                }
+                else
+                {
+                    return ServiceResult.Failure($"All clan updates failed: {summaryMessage}");
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "An unexpected error occurred during overall roster IsInClan status update");
+                return ServiceResult.Failure("An unexpected error occurred during overall roster IsInClan status update");
+            }
+        }
+
+        public async Task<ServiceResult> UpdateRosterInClanStatusForClanAsync(int? clanId)
+        {
+            try
+            {
+                var clanName = clanId.HasValue ? "specific clan" : "unassigned players";
+                _logger.LogInformation("Starting roster IsInClan status update for {ClanName} (ClanID: {ClanId})", clanName, clanId);
+
+                // Get roster assignments for the specific clan only
+                var rosterAssignments = await _playerRepository.GetRosterAssignmentsForOneWeekOneClanAsync(999, 999, clanId);
+
+                if (!rosterAssignments.Any())
+                {
+                    var msg = clanId.HasValue
+                        ? $"No roster assignments found for ClanID {clanId}"
+                        : "No unassigned roster assignments found";
+                    _logger.LogInformation(msg);
+                    return ServiceResult.Successful(msg);
+                }
+
+                _logger.LogInformation("Found {Count} roster assignments to check for InClan status for {ClanName}",
+                    rosterAssignments.Count, clanName);
+
+                var successfulUpdates = 0;
+                var failedUpdates = 0;
+                var skippedUpdates = 0;
+                var unassignedUpdates = 0;
+
+                foreach (var assignment in rosterAssignments)
+                {
+                    try
+                    {
+                        bool shouldBeInClan = false;
+
+                        // Check if player has no assigned clan (ClanID is null)
+                        if (!assignment.ClanID.HasValue)
+                        {
+                            // Player is unassigned - immediately set to false without API call
+                            shouldBeInClan = false;
+                            _logger.LogDebug("Player {PlayerName} ({PlayerTag}) has no assigned clan, setting IsInClan to false",
+                                assignment.PlayerName, assignment.PlayerTag);
+
+                            // Update if status has changed
+                            if (assignment.IsInClan != shouldBeInClan)
+                            {
+                                var updateResult = await _playerRepository.UpdateRosterAssignmentInClanStatusAsync(assignment.ID, shouldBeInClan);
+
+                                if (updateResult)
+                                {
+                                    unassignedUpdates++;
+                                    _logger.LogDebug("Updated IsInClan status for unassigned player {PlayerName} ({PlayerTag}) from {OldStatus} to {NewStatus}",
+                                        assignment.PlayerName, assignment.PlayerTag, assignment.IsInClan, shouldBeInClan);
+                                }
+                                else
+                                {
+                                    failedUpdates++;
+                                    _logger.LogWarning("Failed to update IsInClan status for unassigned player {PlayerName} ({PlayerTag})",
+                                        assignment.PlayerName, assignment.PlayerTag);
+                                }
+                            }
+                            else
+                            {
+                                skippedUpdates++;
+                                _logger.LogDebug("IsInClan status already correct for unassigned player {PlayerName} ({PlayerTag}): {Status}",
+                                    assignment.PlayerName, assignment.PlayerTag, assignment.IsInClan);
+                            }
+                        }
+                        else
+                        {
+                            // Player has an assigned clan - make API call to check current clan
+                            var playerInfo = await _clashRoyaleService.GetPlayerByTagAsync(assignment.PlayerTag);
+
+                            if (playerInfo == null)
+                            {
+                                _logger.LogWarning("Could not retrieve player info for {PlayerTag}", assignment.PlayerTag);
+                                skippedUpdates++;
+                                continue;
+                            }
+
+                            // Check if their current clan matches assigned clan
+                            shouldBeInClan = !string.IsNullOrEmpty(playerInfo.CurrentClanTag) &&
+                                           !string.IsNullOrEmpty(assignment.ClanTag) &&
+                                           string.Equals(playerInfo.CurrentClanTag, assignment.ClanTag, StringComparison.OrdinalIgnoreCase);
+
+                            // Update if status has changed
+                            if (assignment.IsInClan != shouldBeInClan)
+                            {
+                                var updateResult = await _playerRepository.UpdateRosterAssignmentInClanStatusAsync(assignment.ID, shouldBeInClan);
+
+                                if (updateResult)
+                                {
+                                    successfulUpdates++;
+                                    _logger.LogDebug("Updated IsInClan status for {PlayerName} ({PlayerTag}) from {OldStatus} to {NewStatus}",
+                                        assignment.PlayerName, assignment.PlayerTag, assignment.IsInClan, shouldBeInClan);
+                                }
+                                else
+                                {
+                                    failedUpdates++;
+                                    _logger.LogWarning("Failed to update IsInClan status for {PlayerName} ({PlayerTag})",
+                                        assignment.PlayerName, assignment.PlayerTag);
+                                }
+                            }
+                            else
+                            {
+                                skippedUpdates++;
+                                _logger.LogDebug("IsInClan status already correct for {PlayerName} ({PlayerTag}): {Status}",
+                                    assignment.PlayerName, assignment.PlayerTag, assignment.IsInClan);
+                            }
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "Error processing roster assignment for {PlayerName} ({PlayerTag})",
+                            assignment.PlayerName, assignment.PlayerTag);
+                        failedUpdates++;
+                    }
+                }
+
+                var totalUpdates = successfulUpdates + unassignedUpdates;
+                var message = $"IsInClan status update completed for {clanName}. " +
+                             $"Total: {rosterAssignments.Count}, " +
+                             $"Updated: {totalUpdates} (Assigned: {successfulUpdates}, Unassigned: {unassignedUpdates}), " +
+                             $"Failed: {failedUpdates}, " +
+                             $"Skipped: {skippedUpdates}";
+
+                _logger.LogInformation(message);
+
+                if (failedUpdates == 0)
+                {
+                    return ServiceResult.Successful(message);
+                }
+                else if (totalUpdates > 0)
+                {
+                    return ServiceResult.Successful($"Partial success: {message}");
+                }
+                else
+                {
+                    return ServiceResult.Failure($"All updates failed: {message}");
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "An unexpected error occurred during clan-specific roster IsInClan status update for ClanID {ClanId}", clanId);
+                return ServiceResult.Failure($"An unexpected error occurred during clan-specific roster IsInClan status update for ClanID {clanId}");
             }
         }
     }

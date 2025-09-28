@@ -16,5 +16,9 @@ namespace ClashRoyaleWarTracker.Application.Interfaces
         Task<bool> UpdatePlayerNotesAsync(int playerId, string? notes);
         Task<IEnumerable<RosterAssignmentDTO>> GetAllRosterAssignmentDTOsAsync();
         Task<IEnumerable<PlayerAverage>> GetAllActivePlayerAveragesAsync(bool is5k);
+        Task<List<Player>> GetAllPlayersAsync();
+        Task<bool> BulkUpsertRosterAssignmentsAsync(List<RosterAssignment> rosterAssignments);
+        Task<bool> UpdateRosterAssignmentInClanStatusAsync(int rosterAssignmentId, bool isInClan);
+        Task<List<RosterAssignmentDTO>> GetRosterAssignmentsForOneWeekOneClanAsync(int seasonId, int weekIndex, int? clanId);
     }
 }

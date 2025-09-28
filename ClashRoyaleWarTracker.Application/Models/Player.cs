@@ -80,4 +80,12 @@ namespace ClashRoyaleWarTracker.Application.Models
         public DateTime LastUpdated { get; set; }
         public string? UpdatedBy { get; set; }
     }
+
+    public class ClashRoyalePlayerInfo
+    {
+        public string Tag { get; set; } = string.Empty;
+        public string Name { get; set; } = string.Empty;
+        public string? CurrentClanTag { get; set; }
+        public string? CurrentClanName { get; set; }
+    }
 }

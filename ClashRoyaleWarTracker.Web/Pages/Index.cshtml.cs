@@ -331,7 +331,7 @@ namespace ClashRoyaleWarTracker.Web.Pages
                     return Forbid();
                 }
 
-                var result = await _applicationService.DataUpdateAsync(1);
+                var result = await _applicationService.WeeklyUpdateAsync();
                 if (result.Success)
                 {
                     _logger.LogInformation("Weekly update successful: {Message}", result.Message);
@@ -467,7 +467,7 @@ namespace ClashRoyaleWarTracker.Web.Pages
                 }
 
                 // Use the Is5kTrophies bind property directly
-                var result = await _applicationService.UpdateAllActivePlayerAverages(4, Is5kTrophies);
+                var result = await _applicationService.UpdateAllPlayerAveragesAsync(4, Is5kTrophies);
 
                 if (result.Success)
                 {

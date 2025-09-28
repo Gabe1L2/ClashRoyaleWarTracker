@@ -12,6 +12,12 @@
         <input id="unassignedOnly" type="checkbox" class="form-check-input me-1" /> Show only unassigned
     </label>
     <div class="ms-auto">
+        <form method="post" asp-page-handler="UpdateInClanStatus" style="display: inline;">
+            @Html.AntiForgeryToken()
+            <button type="submit" class="btn btn-warning me-1" title="Update IsInClan status for all players by checking their current clan via API">
+                <i class="fas fa-sync-alt"></i> Update All In-Clan Status
+            </button>
+        </form>
         <button class="btn btn-info me-1" type="button" onclick="showAutoRosterModal()">
             <i class="fas fa-magic"></i> Auto Roster
         </button>
@@ -20,99 +26,127 @@
     </div>
 </div>
 
-<form id="rosterForm">
-    @Html.AntiForgeryToken()
-    <div id="rosterContainer">
-        @foreach (var group in Model.RosterAssignments
-            .GroupBy(r => r.ClanID)
-            .OrderByDescending(g => {
-                var clan = Model.Clans.FirstOrDefault(c => c.ID == g.Key);
-                return clan?.WarTrophies ?? 0;
-            }))
-        {
-            var clan = Model.Clans.FirstOrDefault(c => c.ID == group.Key);
-            var clanName = clan?.Name ?? "Unassigned";
-            var groupKey = group.Key?.ToString() ?? "unassigned";
-            <div class="card mb-3">
-                <div class="card-header d-flex justify-content-between align-items-center" data-bs-toggle="collapse" data-bs-target="#clan-@groupKey" style="cursor:pointer;">
-                    <div>
-                        <strong>@clanName</strong>
-                        @if (clan != null)
-                        {
-                            <small class="text-muted ms-2">(@clan.WarTrophies trophies)</small>
-                        }
-                        <span class="badge bg-primary ms-2">@group.Count()</span>
-                    </div>
-                    <div>
-                        <input type="checkbox" onclick="toggleSelectAll(this,'@groupKey')" /> Select all
-                    </div>
+<!-- Remove the wrapping form, just keep the content in a div -->
+<div id="rosterContainer">
+    @Html.AntiForgeryToken() <!-- Keep this for JavaScript functions -->
+    @foreach (var group in Model.RosterAssignments
+        .GroupBy(r => r.ClanID)
+        .OrderByDescending(g => {
+            var clan = Model.Clans.FirstOrDefault(c => c.ID == g.Key);
+            return clan?.WarTrophies ?? 0;
+        }))
+    {
+        var clan = Model.Clans.FirstOrDefault(c => c.ID == group.Key);
+        var clanName = clan?.Name ?? "Unassigned";
+        var groupKey = group.Key?.ToString() ?? "unassigned";
+        <div class="card mb-3">
+            <div class="card-header d-flex justify-content-between align-items-center" data-bs-toggle="collapse" data-bs-target="#clan-@groupKey" style="cursor:pointer;">
+                <div>
+                    <strong>@clanName</strong>
+                    @if (clan != null)
+                    {
+                        <small class="text-muted ms-2">(@clan.WarTrophies trophies)</small>
+                    }
+                    <span class="badge bg-primary ms-2">@group.Count()</span>
                 </div>
+                <div>
+                    <form method="post" asp-page-handler="UpdateInClanStatusForClan" style="display: inline;" class="update-inclan-form">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" name="clanId" value="@group.Key" />
+                        <button type="submit" class="btn btn-sm btn-outline-warning update-inclan-btn"
+                                title="Update IsInClan status for this clan only">
+                            <i class="fas fa-sync-alt"></i> Update In-Clan
+                        </button>
+                    </form>
 
-                <div id="clan-@groupKey" class="collapse show">
-                    <div class="table-responsive">
-                        <table class="table table-sm mb-0">
-                            <thead class="table-light">
-                                <tr>
-                                    <th style="width:40px">#</th>
-                                    <th>Player</th>
-                                    <th>Tag</th>
-                                    <th style="width:220px">Assigned Clan</th>
-                                    <th style="width:90px">In Clan</th>
-                                    <th style="width:100px">Fame / Atk</th>
-                                    <th style="width:120px">Select</th>
-                                    <th style="width:120px">Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                @{
-                                    var idx = 1;
-                                }
-                                @foreach (var roster in group.OrderBy(r => r.PlayerName))
-                                {
-                                    <tr data-player-id="@roster.PlayerID" data-roster-id="@roster.ID">
-                                        <td>@idx</td>
-                                        <td>@roster.PlayerName</td>
-                                        <td><code>@roster.PlayerTag</code></td>
-                                        <td>
-                                            <select class="form-select form-select-sm assigned-clan" data-roster-id="@roster.ID">
-                                                <option value="">Unassigned</option>
-                                                @foreach (var c in Model.Clans.OrderByDescending(c => c.WarTrophies))
-                                                {
-                                                    <option value="@c.ID" selected="@(roster.ClanID.HasValue && roster.ClanID.Value == c.ID ? "selected" : null)">@c.Name (@c.WarTrophies)</option>
-                                                }
-                                            </select>
-                                        </td>
-                                        <td class="text-center">
-                                            <input type="checkbox" class="in-clan-checkbox" data-roster-id="@roster.ID" @(roster.IsInClan ? "checked" : "") />
-                                        </td>
-                                        <td class="text-center">
-                                            <strong class="@((roster.FameAttackAverage ?? 0) >= 200 ? "text-success" : (roster.FameAttackAverage ?? 0) >= 175 ? "text-warning" : "text-danger")">
-                                                @((roster.FameAttackAverage ?? 0).ToString("F1"))
-                                            </strong>
-                                        </td>
-                                        <td class="text-center">
-                                            <input type="checkbox" class="bulk-select" data-roster-id="@roster.ID" />
-                                        </td>
-                                        <td>
-                                            <button type="button" class="btn btn-sm btn-primary" onclick="saveRow(@roster.ID)">Save</button>
-                                        </td>
-                                    </tr>
-                                    idx++;
-                                }
-                            </tbody>
-                        </table>
-                    </div>
+                    <input type="checkbox" class="select-all-checkbox" data-group-key="@groupKey" title="Select all players in this clan" /> Select all
                 </div>
             </div>
-        }
-    </div>
 
-    <div class="d-flex gap-2">
-        <button type="button" class="btn btn-info" onclick="bulkAssign()">Assign Selected to Clan</button>
-        <button type="button" class="btn btn-warning" onclick="bulkToggleInClan()">Toggle InClan for Selected</button>
-        <button type="button" class="btn btn-success" onclick="saveAll()">Save All</button>
-    </div>
-</form>
+            <div id="clan-@groupKey" class="collapse show">
+                <div class="table-responsive">
+                    <table class="table table-sm mb-0 roster-table" data-clan-key="@groupKey">
+                        <thead class="table-light">
+                            <tr>
+                                <th style="width:40px">#</th>
+                                <th style="cursor: pointer;" onclick="sortRosterTable('@groupKey', 'tag')">
+                                    Tag <i class="fas fa-sort" id="sort-icon-@groupKey-tag"></i>
+                                </th>
+                                <th style="cursor: pointer;" onclick="sortRosterTable('@groupKey', 'player')">
+                                    Player <i class="fas fa-sort" id="sort-icon-@groupKey-player"></i>
+                                </th>
+                                <th style="width:220px">Assigned Clan</th>
+                                <th style="width:90px; cursor: pointer;" onclick="sortRosterTable('@groupKey', 'inclan')">
+                                    In Clan <i class="fas fa-sort" id="sort-icon-@groupKey-inclan"></i>
+                                </th>
+                                <th style="width:100px; cursor: pointer;" onclick="sortRosterTable('@groupKey', 'fame')">
+                                    Fame / Atk <i class="fas fa-sort" id="sort-icon-@groupKey-fame"></i>
+                                </th>
+                                <th style="width:120px; cursor: pointer;" onclick="sortRosterTable('@groupKey', 'select')">
+                                    Select <i class="fas fa-sort" id="sort-icon-@groupKey-select"></i>
+                                </th>
+                                <th style="width:120px">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @{
+                                var idx = 1;
+                            }
+                            @foreach (var roster in group.OrderByDescending(r => r.FameAttackAverage ?? 0))
+                            {
+                                <tr data-player-id="@roster.PlayerID" 
+                                    data-roster-id="@roster.ID"
+                                    data-player-tag="@roster.PlayerTag"
+                                    data-player-name="@roster.PlayerName"
+                                    data-in-clan="@roster.IsInClan.ToString().ToLower()"
+                                    data-fame-avg="@((roster.FameAttackAverage ?? 0).ToString("F1"))">
+                                    <td>@idx</td>
+                                    <td>
+                                        <a href="https://royaleapi.com/player/@roster.PlayerTag" target="_blank" class="text-decoration-none">
+                                            <code>@roster.PlayerTag</code>
+                                            <i class="fas fa-external-link-alt ms-1" style="font-size: 0.7em;"></i>
+                                        </a>
+                                    </td>
+                                    <td>@roster.PlayerName</td>
+                                    <td>
+                                        <select class="form-select form-select-sm assigned-clan" data-roster-id="@roster.ID">
+                                            <option value="">Unassigned</option>
+                                            @foreach (var c in Model.Clans.OrderByDescending(c => c.WarTrophies))
+                                            {
+                                                <option value="@c.ID" selected="@(roster.ClanID.HasValue && roster.ClanID.Value == c.ID ? "selected" : null)">@c.Name</option>
+                                            }
+                                        </select>
+                                    </td>
+                                    <td class="text-center">
+                                        <input type="checkbox" class="in-clan-checkbox" data-roster-id="@roster.ID" @(roster.IsInClan ? "checked" : "") />
+                                    </td>
+                                    <td class="text-center">
+                                        <strong class="@((roster.FameAttackAverage ?? 0) >= 200 ? "text-success" : (roster.FameAttackAverage ?? 0) >= 175 ? "text-warning" : "text-danger")">
+                                            @((roster.FameAttackAverage ?? 0).ToString("F1"))
+                                        </strong>
+                                    </td>
+                                    <td class="text-center">
+                                        <input type="checkbox" class="bulk-select" data-roster-id="@roster.ID" />
+                                    </td>
+                                    <td>
+                                        <button type="button" class="btn btn-sm btn-primary" onclick="saveRow(@roster.ID)">Save</button>
+                                    </td>
+                                </tr>
+                                idx++;
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+<div class="d-flex gap-2">
+    <button type="button" class="btn btn-info" onclick="bulkAssign()">Assign Selected to Clan</button>
+    <button type="button" class="btn btn-warning" onclick="bulkToggleInClan()">Toggle InClan for Selected</button>
+    <button type="button" class="btn btn-success" onclick="saveAll()">Save All</button>
+</div>
 
 <!-- Auto Roster Modal -->
 <div class="modal fade" id="autoRosterModal" tabindex="-1">
@@ -138,7 +172,8 @@
                             <p class="card-text text-muted mb-3">
                                 Automatically assigns players to clans based on their <strong>fame attack average</strong>, with the highest performers assigned to higher trophy clans.
                             </p>
-                            <form method="post" asp-page-handler="AutoRosterByFameAverage" style="display: inline;">
+                            <form method="post" asp-page-handler="UpdateRosterByFameAverage" style="display: inline;">
+                                @Html.AntiForgeryToken()
                                 <button type="submit" class="btn btn-primary w-100" onclick="return confirmAutoRoster('fameAverage')">
                                     <i class="fas fa-magic"></i> Create Roster by Fame Average
                                 </button>
@@ -158,14 +193,17 @@
 
 @section Scripts {
 <script>
+    let rosterSortDirection = {}; // Track sort direction per clan table
+
     // Basic client-side filtering
     document.getElementById('searchInput').addEventListener('input', function () {
         const q = this.value.toLowerCase();
         document.querySelectorAll('#rosterContainer tbody tr').forEach(tr => {
-            const name = tr.children[1].textContent.toLowerCase();
-            const tag = tr.children[2].textContent.toLowerCase();
+            const name = tr.children[2].textContent.toLowerCase(); // Player name column
+            const tag = tr.children[1].textContent.toLowerCase();  // Tag column
             tr.style.display = (name.includes(q) || tag.includes(q)) ? '' : 'none';
         });
+        updateAllRowNumbers();
     });
 
     document.getElementById('unassignedOnly').addEventListener('change', function () {
@@ -178,9 +216,108 @@
                 tr.style.display = '';
             }
         });
+        updateAllRowNumbers();
     });
 
+    function sortRosterTable(clanKey, column) {
+        const table = document.querySelector(`.roster-table[data-clan-key="${clanKey}"]`);
+        if (!table) return;
+
+        const tbody = table.tBodies[0];
+        const rows = Array.from(tbody.rows);
+        
+        // Initialize sort direction for this clan/column combination
+        const sortKey = `${clanKey}-${column}`;
+        if (!rosterSortDirection[sortKey]) {
+            rosterSortDirection[sortKey] = 'asc';
+        }
+        
+        const isAscending = rosterSortDirection[sortKey] === 'asc';
+        rosterSortDirection[sortKey] = isAscending ? 'desc' : 'asc';
+
+        rows.sort((a, b) => {
+            let aVal, bVal;
+
+            switch(column) {
+                case 'tag':
+                    aVal = a.getAttribute('data-player-tag') || '';
+                    bVal = b.getAttribute('data-player-tag') || '';
+                    break;
+                case 'player':
+                    aVal = a.getAttribute('data-player-name') || '';
+                    bVal = b.getAttribute('data-player-name') || '';
+                    break;
+                case 'inclan':
+                    aVal = a.getAttribute('data-in-clan') === 'true' ? 1 : 0;
+                    bVal = b.getAttribute('data-in-clan') === 'true' ? 1 : 0;
+                    return isAscending ? aVal - bVal : bVal - aVal;
+                case 'fame':
+                    aVal = parseFloat(a.getAttribute('data-fame-avg')) || 0;
+                    bVal = parseFloat(b.getAttribute('data-fame-avg')) || 0;
+                    return isAscending ? aVal - bVal : bVal - aVal;
+                case 'select':
+                    const aChecked = a.querySelector('.bulk-select').checked ? 1 : 0;
+                    const bChecked = b.querySelector('.bulk-select').checked ? 1 : 0;
+                    return isAscending ? aChecked - bChecked : bChecked - aChecked;
+                default:
+                    return 0;
+            }
+
+            return isAscending ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
+        });
+
+        // Re-append sorted rows
+        rows.forEach(row => tbody.appendChild(row));
+
+        // Update row numbers for this table
+        updateRowNumbers(clanKey);
+
+        // Update sort indicators
+        updateSortIndicators(clanKey, column, !isAscending);
+    }
+
+    function updateRowNumbers(clanKey) {
+        const table = document.querySelector(`.roster-table[data-clan-key="${clanKey}"]`);
+        if (!table) return;
+
+        const visibleRows = Array.from(table.querySelectorAll('tbody tr')).filter(row => 
+            row.style.display !== 'none'
+        );
+        
+        visibleRows.forEach((row, index) => {
+            const firstCell = row.cells[0];
+            if (firstCell) {
+                firstCell.textContent = index + 1;
+            }
+        });
+    }
+
+    function updateAllRowNumbers() {
+        document.querySelectorAll('.roster-table').forEach(table => {
+            const clanKey = table.getAttribute('data-clan-key');
+            if (clanKey) {
+                updateRowNumbers(clanKey);
+            }
+        });
+    }
+
+    function updateSortIndicators(clanKey, activeColumn, isDescending) {
+        // Reset all sort icons for this clan
+        document.querySelectorAll(`#sort-icon-${clanKey}-tag, #sort-icon-${clanKey}-player, #sort-icon-${clanKey}-inclan, #sort-icon-${clanKey}-fame, #sort-icon-${clanKey}-select`).forEach(icon => {
+            icon.className = 'fas fa-sort';
+        });
+
+        // Update the active column's icon
+        const activeIcon = document.getElementById(`sort-icon-${clanKey}-${activeColumn}`);
+        if (activeIcon) {
+            activeIcon.className = `fas fa-sort-${isDescending ? 'down' : 'up'}`;
+        }
+    }
+
     function toggleSelectAll(cb, groupKey) {
+        // Stop event from bubbling up to prevent collapse
+        event.stopPropagation();
+
         const container = document.getElementById('clan-' + (groupKey === 'unassigned' ? 'unassigned' : groupKey));
         if (!container) return;
         container.querySelectorAll('.bulk-select').forEach(c => c.checked = cb.checked);
@@ -341,5 +478,60 @@
             alert('Error copying previous week');
         }
     }
+
+    // Initialize row numbers and default sort on page load
+    document.addEventListener('DOMContentLoaded', function() {
+        updateAllRowNumbers();
+
+        // Initialize default sort state for fame column (descending) for all tables
+        document.querySelectorAll('.roster-table').forEach(table => {
+            const clanKey = table.getAttribute('data-clan-key');
+            if (clanKey) {
+                // Set initial sort direction for fame column to descending
+                rosterSortDirection[`${clanKey}-fame`] = 'desc';
+
+                // Update the sort indicator to show descending
+                updateSortIndicators(clanKey, 'fame', true); // true = descending
+            }
+        });
+
+        // ACTUALLY ADD THE EVENT LISTENERS - exactly like your Stack Overflow example
+        document.querySelectorAll('.update-inclan-btn').forEach(function(button) {
+            button.addEventListener('click', function(event) {
+                event.stopPropagation(); // Prevent the click from propagating to the parent collapse
+                console.log('Button clicked, stopping propagation'); // Debug log
+            });
+        });
+
+        document.querySelectorAll('.select-all-checkbox').forEach(function(checkbox) {
+            checkbox.addEventListener('click', function(event) {
+                event.stopPropagation(); // Prevent the click from propagating to the parent collapse
+                console.log('Checkbox clicked, stopping propagation'); // Debug log
+                
+                // Handle the select all functionality
+                const groupKey = this.getAttribute('data-group-key');
+                const container = document.getElementById('clan-' + (groupKey === 'unassigned' ? 'unassigned' : groupKey));
+                if (container) {
+                    container.querySelectorAll('.bulk-select').forEach(function(c) { 
+                        c.checked = checkbox.checked; 
+                    });
+                }
+            });
+        });
+    });
 </script>
+
+<style>
+    /* Make table header text smaller to fit on one line */
+    .roster-table thead th {
+        font-size: 0.875rem; /* Slightly smaller than default */
+        font-weight: 600;
+        white-space: nowrap; /* Prevent text wrapping */
+    }
+
+    /* Ensure sort icons are proportionally sized */
+    .roster-table thead th i {
+        font-size: 0.75rem;
+    }
+</style>
 }

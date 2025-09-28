@@ -78,7 +78,9 @@ namespace ClashRoyaleWarTracker.Infrastructure.Repositories
             try
             {
                 _logger.LogDebug("Retrieving all clans from the database");
-                var clans = await _context.Clans.ToListAsync();
+                var clans = await _context.Clans
+                    .OrderByDescending(c => c.WarTrophies)
+                    .ToListAsync();
 
                 _logger.LogInformation($"Retrieved {clans.Count} clans from database");
                 return clans;

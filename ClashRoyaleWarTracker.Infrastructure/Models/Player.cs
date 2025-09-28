@@ -1,5 +1,4 @@
-﻿using Microsoft.AspNetCore.Components.Routing;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -8,14 +7,7 @@ using System.Threading.Tasks;
 
 namespace ClashRoyaleWarTracker.Infrastructure.Models
 {
-    public class ClashRoyaleApiClan
-    {
-        public string? Tag { get; set; }
-        public string? Name { get; set; }
-        public int ClanWarTrophies { get; set; }
-    }
-
-    public class ClashRoyaleApiPlayerClan
+    public class ClashRoyaleApiPlayer
     {
         [JsonPropertyName("tag")]
         public string Tag { get; set; } = string.Empty;
@@ -23,7 +15,13 @@ namespace ClashRoyaleWarTracker.Infrastructure.Models
         [JsonPropertyName("name")]
         public string Name { get; set; } = string.Empty;
 
-        [JsonPropertyName("badgeId")]
-        public int BadgeId { get; set; }
+        [JsonPropertyName("expLevel")]
+        public int ExpLevel { get; set; }
+
+        [JsonPropertyName("trophies")]
+        public int Trophies { get; set; }
+
+        [JsonPropertyName("clan")]
+        public ClashRoyaleApiPlayerClan? Clan { get; set; }
     }
 }

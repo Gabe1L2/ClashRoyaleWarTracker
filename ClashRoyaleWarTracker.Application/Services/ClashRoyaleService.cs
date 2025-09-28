@@ -1,4 +1,5 @@
-﻿using ClashRoyaleWarTracker.Application.Interfaces;
+﻿using ClashRoyaleWarTracker.Application.Helpers;
+using ClashRoyaleWarTracker.Application.Interfaces;
 using ClashRoyaleWarTracker.Application.Models;
 using Microsoft.Extensions.Logging;
 using System;
@@ -49,6 +50,26 @@ namespace ClashRoyaleWarTracker.Application.Services
             {
                 _logger.LogError(ex, "Error fetching war log for clan with tag {ClanTag}", clanTag);
                 throw;
+            }
+        }
+
+        public async Task<ClashRoyalePlayerInfo?> GetPlayerByTagAsync(string playerTag)
+        {
+            try
+            {
+                var sanitized = ClanTagValidator.ValidateAndSanitizeClanTag(playerTag);
+                if (!sanitized.isValid)
+                {
+                    _logger.LogWarning("Invalid player tag provided: {PlayerTag}", playerTag);
+                    return null;
+                }
+
+                return await _apiClient.GetPlayerByTagAsync(sanitized.sanitizedTag);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting player by tag: {PlayerTag}", playerTag);
+                return null;
             }
         }
     }

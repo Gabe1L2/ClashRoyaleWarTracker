@@ -311,5 +311,147 @@ namespace ClashRoyaleWarTracker.Infrastructure.Repositories
                 throw;
             }
         }
+
+        public async Task<List<Player>> GetAllPlayersAsync()
+        {
+            try
+            {
+                _logger.LogDebug("Retrieving all players from database");
+                var players = await _context.Players
+                    .OrderBy(p => p.Name)
+                    .ThenBy(p => p.Tag)
+                    .ToListAsync();
+                _logger.LogDebug("Found {Count} players", players.Count);
+                return players;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to retrieve players from the database");
+                throw new InvalidOperationException("Failed to retrieve players from the database", ex);
+            }
+        }
+
+        public async Task<bool> BulkUpsertRosterAssignmentsAsync(List<RosterAssignment> rosterAssignments)
+        {
+            try
+            {
+                _logger.LogDebug("Bulk upserting {Count} roster assignments", rosterAssignments.Count);
+
+                // First, delete existing assignments for season 999, week 999
+                await _context.Database.ExecuteSqlRawAsync(
+                    "DELETE FROM RosterAssignments WHERE SeasonID = 999 AND WeekIndex = 999");
+
+                // Add new assignments
+                foreach (var assignment in rosterAssignments)
+                {
+                    assignment.LastUpdated = _timeZoneService.Now;
+                    await _context.RosterAssignments.AddAsync(assignment);
+                }
+
+                await _context.SaveChangesAsync();
+
+                _logger.LogInformation("Successfully bulk upserted {Count} roster assignments", rosterAssignments.Count);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to bulk upsert roster assignments");
+                throw new InvalidOperationException("Failed to bulk upsert roster assignments", ex);
+            }
+        }
+
+        public async Task<bool> UpdateRosterAssignmentInClanStatusAsync(int rosterAssignmentId, bool isInClan)
+        {
+            try
+            {
+                _logger.LogDebug("Updating IsInClan status for roster assignment {RosterAssignmentId} to {IsInClan}",
+                    rosterAssignmentId, isInClan);
+
+                var rosterAssignment = await _context.RosterAssignments
+                    .FirstOrDefaultAsync(r => r.ID == rosterAssignmentId);
+
+                if (rosterAssignment == null)
+                {
+                    _logger.LogWarning("Roster assignment with ID {RosterAssignmentId} not found", rosterAssignmentId);
+                    return false;
+                }
+
+                rosterAssignment.IsInClan = isInClan;
+                rosterAssignment.LastUpdated = _timeZoneService.Now;
+
+                await _context.SaveChangesAsync();
+
+                _logger.LogDebug("Successfully updated IsInClan status for roster assignment {RosterAssignmentId}",
+                    rosterAssignmentId);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to update IsInClan status for roster assignment {RosterAssignmentId}",
+                    rosterAssignmentId);
+                return false;
+            }
+        }
+
+        public async Task<List<RosterAssignmentDTO>> GetRosterAssignmentsForOneWeekOneClanAsync(int seasonId, int weekIndex, int? clanId)
+        {
+            try
+            {
+                string filterDescription = clanId.HasValue ? $"ClanID {clanId}" : "unassigned players";
+
+                _logger.LogDebug("Getting roster assignments for Season {SeasonId}, Week {WeekIndex}, Filter: {FilterDescription}",
+                    seasonId, weekIndex, filterDescription);
+
+                var sql = @"
+                SELECT
+                    r.ID,
+                    r.SeasonID,
+                    r.WeekIndex,
+                    r.PlayerID,
+                    p.Tag AS PlayerTag,
+                    ISNULL(p.Name, '') AS PlayerName,
+                    p.Status,
+                    p.Notes,
+                    CAST(ISNULL(pa.FameAttackAverage, 0.00) AS decimal(5,2)) AS FameAttackAverage,
+                    CAST(ISNULL(pa.Is5k, 0) AS bit) AS Is5k,
+                    r.ClanID,
+                    c.Name AS ClanName,
+                    c.Tag AS ClanTag,
+                    r.IsInClan,
+                    r.LastUpdated,
+                    r.UpdatedBy
+                FROM RosterAssignments r
+                INNER JOIN Players p ON r.PlayerID = p.ID
+                LEFT JOIN Clans c ON r.ClanID = c.ID
+                OUTER APPLY (
+                    SELECT TOP 1 pa2.FameAttackAverage, pa2.Is5k
+                    FROM PlayerAverages pa2
+                    WHERE pa2.PlayerID = p.ID
+                      AND pa2.Is5k = CASE 
+                                        WHEN r.ClanID IS NULL THEN CAST(1 AS bit)
+                                        WHEN ISNULL(c.WarTrophies, 0) >= 5000 THEN CAST(1 AS bit)
+                                        ELSE CAST(0 AS bit)
+                                     END
+                    ORDER BY pa2.LastUpdated DESC
+                ) pa
+                WHERE r.SeasonID = @p0 AND r.WeekIndex = @p1 
+                  AND (@p2 IS NULL AND r.ClanID IS NULL OR r.ClanID = @p2)
+                ORDER BY r.ID;";
+
+                var result = await _context.Database.SqlQueryRaw<RosterAssignmentDTO>(sql, seasonId, weekIndex, clanId).ToListAsync();
+
+                _logger.LogDebug("Retrieved {Count} roster assignments for Season {SeasonId}, Week {WeekIndex}, Filter: {FilterDescription}",
+                    result.Count, seasonId, weekIndex, filterDescription);
+                return result;
+            }
+            catch (Exception ex)
+            {
+                string filterDescription = clanId.HasValue ? $"ClanID {clanId}" : "unassigned players";
+
+                _logger.LogError(ex, "Failed to retrieve roster assignments for Season {SeasonId}, Week {WeekIndex}, Filter: {FilterDescription}",
+                    seasonId, weekIndex, filterDescription);
+                throw;
+            }
+        }
     }
 }

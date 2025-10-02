@@ -6,6 +6,22 @@
 
 <h1 class="mb-3">Rosters</h1>
 
+@if (TempData["SuccessMessage"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        <i class="fas fa-check-circle me-2"></i>@TempData["SuccessMessage"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+
+@if (TempData["ErrorMessage"] != null)
+{
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        <i class="fas fa-exclamation-triangle me-2"></i>@TempData["ErrorMessage"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+
 <div class="mb-3 d-flex gap-2 align-items-center">
     <input id="searchInput" class="form-control" style="width: 220px;" placeholder="Search by name or tag..." />
     <label class="form-check-label ms-2">
@@ -40,8 +56,8 @@
         var clanName = clan?.Name ?? "Unassigned";
         var groupKey = group.Key?.ToString() ?? "unassigned";
         <div class="card mb-3">
-            <div class="card-header d-flex justify-content-between align-items-center" data-bs-toggle="collapse" data-bs-target="#clan-@groupKey" style="cursor:pointer;">
-                <div>
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <div data-bs-toggle="collapse" data-bs-target="#clan-@groupKey" style="cursor:pointer; flex-grow: 1;">
                     <strong>@clanName</strong>
                     @if (clan != null)
                     {
@@ -49,17 +65,20 @@
                     }
                     <span class="badge bg-primary ms-2">@group.Count()</span>
                 </div>
-                <div>
+
+                <div style="flex-shrink: 0;">
                     <form method="post" asp-page-handler="UpdateInClanStatusForClan" style="display: inline;" class="update-inclan-form">
                         @Html.AntiForgeryToken()
                         <input type="hidden" name="clanId" value="@group.Key" />
-                        <button type="submit" class="btn btn-sm btn-outline-warning update-inclan-btn"
+                        <button type="submit" class="btn btn-sm btn-outline-warning"
                                 title="Update IsInClan status for this clan only">
                             <i class="fas fa-sync-alt"></i> Update In-Clan
                         </button>
                     </form>
 
-                    <input type="checkbox" class="select-all-checkbox" data-group-key="@groupKey" title="Select all players in this clan" /> Select all
+                    <input type="checkbox" class="select-all-checkbox" data-group-key="@groupKey"
+                           title="Select all players in this clan"
+                           onchange="toggleSelectAll(this, '@groupKey');" /> Select all
                 </div>
             </div>
 
@@ -315,9 +334,6 @@
     }
 
     function toggleSelectAll(cb, groupKey) {
-        // Stop event from bubbling up to prevent collapse
-        event.stopPropagation();
-
         const container = document.getElementById('clan-' + (groupKey === 'unassigned' ? 'unassigned' : groupKey));
         if (!container) return;
         container.querySelectorAll('.bulk-select').forEach(c => c.checked = cb.checked);
@@ -493,30 +509,6 @@
                 // Update the sort indicator to show descending
                 updateSortIndicators(clanKey, 'fame', true); // true = descending
             }
-        });
-
-        // ACTUALLY ADD THE EVENT LISTENERS - exactly like your Stack Overflow example
-        document.querySelectorAll('.update-inclan-btn').forEach(function(button) {
-            button.addEventListener('click', function(event) {
-                event.stopPropagation(); // Prevent the click from propagating to the parent collapse
-                console.log('Button clicked, stopping propagation'); // Debug log
-            });
-        });
-
-        document.querySelectorAll('.select-all-checkbox').forEach(function(checkbox) {
-            checkbox.addEventListener('click', function(event) {
-                event.stopPropagation(); // Prevent the click from propagating to the parent collapse
-                console.log('Checkbox clicked, stopping propagation'); // Debug log
-                
-                // Handle the select all functionality
-                const groupKey = this.getAttribute('data-group-key');
-                const container = document.getElementById('clan-' + (groupKey === 'unassigned' ? 'unassigned' : groupKey));
-                if (container) {
-                    container.querySelectorAll('.bulk-select').forEach(function(c) { 
-                        c.checked = checkbox.checked; 
-                    });
-                }
-            });
         });
     });
 </script>

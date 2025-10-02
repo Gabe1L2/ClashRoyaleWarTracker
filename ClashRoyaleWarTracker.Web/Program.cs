@@ -53,7 +53,6 @@ namespace ClashRoyaleWarTracker.Web
                 catch (Exception ex)
                 {
                     logger.LogWarning(ex, "User seeding failed, but application will continue. Users may need to be created manually.");
-                    // Don't throw - let the application start even if seeding fails
                 }
             }
 

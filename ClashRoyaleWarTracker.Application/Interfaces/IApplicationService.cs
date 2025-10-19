@@ -35,5 +35,9 @@ namespace ClashRoyaleWarTracker.Application.Interfaces
         Task<ServiceResult> UpdateAllPlayerAveragesAsync(int numOfWeeksToUse, bool aboveFiveThousandTrophies);
         Task<ServiceResult> UpdateRosterInClanStatusAsync();
         Task<ServiceResult> UpdateRosterInClanStatusForClanAsync(int? clanId);
+        Task<ServiceResult> BackupCurrentRosterToNewSeasonWeekAsync(int newSeasonId, int newWeekIndex);
+        Task<ServiceResult<IEnumerable<(int SeasonId, int WeekIndex)>>> GetAvailableRosterSeasonWeeksAsync();
+        Task<ServiceResult<IEnumerable<RosterAssignmentDTO>>> GetRosterAssignmentsBySeasonWeekAsync(int seasonId, int weekIndex);
+        Task<ServiceResult> UpdateRosterAssignmentAsync(int rosterAssignmentId, int? assignedClanId);
     }
 }

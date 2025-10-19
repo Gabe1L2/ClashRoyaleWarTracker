@@ -21,8 +21,16 @@ namespace ClashRoyaleWarTracker.Web.Pages
 
         public List<RosterAssignmentDTO> RosterAssignments { get; set; } = new();
         public IList<Clan> Clans { get; set; } = new List<Clan>();
+        public List<(int SeasonId, int WeekIndex, string Display)> AvailableSeasonWeeks { get; set; } = new();
+        
         [BindProperty]
         public bool Is5kTrophies { get; set; } = true;
+        
+        [BindProperty(SupportsGet = true)]
+        public int SelectedSeasonId { get; set; } = 999;
+        
+        [BindProperty(SupportsGet = true)]
+        public int SelectedWeekIndex { get; set; } = 999;
 
         public async Task<IActionResult> OnGetAsync(bool is5k = true)
         {
@@ -50,16 +58,40 @@ namespace ClashRoyaleWarTracker.Web.Pages
                     Clans = new List<Clan>();
                 }
 
-                var rosterResult = await _applicationService.GetAllRosterAssignmentDTOsAsync();
-                if (rosterResult.Success && rosterResult.Data != null)
+                // Load available season/weeks for dropdown
+                var seasonWeeksResult = await _applicationService.GetAvailableRosterSeasonWeeksAsync();
+                if (seasonWeeksResult.Success && seasonWeeksResult.Data != null)
                 {
-                    RosterAssignments = rosterResult.Data.ToList();
-                    _logger.LogDebug("Successfully loaded {RosterCount} roster assignments", RosterAssignments.Count);
+                    AvailableSeasonWeeks = seasonWeeksResult.Data
+                        .Select(sw => (
+                            SeasonId: sw.SeasonId,
+                            WeekIndex: sw.WeekIndex,
+                            Display: sw.SeasonId == 999 && sw.WeekIndex == 999 
+                                ? "Current Roster (999-999)" 
+                                : $"Season {sw.SeasonId} - Week {sw.WeekIndex}"
+                        ))
+                        .ToList();
+                    _logger.LogDebug("Successfully loaded {Count} available season/weeks", AvailableSeasonWeeks.Count);
                 }
                 else
                 {
-                    _logger.LogWarning("Failed to load roster assignments: {Message}", rosterResult.Message);
-                    TempData["ErrorMessage"] = "Failed to load roster assignments. Please try refreshing the page.";
+                    _logger.LogWarning("Failed to load available season/weeks: {Message}", seasonWeeksResult.Message);
+                    AvailableSeasonWeeks = new List<(int, int, string)> { (999, 999, "Current Roster (999-999)") };
+                }
+
+                // Load roster assignments for the selected season/week
+                var rosterResult = await _applicationService.GetRosterAssignmentsBySeasonWeekAsync(SelectedSeasonId, SelectedWeekIndex);
+                if (rosterResult.Success && rosterResult.Data != null)
+                {
+                    RosterAssignments = rosterResult.Data.ToList();
+                    _logger.LogDebug("Successfully loaded {RosterCount} roster assignments for Season {SeasonId}, Week {WeekIndex}", 
+                        RosterAssignments.Count, SelectedSeasonId, SelectedWeekIndex);
+                }
+                else
+                {
+                    _logger.LogWarning("Failed to load roster assignments for Season {SeasonId}, Week {WeekIndex}: {Message}", 
+                        SelectedSeasonId, SelectedWeekIndex, rosterResult.Message);
+                    TempData["ErrorMessage"] = $"Failed to load roster assignments for the selected week. Please try refreshing the page.";
                     RosterAssignments = new List<RosterAssignmentDTO>();
                 }
             }
@@ -70,6 +102,7 @@ namespace ClashRoyaleWarTracker.Web.Pages
                 
                 Clans = new List<Clan>();
                 RosterAssignments = new List<RosterAssignmentDTO>();
+                AvailableSeasonWeeks = new List<(int, int, string)> { (999, 999, "Current Roster (999-999)") };
             }
 
             return Page();
@@ -215,14 +248,25 @@ namespace ClashRoyaleWarTracker.Web.Pages
                     return new JsonResult(new { success = false, message = "Invalid request data" }) { StatusCode = 400 };
                 }
 
-                _logger.LogInformation("Received UpdateRow for roster id {Id} (not persisted yet)", model.Id);
+                _logger.LogInformation("Updating roster assignment {Id} to clan {ClanId} by user {UserName}", 
+                    model.Id, model.AssignedClanId, User.Identity?.Name);
 
-                // TODO: Implement persistence (upsert to RosterAssignments via ApplicationService/repository)
-                return new JsonResult(new { success = false, message = "Not implemented: server-side roster persistence" }) { StatusCode = 501 };
+                var result = await _applicationService.UpdateRosterAssignmentAsync(model.Id, model.AssignedClanId);
+                
+                if (result.Success)
+                {
+                    _logger.LogInformation("Successfully updated roster assignment {Id}", model.Id);
+                    return new JsonResult(new { success = true, message = "Roster assignment updated successfully" });
+                }
+                else
+                {
+                    _logger.LogWarning("Failed to update roster assignment {Id}: {Message}", model.Id, result.Message);
+                    return new JsonResult(new { success = false, message = result.Message }) { StatusCode = 400 };
+                }
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "An unexpected error occurred while updating roster row");
+                _logger.LogError(ex, "An unexpected error occurred while updating roster row {Id}", model?.Id);
                 return new JsonResult(new { success = false, message = "An unexpected error occurred" }) { StatusCode = 500 };
             }
         }

@@ -28,17 +28,18 @@ namespace ClashRoyaleWarTracker.Application.Services
         {
             return await DataUpdateAsync(1, numWeeksForPlayerAverages);
         }
+        
         public async Task<ServiceResult> DataUpdateAsync(int numWeeksWarHistory, int numWeeksPlayerAverages = 4)
         {
             try
             {
-                _logger.LogInformation("Starting weekly update for all clans");
+                _logger.LogInformation("Starting data update for all clans");
 
                 var getAllClansResult = await GetAllClansAsync();
                 if (!getAllClansResult.Success || getAllClansResult.Data == null || !getAllClansResult.Data.Any())
                 {
-                    _logger.LogWarning("Failed to retrieve clans for weekly update");
-                    return ServiceResult.Failure("Failed to retrieve clans for weekly update");
+                    _logger.LogWarning("Failed to retrieve clans for data update");
+                    return ServiceResult.Failure("Failed to retrieve clans for data update");
                 }
 
                 var clans = getAllClansResult.Data.ToList();
@@ -94,6 +95,47 @@ namespace ClashRoyaleWarTracker.Application.Services
                         failedWarHistoryUpdates++;
                         _logger.LogWarning("Failed to populate player war histories for clan {ClanName}: {ErrorMessage}", clan.Name, warHistoryResult.Message);
                     }
+                }
+
+                // Get the most recent season/week from the database (after clan history is populated)
+                int? mostRecentSeasonId = null;
+                int? mostRecentWeekIndex = null;
+                
+                foreach (var clan in clans)
+                {
+                    var clanHistories = await _clanRepository.GetAllClanHistoriesForClanAsync(clan.ID);
+                    if (clanHistories != null && clanHistories.Any())
+                    {
+                        var mostRecent = clanHistories
+                            .OrderByDescending(ch => ch.SeasonID)
+                            .ThenByDescending(ch => ch.WeekIndex)
+                            .First();
+                        
+                        mostRecentSeasonId = mostRecent.SeasonID;
+                        mostRecentWeekIndex = mostRecent.WeekIndex;
+                        _logger.LogInformation("Found most recent war data from database: Season {SeasonId}, Week {WeekIndex} from clan {ClanName}",
+                            mostRecentSeasonId, mostRecentWeekIndex, clan.Name);
+                        break; // We only need one clan's most recent data
+                    }
+                }
+
+                // Backup current roster (999, 999) to the most recent season/week if we found it
+                if (mostRecentSeasonId.HasValue && mostRecentWeekIndex.HasValue)
+                {
+                    var backupResult = await BackupCurrentRosterToNewSeasonWeekAsync(mostRecentSeasonId.Value, mostRecentWeekIndex.Value);
+                    if (backupResult.Success)
+                    {
+                        _logger.LogInformation("Successfully backed up current roster to Season {SeasonId}, Week {WeekIndex}",
+                            mostRecentSeasonId, mostRecentWeekIndex);
+                    }
+                    else
+                    {
+                        _logger.LogWarning("Failed to backup current roster: {Message}", backupResult.Message);
+                    }
+                }
+                else
+                {
+                    _logger.LogWarning("Could not determine most recent season/week for roster backup - no clan history data available");
                 }
 
                 // Update all active player averages for 5k+
@@ -1014,6 +1056,33 @@ namespace ClashRoyaleWarTracker.Application.Services
             }
         }
 
+        public async Task<ServiceResult> UpdateRosterAssignmentAsync(int rosterAssignmentId, int? assignedClanId)
+        {
+            try
+            {
+                _logger.LogInformation("Updating roster assignment {Id} to ClanID {ClanId}", rosterAssignmentId, assignedClanId);
+
+                // Update the roster assignment directly by ID
+                var success = await _playerRepository.UpdateRosterAssignmentClanAsync(rosterAssignmentId, assignedClanId);
+
+                if (success)
+                {
+                    _logger.LogInformation("Successfully updated roster assignment {Id} to ClanID {ClanId}", rosterAssignmentId, assignedClanId);
+                    return ServiceResult.Successful("Roster assignment updated successfully");
+                }
+                else
+                {
+                    _logger.LogWarning("Failed to update roster assignment {Id} - roster assignment not found", rosterAssignmentId);
+                    return ServiceResult.Failure($"Roster assignment with ID {rosterAssignmentId} not found");
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "An unexpected error occurred while updating roster assignment {Id}", rosterAssignmentId);
+                return ServiceResult.Failure($"An unexpected error occurred while updating roster assignment: {ex.Message}");
+            }
+        }
+
         public async Task<ServiceResult> UpdateRosterInClanStatusAsync()
         {
             try
@@ -1270,6 +1339,77 @@ namespace ClashRoyaleWarTracker.Application.Services
             {
                 _logger.LogError(ex, "An unexpected error occurred during clan-specific roster IsInClan status update for ClanID {ClanId}", clanId);
                 return ServiceResult.Failure($"An unexpected error occurred during clan-specific roster IsInClan status update for ClanID {clanId}");
+            }
+        }
+
+        public async Task<ServiceResult> BackupCurrentRosterToNewSeasonWeekAsync(int newSeasonId, int newWeekIndex)
+        {
+            try
+            {
+                _logger.LogInformation("Backing up current roster (Season 999, Week 999) to Season {NewSeasonId}, Week {NewWeekIndex}",
+                    newSeasonId, newWeekIndex);
+
+                // Check if roster backup already exists for this season/week
+                var existingBackup = await _playerRepository.GetRosterAssignmentsForOneWeekOneClanAsync(newSeasonId, newWeekIndex, null);
+                if (existingBackup != null && existingBackup.Any())
+                {
+                    _logger.LogInformation("Roster backup already exists for Season {SeasonId}, Week {WeekIndex} ({Count} assignments). Skipping backup.",
+                        newSeasonId, newWeekIndex, existingBackup.Count);
+                    return ServiceResult.Successful($"Roster backup already exists for Season {newSeasonId}, Week {newWeekIndex}");
+                }
+
+                // Copy roster assignments from 999, 999 to the new season/week
+                var copyResult = await _playerRepository.CopyRosterAssignmentsToNewSeasonWeekAsync(999, 999, newSeasonId, newWeekIndex);
+                
+                if (copyResult)
+                {
+                    _logger.LogInformation("Successfully backed up current roster to Season {SeasonId}, Week {WeekIndex}",
+                        newSeasonId, newWeekIndex);
+                    return ServiceResult.Successful($"Successfully backed up current roster to Season {newSeasonId}, Week {newWeekIndex}");
+                }
+                else
+                {
+                    _logger.LogWarning("Failed to backup current roster to Season {SeasonId}, Week {WeekIndex}",
+                        newSeasonId, newWeekIndex);
+                    return ServiceResult.Failure($"Failed to backup current roster to Season {newSeasonId}, Week {newWeekIndex}");
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "An unexpected error occurred while backing up current roster to Season {SeasonId}, Week {WeekIndex}",
+                    newSeasonId, newWeekIndex);
+                return ServiceResult.Failure($"An unexpected error occurred while backing up current roster to Season {newSeasonId}, Week {newWeekIndex}");
+            }
+        }
+
+        public async Task<ServiceResult<IEnumerable<(int SeasonId, int WeekIndex)>>> GetAvailableRosterSeasonWeeksAsync()
+        {
+            try
+            {
+                _logger.LogDebug("Retrieving available roster season/weeks");
+                var seasonWeeks = await _playerRepository.GetDistinctRosterSeasonWeeksAsync();
+                return ServiceResult<IEnumerable<(int SeasonId, int WeekIndex)>>.Successful(seasonWeeks);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "An unexpected error occurred while retrieving available roster season/weeks");
+                return ServiceResult<IEnumerable<(int SeasonId, int WeekIndex)>>.Failure("An unexpected error occurred while retrieving available roster season/weeks");
+            }
+        }
+
+        public async Task<ServiceResult<IEnumerable<RosterAssignmentDTO>>> GetRosterAssignmentsBySeasonWeekAsync(int seasonId, int weekIndex)
+        {
+            try
+            {
+                _logger.LogDebug("Retrieving roster assignments for Season {SeasonId}, Week {WeekIndex}", seasonId, weekIndex);
+                var rosters = await _playerRepository.GetRosterAssignmentsBySeasonWeekAsync(seasonId, weekIndex);
+                return ServiceResult<IEnumerable<RosterAssignmentDTO>>.Successful(rosters);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "An unexpected error occurred while retrieving roster assignments for Season {SeasonId}, Week {WeekIndex}", 
+                    seasonId, weekIndex);
+                return ServiceResult<IEnumerable<RosterAssignmentDTO>>.Failure($"An unexpected error occurred while retrieving roster assignments for Season {seasonId}, Week {weekIndex}");
             }
         }
     }

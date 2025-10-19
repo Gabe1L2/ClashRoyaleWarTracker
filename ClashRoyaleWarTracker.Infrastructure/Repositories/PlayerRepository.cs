@@ -453,5 +453,169 @@ namespace ClashRoyaleWarTracker.Infrastructure.Repositories
                 throw;
             }
         }
+
+        public async Task<bool> CopyRosterAssignmentsToNewSeasonWeekAsync(int currentSeasonId, int currentWeekIndex, int newSeasonId, int newWeekIndex)
+        {
+            try
+            {
+                _logger.LogInformation("Copying roster assignments from Season {CurrentSeasonId}, Week {CurrentWeekIndex} to Season {NewSeasonId}, Week {NewWeekIndex}",
+                    currentSeasonId, currentWeekIndex, newSeasonId, newWeekIndex);
+
+                // Get all current roster assignments (999, 999)
+                var currentAssignments = await _context.RosterAssignments
+                    .Where(r => r.SeasonID == currentSeasonId && r.WeekIndex == currentWeekIndex)
+                    .ToListAsync();
+
+                if (!currentAssignments.Any())
+                {
+                    _logger.LogWarning("No roster assignments found for Season {CurrentSeasonId}, Week {CurrentWeekIndex}", 
+                        currentSeasonId, currentWeekIndex);
+                    return true; // Not an error, just nothing to copy
+                }
+
+                // Create new roster assignments with the new season/week
+                var newAssignments = currentAssignments.Select(r => new RosterAssignment
+                {
+                    SeasonID = newSeasonId,
+                    WeekIndex = newWeekIndex,
+                    PlayerID = r.PlayerID,
+                    ClanID = r.ClanID,
+                    IsInClan = r.IsInClan,
+                    LastUpdated = _timeZoneService.Now,
+                    UpdatedBy = "WeeklyUpdate"
+                }).ToList();
+
+                // Add new assignments to database
+                await _context.RosterAssignments.AddRangeAsync(newAssignments);
+                await _context.SaveChangesAsync();
+
+                _logger.LogInformation("Successfully copied {Count} roster assignments from Season {CurrentSeasonId}, Week {CurrentWeekIndex} to Season {NewSeasonId}, Week {NewWeekIndex}",
+                    newAssignments.Count, currentSeasonId, currentWeekIndex, newSeasonId, newWeekIndex);
+
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to copy roster assignments from Season {CurrentSeasonId}, Week {CurrentWeekIndex} to Season {NewSeasonId}, Week {NewWeekIndex}",
+                    currentSeasonId, currentWeekIndex, newSeasonId, newWeekIndex);
+                return false;
+            }
+        }
+
+        public async Task<IEnumerable<(int SeasonId, int WeekIndex)>> GetDistinctRosterSeasonWeeksAsync()
+        {
+            try
+            {
+                _logger.LogDebug("Retrieving distinct roster season/weeks from database");
+
+                var seasonWeeks = await _context.RosterAssignments
+                    .Select(r => new { r.SeasonID, r.WeekIndex })
+                    .Distinct()
+                    .OrderByDescending(sw => sw.SeasonID == 999 && sw.WeekIndex == 999 ? 1 : 0) // Current roster first
+                    .ThenByDescending(sw => sw.SeasonID)
+                    .ThenByDescending(sw => sw.WeekIndex)
+                    .ToListAsync();
+
+                var result = seasonWeeks.Select(sw => (sw.SeasonID, sw.WeekIndex)).ToList();
+
+                _logger.LogDebug("Found {Count} distinct season/week combinations", result.Count);
+                return result;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to retrieve distinct roster season/weeks");
+                throw new InvalidOperationException("Failed to retrieve distinct roster season/weeks", ex);
+            }
+        }
+
+        public async Task<IEnumerable<RosterAssignmentDTO>> GetRosterAssignmentsBySeasonWeekAsync(int seasonId, int weekIndex)
+        {
+            try
+            {
+                _logger.LogDebug("Getting roster assignments for Season {SeasonId}, Week {WeekIndex}", seasonId, weekIndex);
+
+                var sql = @"
+                            SELECT
+                                r.ID,
+                                r.SeasonID,
+                                r.WeekIndex,
+                                r.PlayerID,
+                                p.Tag AS PlayerTag,
+                                ISNULL(p.Name, '') AS PlayerName,
+                                p.Status,
+                                p.Notes,
+                                CAST(ISNULL(pa.FameAttackAverage, 0.00) AS decimal(5,2)) AS FameAttackAverage,
+                                CAST(ISNULL(pa.Is5k, 0) AS bit) AS Is5k,
+                                r.ClanID,
+                                c.Name AS ClanName,
+                                c.Tag  AS ClanTag,
+                                r.IsInClan,
+                                r.LastUpdated,
+                                r.UpdatedBy
+                            FROM RosterAssignments r
+                            INNER JOIN Players p ON r.PlayerID = p.ID
+                            LEFT JOIN Clans c ON r.ClanID = c.ID
+                            OUTER APPLY (
+                                SELECT TOP 1 pa2.FameAttackAverage, pa2.Is5k
+                                FROM PlayerAverages pa2
+                                WHERE pa2.PlayerID = p.ID
+                                  AND pa2.Is5k = CASE 
+                                                    WHEN r.ClanID IS NULL THEN CAST(1 AS bit)
+                                                    WHEN ISNULL(c.WarTrophies, 0) >= 5000 THEN CAST(1 AS bit)
+                                                    ELSE CAST(0 AS bit)
+                                                 END
+                                ORDER BY pa2.LastUpdated DESC
+                            ) pa
+                            WHERE r.SeasonID = @p0 AND r.WeekIndex = @p1
+                            ORDER BY r.LastUpdated DESC;";
+
+                var result = await _context.Database.SqlQueryRaw<RosterAssignmentDTO>(sql, seasonId, weekIndex).ToListAsync();
+
+                _logger.LogDebug("Retrieved {Count} roster assignments for Season {SeasonId}, Week {WeekIndex}", 
+                    result.Count, seasonId, weekIndex);
+                return result;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to retrieve roster assignments for Season {SeasonId}, Week {WeekIndex}", 
+                    seasonId, weekIndex);
+                throw;
+            }
+        }
+
+        public async Task<bool> UpdateRosterAssignmentClanAsync(int rosterAssignmentId, int? clanId)
+        {
+            try
+            {
+                _logger.LogDebug("Updating roster assignment {RosterAssignmentId} to ClanID {ClanId}", 
+                    rosterAssignmentId, clanId);
+
+                var rosterAssignment = await _context.RosterAssignments
+                    .FirstOrDefaultAsync(r => r.ID == rosterAssignmentId);
+
+                if (rosterAssignment == null)
+                {
+                    _logger.LogWarning("Roster assignment with ID {RosterAssignmentId} not found", rosterAssignmentId);
+                    return false;
+                }
+
+                rosterAssignment.ClanID = clanId;
+                rosterAssignment.LastUpdated = _timeZoneService.Now;
+                rosterAssignment.UpdatedBy = "ManualUpdate";
+
+                _context.RosterAssignments.Update(rosterAssignment);
+                await _context.SaveChangesAsync();
+
+                _logger.LogInformation("Successfully updated roster assignment {RosterAssignmentId} to ClanID {ClanId}", 
+                    rosterAssignmentId, clanId);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to update roster assignment {RosterAssignmentId} to ClanID {ClanId}", 
+                    rosterAssignmentId, clanId);
+                return false;
+            }
+        }
     }
 }

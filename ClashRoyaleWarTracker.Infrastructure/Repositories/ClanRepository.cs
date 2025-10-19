@@ -216,6 +216,28 @@ namespace ClashRoyaleWarTracker.Infrastructure.Repositories
             }
         }
 
+        public async Task<IEnumerable<ClanHistory>> GetAllClanHistoriesForClanAsync(int clanID)
+        {
+            try
+            {
+                _logger.LogDebug("Retrieving all clan histories for ClanID {ClanID}", clanID);
+                
+                var clanHistories = await _context.ClanHistories
+                    .Where(ch => ch.ClanID == clanID)
+                    .OrderByDescending(ch => ch.SeasonID)
+                    .ThenByDescending(ch => ch.WeekIndex)
+                    .ToListAsync();
+
+                _logger.LogDebug("Found {Count} clan history records for ClanID {ClanID}", clanHistories.Count, clanID);
+                return clanHistories;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to retrieve clan histories for ClanID {ClanID}", clanID);
+                throw new InvalidOperationException($"Failed to retrieve clan histories for ClanID {clanID}", ex);
+            }
+        }
+
         public async Task<int> GetMostRecentClanIDAsync(Player player, bool aboveFiveThousandTrophies)
         {
             try

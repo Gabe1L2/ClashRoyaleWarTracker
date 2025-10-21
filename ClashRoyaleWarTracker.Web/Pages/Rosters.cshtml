@@ -133,21 +133,39 @@
                             }
                             @foreach (var roster in group.OrderByDescending(r => r.FameAttackAverage ?? 0))
                             {
+                                var statusClass = string.Equals(roster.Status, "L2W", StringComparison.OrdinalIgnoreCase) ? "l2w-player" 
+                                    : string.Equals(roster.Status, "Inactive", StringComparison.OrdinalIgnoreCase) ? "inactive-player" 
+                                    : "active-player";
+                                
                                 <tr data-player-id="@roster.PlayerID" 
                                     data-roster-id="@roster.ID"
                                     data-player-tag="@roster.PlayerTag"
                                     data-player-name="@roster.PlayerName"
+                                    data-player-status="@roster.Status"
+                                    data-player-notes="@Html.Raw(Html.Encode(roster.Notes ?? ""))"
                                     data-in-clan="@roster.IsInClan.ToString().ToLower()"
-                                    data-fame-avg="@((roster.FameAttackAverage ?? 0).ToString("F1"))">
+                                    data-fame-avg="@((roster.FameAttackAverage ?? 0).ToString("F1"))"
+                                    data-current-clan-key="@groupKey"
+                                    class="player-row @statusClass"
+                                    onclick="handleRowClick(event, @roster.PlayerID, '@Html.Raw(Html.Encode(roster.PlayerName))', '@roster.PlayerTag', '@Html.Raw(Html.Encode(roster.Status ?? "Active"))', '@Html.Raw(Html.Encode(roster.Notes ?? ""))')"
+                                    style="cursor: pointer;">
                                     <td>@idx</td>
-                                    <td>
+                                    <td onclick="event.stopPropagation();">
                                         <a href="https://royaleapi.com/player/@roster.PlayerTag" target="_blank" class="text-decoration-none">
                                             <code>@roster.PlayerTag</code>
                                             <i class="fas fa-external-link-alt ms-1" style="font-size: 0.7em;"></i>
                                         </a>
                                     </td>
-                                    <td>@roster.PlayerName</td>
                                     <td>
+                                        @roster.PlayerName
+                                        @if (!string.IsNullOrWhiteSpace(roster.Notes))
+                                        {
+                                            <span class="ms-1 player-note" data-bs-toggle="tooltip" title="@Html.Raw(Html.Encode(roster.Notes))" role="button" tabindex="0" aria-label="Player notes">
+                                                <i class="fas fa-sticky-note" aria-hidden="true"></i>
+                                            </span>
+                                        }
+                                    </td>
+                                    <td onclick="event.stopPropagation();">
                                         <select class="form-select form-select-sm assigned-clan" 
                                                 data-roster-id="@roster.ID" 
                                                 onchange="updateClanAssignment(@roster.ID, this.value)">
@@ -229,257 +247,382 @@
     </div>
 </div>
 
+<partial name="_PlayerActionsModal" />
+
 @section Scripts {
-<script>
-    let rosterSortDirection = {}; // Track sort direction per clan table
+    <!-- Include shared modal scripts and styles -->
+    <link rel="stylesheet" href="~/css/player-actions-modal.css" />
+    <link rel="stylesheet" href="~/css/player-status-styles.css" />
+    <script src="~/js/player-actions-modal.js"></script>
+    <script>
+        let rosterSortDirection = {}; // Track sort direction per clan table
 
-    function updateWeekIndexAndSubmit(selectedSeasonId) {
-        const select = document.getElementById('seasonWeekSelect');
-        const selectedOption = select.options[select.selectedIndex];
-        const weekIndex = selectedOption.getAttribute('data-week-index');
-        document.getElementById('selectedWeekIndexInput').value = weekIndex;
-        select.form.submit();
-    }
-
-    // Basic client-side filtering
-    document.getElementById('searchInput').addEventListener('input', function () {
-        const q = this.value.toLowerCase();
-        document.querySelectorAll('#rosterContainer tbody tr').forEach(tr => {
-            const name = tr.children[2].textContent.toLowerCase(); // Player name column
-            const tag = tr.children[1].textContent.toLowerCase();  // Tag column
-            tr.style.display = (name.includes(q) || tag.includes(q)) ? '' : 'none';
-        });
-        updateAllRowNumbers();
-    });
-
-    document.getElementById('unassignedOnly').addEventListener('change', function () {
-        const showOnlyUnassigned = this.checked;
-        document.querySelectorAll('#rosterContainer tbody tr').forEach(tr => {
-            const sel = tr.querySelector('select.assigned-clan');
-            if (showOnlyUnassigned) {
-                tr.style.display = (sel && sel.value === '') ? '' : 'none';
-            } else {
-                tr.style.display = '';
+        // Handle row clicks - don't open modal if clicking on interactive elements
+        function handleRowClick(event, playerId, playerName, playerTag, playerStatus, playerNotes) {
+            // Don't open modal if clicking on select dropdown or links
+            if (event.target.closest('select') || event.target.closest('a')) {
+                return;
             }
-        });
-        updateAllRowNumbers();
-    });
-
-    function sortRosterTable(clanKey, column) {
-        const table = document.querySelector(`.roster-table[data-clan-key="${clanKey}"]`);
-        if (!table) return;
-
-        const tbody = table.tBodies[0];
-        const rows = Array.from(tbody.rows);
-        
-        // Initialize sort direction for this clan/column combination
-        const sortKey = `${clanKey}-${column}`;
-        if (!rosterSortDirection[sortKey]) {
-            rosterSortDirection[sortKey] = 'asc';
-        }
-        
-        const isAscending = rosterSortDirection[sortKey] === 'asc';
-        rosterSortDirection[sortKey] = isAscending ? 'desc' : 'asc';
-
-        rows.sort((a, b) => {
-            let aVal, bVal;
-
-            switch(column) {
-                case 'tag':
-                    aVal = a.getAttribute('data-player-tag') || '';
-                    bVal = b.getAttribute('data-player-tag') || '';
-                    break;
-                case 'player':
-                    aVal = a.getAttribute('data-player-name') || '';
-                    bVal = b.getAttribute('data-player-name') || '';
-                    break;
-                case 'inclan':
-                    aVal = a.getAttribute('data-in-clan') === 'true' ? 1 : 0;
-                    bVal = b.getAttribute('data-in-clan') === 'true' ? 1 : 0;
-                    return isAscending ? aVal - bVal : bVal - aVal;
-                case 'fame':
-                    aVal = parseFloat(a.getAttribute('data-fame-avg')) || 0;
-                    bVal = parseFloat(b.getAttribute('data-fame-avg')) || 0;
-                    return isAscending ? aVal - bVal : bVal - aVal;
-                default:
-                    return 0;
-            }
-
-            return isAscending ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
-        });
-
-        // Re-append sorted rows
-        rows.forEach(row => tbody.appendChild(row));
-
-        // Update row numbers for this table
-        updateRowNumbers(clanKey);
-
-        // Update sort indicators
-        updateSortIndicators(clanKey, column, !isAscending);
-    }
-
-    function updateRowNumbers(clanKey) {
-        const table = document.querySelector(`.roster-table[data-clan-key="${clanKey}"]`);
-        if (!table) return;
-
-        const visibleRows = Array.from(table.querySelectorAll('tbody tr')).filter(row => 
-            row.style.display !== 'none'
-        );
-        
-        visibleRows.forEach((row, index) => {
-            const firstCell = row.cells[0];
-            if (firstCell) {
-                firstCell.textContent = index + 1;
-            }
-        });
-    }
-
-    function updateAllRowNumbers() {
-        document.querySelectorAll('.roster-table').forEach(table => {
-            const clanKey = table.getAttribute('data-clan-key');
-            if (clanKey) {
-                updateRowNumbers(clanKey);
-            }
-        });
-    }
-
-    function updateSortIndicators(clanKey, activeColumn, isDescending) {
-        // Reset all sort icons for this clan (removed select column reference)
-        document.querySelectorAll(`#sort-icon-${clanKey}-tag, #sort-icon-${clanKey}-player, #sort-icon-${clanKey}-inclan, #sort-icon-${clanKey}-fame`).forEach(icon => {
-            icon.className = 'fas fa-sort';
-        });
-
-        // Update the active column's icon
-        const activeIcon = document.getElementById(`sort-icon-${clanKey}-${activeColumn}`);
-        if (activeIcon) {
-            activeIcon.className = `fas fa-sort-${isDescending ? 'down' : 'up'}`;
-        }
-    }
-
-    function getAntiForgeryToken() {
-        const t = document.querySelector('input[name="__RequestVerificationToken"]');
-        return t ? t.value : '';
-    }
-
-    function showAutoRosterModal() {
-        var modal = new bootstrap.Modal(document.getElementById('autoRosterModal'));
-        modal.show();
-    }
-
-    function confirmAutoRoster(type) {
-        const messages = {
-            'fameAverage': 'This will automatically assign all players to clans based on their fame attack average. Existing assignments will be overwritten. Continue?'
-        };
-
-        return confirm(messages[type]);
-    }
-
-    async function updateClanAssignment(rosterId, clanId) {
-        const selectElement = document.querySelector(`select.assigned-clan[data-roster-id="${rosterId}"]`);
-        const originalValue = selectElement.getAttribute('data-original-value') || selectElement.value;
-        
-        // Store original value for rollback if needed
-        if (!selectElement.hasAttribute('data-original-value')) {
-            selectElement.setAttribute('data-original-value', originalValue);
+            selectPlayer(playerId, playerName, playerTag, playerStatus, playerNotes);
         }
 
-        // Show loading state
-        selectElement.disabled = true;
-        selectElement.style.opacity = '0.6';
+        function updateWeekIndexAndSubmit(selectedSeasonId) {
+            const select = document.getElementById('seasonWeekSelect');
+            const selectedOption = select.options[select.selectedIndex];
+            const weekIndex = selectedOption.getAttribute('data-week-index');
+            document.getElementById('selectedWeekIndexInput').value = weekIndex;
+            select.form.submit();
+        }
 
-        const assignedClanId = clanId || null;
-        const payload = { id: rosterId, assignedClanId: assignedClanId };
-
-        try {
-            const resp = await fetch('?handler=UpdateRow', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'RequestVerificationToken': getAntiForgeryToken()
-                },
-                body: JSON.stringify(payload)
+        // Basic client-side filtering
+        document.getElementById('searchInput').addEventListener('input', function () {
+            const q = this.value.toLowerCase();
+            document.querySelectorAll('#rosterContainer tbody tr').forEach(tr => {
+                const name = tr.children[2].textContent.toLowerCase(); // Player name column
+                const tag = tr.children[1].textContent.toLowerCase();  // Tag column
+                tr.style.display = (name.includes(q) || tag.includes(q)) ? '' : 'none';
             });
-            const json = await resp.json();
+            updateAllRowNumbers();
+        });
+
+        document.getElementById('unassignedOnly').addEventListener('change', function () {
+            const showOnlyUnassigned = this.checked;
+            document.querySelectorAll('#rosterContainer tbody tr').forEach(tr => {
+                const sel = tr.querySelector('select.assigned-clan');
+                if (showOnlyUnassigned) {
+                    tr.style.display = (sel && sel.value === '') ? '' : 'none';
+                } else {
+                    tr.style.display = '';
+                }
+            });
+            updateAllRowNumbers();
+        });
+
+        function sortRosterTable(clanKey, column) {
+            const table = document.querySelector(`.roster-table[data-clan-key="${clanKey}"]`);
+            if (!table) return;
+
+            const tbody = table.tBodies[0];
+            const rows = Array.from(tbody.rows);
+        
+            // Initialize sort direction for this clan/column combination
+            const sortKey = `${clanKey}-${column}`;
+            if (!rosterSortDirection[sortKey]) {
+                rosterSortDirection[sortKey] = 'asc';
+            }
+        
+            const isAscending = rosterSortDirection[sortKey] === 'asc';
+            rosterSortDirection[sortKey] = isAscending ? 'desc' : 'asc';
+
+            rows.sort((a, b) => {
+                let aVal, bVal;
+
+                switch(column) {
+                    case 'tag':
+                        aVal = a.getAttribute('data-player-tag') || '';
+                        bVal = b.getAttribute('data-player-tag') || '';
+                        break;
+                    case 'player':
+                        aVal = a.getAttribute('data-player-name') || '';
+                        bVal = b.getAttribute('data-player-name') || '';
+                        break;
+                    case 'inclan':
+                        aVal = a.getAttribute('data-in-clan') === 'true' ? 1 : 0;
+                        bVal = b.getAttribute('data-in-clan') === 'true' ? 1 : 0;
+                        return isAscending ? aVal - bVal : bVal - aVal;
+                    case 'fame':
+                        aVal = parseFloat(a.getAttribute('data-fame-avg')) || 0;
+                        bVal = parseFloat(b.getAttribute('data-fame-avg')) || 0;
+                        return isAscending ? aVal - bVal : bVal - aVal;
+                    default:
+                        return 0;
+                }
+
+                return isAscending ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
+            });
+
+            // Re-append sorted rows
+            rows.forEach(row => tbody.appendChild(row));
+
+            // Update row numbers for this table
+            updateRowNumbers(clanKey);
+
+            // Update sort indicators
+            updateSortIndicators(clanKey, column, !isAscending);
+        }
+
+        function updateRowNumbers(clanKey) {
+            const table = document.querySelector(`.roster-table[data-clan-key="${clanKey}"]`);
+            if (!table) return;
+
+            const visibleRows = Array.from(table.querySelectorAll('tbody tr')).filter(row => 
+                row.style.display !== 'none'
+            );
+        
+            visibleRows.forEach((row, index) => {
+                const firstCell = row.cells[0];
+                if (firstCell) {
+                    firstCell.textContent = index + 1;
+                }
+            });
+        }
+
+        function updateAllRowNumbers() {
+            document.querySelectorAll('.roster-table').forEach(table => {
+                const clanKey = table.getAttribute('data-clan-key');
+                if (clanKey) {
+                    updateRowNumbers(clanKey);
+                }
+            });
+        }
+
+        function updateSortIndicators(clanKey, activeColumn, isDescending) {
+            // Reset all sort icons for this clan
+            document.querySelectorAll(`#sort-icon-${clanKey}-tag, #sort-icon-${clanKey}-player, #sort-icon-${clanKey}-inclan, #sort-icon-${clanKey}-fame`).forEach(icon => {
+                icon.className = 'fas fa-sort';
+            });
+
+            // Update the active column's icon
+            const activeIcon = document.getElementById(`sort-icon-${clanKey}-${activeColumn}`);
+            if (activeIcon) {
+                activeIcon.className = `fas fa-sort-${isDescending ? 'down' : 'up'}`;
+            }
+        }
+
+        function getAntiForgeryToken() {
+            const t = document.querySelector('input[name="__RequestVerificationToken"]');
+            return t ? t.value : '';
+        }
+
+        function showAutoRosterModal() {
+            var modal = new bootstrap.Modal(document.getElementById('autoRosterModal'));
+            modal.show();
+        }
+
+        function confirmAutoRoster(type) {
+            const messages = {
+                'fameAverage': 'This will automatically assign all players to clans based on their fame attack average. Existing assignments will be overwritten. Continue?'
+            };
+
+            return confirm(messages[type]);
+        }
+
+        async function updateClanAssignment(rosterId, clanId) {
+            const selectElement = document.querySelector(`select.assigned-clan[data-roster-id="${rosterId}"]`);
+            const playerRow = selectElement.closest('tr');
             
-            if (resp.ok && json.success) {
-                // Update successful - update the original value
-                selectElement.setAttribute('data-original-value', clanId);
+            // Get the ACTUAL clan section the row is currently in, not what the dropdown says
+            const originalValue = playerRow.getAttribute('data-current-clan-key');
+        
+            // Show loading state
+            selectElement.disabled = true;
+            selectElement.style.opacity = '0.6';
+
+            const assignedClanId = clanId || null;
+            const payload = { id: rosterId, assignedClanId: assignedClanId };
+
+            try {
+                const resp = await fetch('?handler=UpdateRow', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'RequestVerificationToken': getAntiForgeryToken()
+                    },
+                    body: JSON.stringify(payload)
+                });
+                const json = await resp.json();
+            
+                if (resp.ok && json.success) {
+                    // Show brief success indication
+                    selectElement.style.borderColor = '#28a745';
+                    setTimeout(() => {
+                        selectElement.style.borderColor = '';
+                    }, 1000);
                 
-                // Show brief success indication
-                selectElement.style.borderColor = '#28a745';
-                setTimeout(() => {
-                    selectElement.style.borderColor = '';
-                }, 1000);
+                    // Update the UI without full page reload
+                    movePlayerToNewClan(rosterId, clanId, originalValue);
+                    
+                    // Update the row's current clan key to the new clan
+                    const newClanKey = (clanId === '' || clanId === null || clanId === undefined) ? 'unassigned' : clanId.toString();
+                    playerRow.setAttribute('data-current-clan-key', newClanKey);
+                } else {
+                    // Revert to original value on failure
+                    selectElement.value = originalValue === 'unassigned' ? '' : originalValue;
+                    selectElement.style.borderColor = '#dc3545';
+                    alert(json?.message ?? 'Failed to update clan assignment');
                 
-                // Reload page to reflect changes (including InClan status, player movement between clans, etc.)
-                setTimeout(() => {
-                    location.reload();
-                }, 500);
-            } else {
-                // Revert to original value on failure
-                selectElement.value = originalValue;
+                    setTimeout(() => {
+                        selectElement.style.borderColor = '';
+                    }, 2000);
+                }
+            } catch (err) {
+                console.error(err);
+                // Revert to original value on error
+                selectElement.value = originalValue === 'unassigned' ? '' : originalValue;
                 selectElement.style.borderColor = '#dc3545';
-                alert(json?.message ?? 'Failed to update clan assignment');
-                
+                alert('Error updating clan assignment');
+            
                 setTimeout(() => {
                     selectElement.style.borderColor = '';
                 }, 2000);
+            } finally {
+                selectElement.disabled = false;
+                selectElement.style.opacity = '1';
             }
-        } catch (err) {
-            console.error(err);
-            // Revert to original value on error
-            selectElement.value = originalValue;
-            selectElement.style.borderColor = '#dc3545';
-            alert('Error updating clan assignment');
-            
-            setTimeout(() => {
-                selectElement.style.borderColor = '';
-            }, 2000);
-        } finally {
-            selectElement.disabled = false;
-            selectElement.style.opacity = '1';
         }
-    }
 
-    async function copyPreviousWeek() {
-        if (!confirm('Copy previous week roster into current week?')) return;
-        try {
-            const resp = await fetch('?handler=CopyPreviousWeek', {
-                method: 'POST',
-                headers: {
-                    'RequestVerificationToken': getAntiForgeryToken()
+        /**
+         * Move a player row to a different clan section without page refresh
+         */
+        function movePlayerToNewClan(rosterId, newClanId, oldClanId) {
+            // Find the player row
+            const playerRow = document.querySelector(`tr[data-roster-id="${rosterId}"]`);
+            if (!playerRow) {
+                console.warn('Could not find player row for rosterId:', rosterId);
+                return;
+            }
+
+            // Determine the old and new clan keys
+            // Important: The groupKey in Razor is either the ClanID.ToString() or "unassigned"
+            // When newClanId is empty string "" from the select, it should be "unassigned"
+            // When newClanId is a number string like "5", it should be "5"
+            const oldClanKey = (oldClanId === '' || oldClanId === null || oldClanId === undefined) ? 'unassigned' : oldClanId.toString();
+            const newClanKey = (newClanId === '' || newClanId === null || newClanId === undefined) ? 'unassigned' : newClanId.toString();
+
+            // If same clan, no need to move (just update the select value)
+            if (oldClanKey === newClanKey) {
+                return;
+            }
+
+            // Find the old and new clan tables
+            const oldTable = document.querySelector(`.roster-table[data-clan-key="${oldClanKey}"]`);
+            const newTable = document.querySelector(`.roster-table[data-clan-key="${newClanKey}"]`);
+
+            if (!oldTable) {
+                location.reload(); // Fallback to page reload if tables not found
+                return;
+            }
+
+            if (!newTable) {
+                location.reload(); // Fallback to page reload if tables not found
+                return;
+            }
+
+            // Get player data for sorting
+            const fameAvg = parseFloat(playerRow.getAttribute('data-fame-avg')) || 0;
+
+            // Remove from old table
+            playerRow.remove();
+
+            // Insert into new table (sorted by fame average descending)
+            const newTableBody = newTable.querySelector('tbody');
+            const newTableRows = Array.from(newTableBody.querySelectorAll('tr'));
+
+            let inserted = false;
+            for (let i = 0; i < newTableRows.length; i++) {
+                const rowFameAvg = parseFloat(newTableRows[i].getAttribute('data-fame-avg')) || 0;
+                if (fameAvg > rowFameAvg) {
+                    newTableBody.insertBefore(playerRow, newTableRows[i]);
+                    inserted = true;
+                    break;
+                }
+            }
+
+            // If not inserted (lowest fame or empty table), append to end
+            if (!inserted) {
+                newTableBody.appendChild(playerRow);
+            }
+
+            // Update badge counts for both clans
+            updateClanBadgeCount(oldClanKey);
+            updateClanBadgeCount(newClanKey);
+
+            // Update row numbers for both tables
+            updateRowNumbers(oldClanKey);
+            updateRowNumbers(newClanKey);
+
+            // Reinitialize tooltips for the moved row
+            const tooltips = playerRow.querySelectorAll('[data-bs-toggle="tooltip"]');
+            tooltips.forEach(el => {
+                const existingTooltip = bootstrap.Tooltip.getInstance(el);
+                if (existingTooltip) {
+                    existingTooltip.dispose();
+                }
+                new bootstrap.Tooltip(el);
+            });
+
+            console.log(`Successfully moved player from clan ${oldClanKey} to ${newClanKey}`);
+        }
+
+        /**
+         * Update the badge count for a specific clan
+         */
+        function updateClanBadgeCount(clanKey) {
+            const table = document.querySelector(`.roster-table[data-clan-key="${clanKey}"]`);
+            if (!table) return;
+
+            const rowCount = table.querySelectorAll('tbody tr').length;
+
+            // Find the badge in the card header
+            const cardHeader = table.closest('.card').querySelector('.card-header');
+            const badge = cardHeader.querySelector('.badge.bg-primary');
+            
+            if (badge) {
+                badge.textContent = rowCount;
+            }
+        }
+
+        async function copyPreviousWeek() {
+            if (!confirm('Copy previous week roster into current week?')) return;
+            try {
+                const resp = await fetch('?handler=CopyPreviousWeek', {
+                    method: 'POST',
+                    headers: {
+                        'RequestVerificationToken': getAntiForgeryToken()
+                    }
+                });
+                const json = await resp.json();
+                if (resp.ok && json.success) {
+                    alert('Copied previous week');
+                    location.reload();
+                } else {
+                    alert(json?.message ?? 'Copy previous week failed');
+                }
+            } catch (err) {
+                console.error(err);
+                alert('Error copying previous week');
+            }
+        }
+
+        // Initialize row numbers and default sort on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            // INITIALIZE THE SHARED MODAL
+            initializePlayerActionsModal({
+                canModifyPlayerData: @(Model.CanModifyPlayerData ? "true" : "false"),
+                handlerPrefix: '/Rosters'  // Rosters page handler prefix
+            });
+
+            updateAllRowNumbers();
+
+            // Initialize default sort state for fame column (descending) for all tables
+            document.querySelectorAll('.roster-table').forEach(table => {
+                const clanKey = table.getAttribute('data-clan-key');
+                if (clanKey) {
+                    // Set initial sort direction for fame column to descending
+                    rosterSortDirection[`${clanKey}-fame`] = 'desc';
+
+                    // Update the sort indicator to show descending
+                    updateSortIndicators(clanKey, 'fame', true); // true = descending
                 }
             });
-            const json = await resp.json();
-            if (resp.ok && json.success) {
-                alert('Copied previous week');
-                location.reload();
-            } else {
-                alert(json?.message ?? 'Copy previous week failed');
-            }
-        } catch (err) {
-            console.error(err);
-            alert('Error copying previous week');
-        }
-    }
 
-    // Initialize row numbers and default sort on page load
-    document.addEventListener('DOMContentLoaded', function() {
-        updateAllRowNumbers();
-
-        // Initialize default sort state for fame column (descending) for all tables
-        document.querySelectorAll('.roster-table').forEach(table => {
-            const clanKey = table.getAttribute('data-clan-key');
-            if (clanKey) {
-                // Set initial sort direction for fame column to descending
-                rosterSortDirection[`${clanKey}-fame`] = 'desc';
-
-                // Update the sort indicator to show descending
-                updateSortIndicators(clanKey, 'fame', true); // true = descending
-            }
+            // Initialize Bootstrap tooltips for player notes
+            const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+            const tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+                return new bootstrap.Tooltip(tooltipTriggerEl);
+            });
         });
-    });
-</script>
+    </script>
 
 <style>
     /* Make table header text smaller to fit on one line */
@@ -507,6 +650,15 @@
 
     .roster-table tbody td i.fa-times-circle {
         color: #dc3545 !important; /* Bootstrap danger red */
+    }
+
+    /* Status-based row highlighting */
+    .roster-table tbody tr.inactive-player {
+        background-color: #f8d7da; /* Light red background for Inactive */
+    }
+
+    .roster-table tbody tr.l2w-player {
+        background-color: #d1e7dd; /* Light green background for L2W */
     }
 </style>
 }

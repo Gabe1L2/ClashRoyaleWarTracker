@@ -869,7 +869,7 @@ namespace ClashRoyaleWarTracker.Application.Services
             {
                 _logger.LogInformation("Updating roster assignments based on fame averages");
 
-                // Get 5k+ and sub-5k player averages, combine and deduplicate
+                // Get 5k+ and sub-5k player averages for ACTIVE players, combine and deduplicate
                 var fiveKResult = await GetAllActivePlayerAveragesAsync(true);
                 if (!fiveKResult.Success || fiveKResult.Data == null)
                 {
@@ -887,7 +887,7 @@ namespace ClashRoyaleWarTracker.Application.Services
                 var fiveKPlayers = fiveKResult.Data.ToList();
                 var subFiveKPlayers = subFiveKResult.Data.ToList();
 
-                _logger.LogInformation("Retrieved {FiveKCount} 5k+ players and {SubFiveKCount} sub-5k players",
+                _logger.LogInformation("Retrieved {FiveKCount} 5k+ active players and {SubFiveKCount} sub-5k active players",
                     fiveKPlayers.Count, subFiveKPlayers.Count);
 
                 // Remove duplicates from sub-5k list (prioritize 5k+ list)
@@ -907,14 +907,19 @@ namespace ClashRoyaleWarTracker.Application.Services
                         .ToList();
                 }
 
-                // Combine and sort by fame attack average (descending)
-                var allPlayerAverages = fiveKPlayers
+                // Combine and sort ACTIVE players by fame attack average (descending)
+                var allActivePlayerAverages = fiveKPlayers
                     .Concat(subFiveKPlayers)
                     .OrderByDescending(p => p.Is5k) // 5k+ players first (true > false)
                     .ThenByDescending(p => p.FameAttackAverage) // Then by fame average descending
                     .ToList();
 
-                _logger.LogInformation("Combined and sorted {TotalCount} players by fame average", allPlayerAverages.Count);
+                _logger.LogInformation("Combined and sorted {TotalCount} active players by fame average", allActivePlayerAverages.Count);
+
+                // Get all L2W (Left 2 Weeks) players to assign to unassigned section
+                var l2wPlayers = await _playerRepository.GetL2WPlayersAsync();
+
+                _logger.LogInformation("Found {L2WCount} L2W players to assign to unassigned", l2wPlayers.Count);
 
                 var clansResult = await GetAllClansAsync();
                 if (!clansResult.Success || clansResult.Data == null)
@@ -923,7 +928,9 @@ namespace ClashRoyaleWarTracker.Application.Services
                     return ServiceResult.Failure($"Failed to retrieve clans: {clansResult.Message}");
                 }
 
-                var clans = clansResult.Data.ToList();
+                var clans = clansResult.Data
+                    .OrderByDescending(c => c.WarTrophies) // Sort by war trophies descending for assignment
+                    .ToList();
                 _logger.LogInformation("Found {ClanCount} clans for roster assignment", clans.Count);
 
                 if (clans.Count == 0)
@@ -936,15 +943,17 @@ namespace ClashRoyaleWarTracker.Application.Services
                 var playersPerClan = 50;
                 var playersInCurrentClan = 0;
                 var totalClanCapacity = clans.Count * playersPerClan;
-                var unassignedCount = 0;
+                var activePlayersUnassignedCount = 0;
+                var l2wPlayersUnassignedCount = 0;
 
-                foreach (var playerAverage in allPlayerAverages)
+                // First, assign ACTIVE players to clans
+                foreach (var playerAverage in allActivePlayerAverages)
                 {
                     RosterAssignment rosterAssignment;
 
                     if (rosterAssignments.Count >= totalClanCapacity)
                     {
-                        // Assign remaining players to ClanID = null
+                        // Assign remaining active players to ClanID = null (overflow)
                         rosterAssignment = new RosterAssignment
                         {
                             SeasonID = 999, // Current season placeholder
@@ -952,11 +961,11 @@ namespace ClashRoyaleWarTracker.Application.Services
                             PlayerID = playerAverage.PlayerID,
                             ClanID = null, // Unassigned
                             IsInClan = false,
-                            UpdatedBy = "system"
+                            UpdatedBy = "AutoRoster-Overflow"
                         };
 
-                        unassignedCount++;
-                        _logger.LogDebug("Assigned PlayerID {PlayerId} to unassigned (excess capacity)", playerAverage.PlayerID);
+                        activePlayersUnassignedCount++;
+                        _logger.LogDebug("Assigned active PlayerID {PlayerId} to unassigned (excess capacity)", playerAverage.PlayerID);
                     }
                     else
                     {
@@ -976,15 +985,34 @@ namespace ClashRoyaleWarTracker.Application.Services
                             PlayerID = playerAverage.PlayerID,
                             ClanID = assignedClan.ID,
                             IsInClan = false,
-                            UpdatedBy = "system"
+                            UpdatedBy = "AutoRoster"
                         };
 
                         playersInCurrentClan++;
-                        _logger.LogDebug("Assigned PlayerID {PlayerId} to {ClanName} ({PlayersInClan}/{MaxPlayers})",
+                        _logger.LogDebug("Assigned active PlayerID {PlayerId} to {ClanName} ({PlayersInClan}/{MaxPlayers})",
                             playerAverage.PlayerID, assignedClan.Name, playersInCurrentClan, playersPerClan);
                     }
 
                     rosterAssignments.Add(rosterAssignment);
+                }
+
+                // Second, assign all L2W players to unassigned (ClanID = null)
+                foreach (var l2wPlayer in l2wPlayers)
+                {
+                    var rosterAssignment = new RosterAssignment
+                    {
+                        SeasonID = 999,
+                        WeekIndex = 999,
+                        PlayerID = l2wPlayer.ID,
+                        ClanID = null, // Unassigned
+                        IsInClan = false,
+                        UpdatedBy = "AutoRoster-L2W"
+                    };
+
+                    rosterAssignments.Add(rosterAssignment);
+                    l2wPlayersUnassignedCount++;
+                    _logger.LogDebug("Assigned L2W PlayerID {PlayerId} to unassigned",
+                        l2wPlayer.ID);
                 }
 
                 var bulkUpsertResult = await _playerRepository.BulkUpsertRosterAssignmentsAsync(rosterAssignments);
@@ -993,15 +1021,16 @@ namespace ClashRoyaleWarTracker.Application.Services
                     return ServiceResult.Failure("Failed to save roster assignments to database");
                 }
 
-                var assignedToClanCount = rosterAssignments.Count - unassignedCount;
+                var assignedToClanCount = rosterAssignments.Count - activePlayersUnassignedCount - l2wPlayersUnassignedCount;
+                var totalUnassignedCount = activePlayersUnassignedCount + l2wPlayersUnassignedCount;
 
-                _logger.LogInformation("Successfully created {Count} roster assignments: {AssignedCount} assigned to {ClanCount} clans, {UnassignedCount} unassigned",
-                    rosterAssignments.Count, assignedToClanCount, clans.Count, unassignedCount);
+                _logger.LogInformation("Successfully created {Count} roster assignments: {AssignedCount} assigned to {ClanCount} clans, {TotalUnassigned} unassigned ({ActiveUnassigned} active overflow, {L2WUnassigned} L2W)",
+                    rosterAssignments.Count, assignedToClanCount, clans.Count, totalUnassignedCount, activePlayersUnassignedCount, l2wPlayersUnassignedCount);
 
                 var message = $"Successfully created {rosterAssignments.Count} roster assignments for season 999, week 999";
-                if (unassignedCount > 0)
+                if (totalUnassignedCount > 0)
                 {
-                    message += $" ({assignedToClanCount} assigned to clans, {unassignedCount} unassigned due to capacity limits)";
+                    message += $" ({assignedToClanCount} assigned to clans, {totalUnassignedCount} unassigned: {activePlayersUnassignedCount} active overflow, {l2wPlayersUnassignedCount} L2W)";
                 }
 
                 return ServiceResult.Successful(message);
@@ -1010,49 +1039,6 @@ namespace ClashRoyaleWarTracker.Application.Services
             {
                 _logger.LogError(ex, "An unexpected error occurred while updating roster by fame average");
                 return ServiceResult.Failure("An unexpected error occurred while updating roster by fame average");
-            }
-        }
-
-        public async Task<ServiceResult<IEnumerable<PlayerAverage>>> GetAllActivePlayerAveragesAsync(bool is5k)
-        {
-            try
-            {
-                _logger.LogInformation("Retrieving all active player averages for {TrophyLevel}", is5k ? "5k+" : "sub-5k");
-                var playerAverages = await _playerRepository.GetAllActivePlayerAveragesAsync(is5k);
-                return ServiceResult<IEnumerable<PlayerAverage>>.Successful(playerAverages);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "An unexpected error occurred while retrieving active player averages for {TrophyLevel}", is5k ? "5k+" : "sub-5k");
-                return ServiceResult<IEnumerable<PlayerAverage>>.Failure($"An unexpected error occurred while retrieving active player averages for {(is5k ? "5k+" : "sub-5k")}");
-            }
-        }
-
-        public async Task<ServiceResult> UpdateAllPlayerAveragesAsync(int numOfWeeksToUse, bool aboveFiveThousandTrophies)
-        {
-            try
-            {
-                _logger.LogInformation("Updating player averages for all players {TrophyLevel} 5000 trophies", aboveFiveThousandTrophies ? "above" : "below");
-                var players = await _playerRepository.GetAllPlayersAsync();
-                if (players == null || players.Count == 0)
-                {
-                    _logger.LogWarning("No players found in database");
-                    return ServiceResult.Failure("No players found in database");
-                }
-
-                foreach (var player in players)
-                {
-                    await UpdatePlayerAverageForTrophyLevelAsync(player, numOfWeeksToUse, aboveFiveThousandTrophies);
-                    _logger.LogInformation("Successfully updated player average for {PlayerName} ({PlayerTag})", player.Name, player.Tag);
-                }
-
-                _logger.LogInformation("Successfully updated player averages for all players");
-                return ServiceResult.Successful("Player averages successfully updated!");
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "An unexpected error occurred while updating player averages");
-                return ServiceResult.Failure($"An unexpected error occurred while updating player averages");
             }
         }
 
@@ -1410,6 +1396,49 @@ namespace ClashRoyaleWarTracker.Application.Services
                 _logger.LogError(ex, "An unexpected error occurred while retrieving roster assignments for Season {SeasonId}, Week {WeekIndex}", 
                     seasonId, weekIndex);
                 return ServiceResult<IEnumerable<RosterAssignmentDTO>>.Failure($"An unexpected error occurred while retrieving roster assignments for Season {seasonId}, Week {weekIndex}");
+            }
+        }
+
+        public async Task<ServiceResult<IEnumerable<PlayerAverage>>> GetAllActivePlayerAveragesAsync(bool is5k)
+        {
+            try
+            {
+                _logger.LogInformation("Retrieving all active player averages for {TrophyLevel}", is5k ? "5k+" : "sub-5k");
+                var playerAverages = await _playerRepository.GetAllActivePlayerAveragesAsync(is5k);
+                return ServiceResult<IEnumerable<PlayerAverage>>.Successful(playerAverages);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "An unexpected error occurred while retrieving active player averages for {TrophyLevel}", is5k ? "5k+" : "sub-5k");
+                return ServiceResult<IEnumerable<PlayerAverage>>.Failure($"An unexpected error occurred while retrieving active player averages for {(is5k ? "5k+" : "sub-5k")}" );
+            }
+        }
+
+        public async Task<ServiceResult> UpdateAllPlayerAveragesAsync(int numOfWeeksToUse, bool aboveFiveThousandTrophies)
+        {
+            try
+            {
+                _logger.LogInformation("Updating player averages for all players {TrophyLevel} 5000 trophies", aboveFiveThousandTrophies ? "above" : "below");
+                var players = await _playerRepository.GetAllPlayersAsync();
+                if (players == null || players.Count == 0)
+                {
+                    _logger.LogWarning("No players found in database");
+                    return ServiceResult.Failure("No players found in database");
+                }
+
+                foreach (var player in players)
+                {
+                    await UpdatePlayerAverageForTrophyLevelAsync(player, numOfWeeksToUse, aboveFiveThousandTrophies);
+                    _logger.LogInformation("Successfully updated player average for {PlayerName} ({PlayerTag})", player.Name, player.Tag);
+                }
+
+                _logger.LogInformation("Successfully updated player averages for all players");
+                return ServiceResult.Successful("Player averages successfully updated!");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "An unexpected error occurred while updating player averages");
+                return ServiceResult.Failure($"An unexpected error occurred while updating player averages");
             }
         }
     }

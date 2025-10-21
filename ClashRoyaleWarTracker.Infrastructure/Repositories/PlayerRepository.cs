@@ -79,6 +79,27 @@ namespace ClashRoyaleWarTracker.Infrastructure.Repositories
             }
         }
 
+        public async Task<List<Player>> GetL2WPlayersAsync()
+        {
+            try
+            {
+                _logger.LogDebug("Retrieving all L2W (Left 2 Weeks) players from database");
+
+                var players = await _context.Players
+                    .Where(p => p.Status == "L2W")
+                    .OrderBy(p => p.Name)
+                    .ToListAsync();
+
+                _logger.LogDebug("Found {Count} L2W players", players.Count);
+                return players;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to retrieve L2W players from the database");
+                throw new InvalidOperationException("Failed to retrieve L2W players from the database", ex);
+            }
+        }
+
         public async Task UpsertPlayerAverageAsync(PlayerAverage newPlayerAverage)
         {
             try
@@ -468,7 +489,7 @@ namespace ClashRoyaleWarTracker.Infrastructure.Repositories
 
                 if (!currentAssignments.Any())
                 {
-                    _logger.LogWarning("No roster assignments found for Season {CurrentSeasonId}, Week {CurrentWeekIndex}", 
+                    _logger.LogWarning("No roster assignments found for Season {CurrentSeasonId}, Week {CurrentWeekIndex}",
                         currentSeasonId, currentWeekIndex);
                     return true; // Not an error, just nothing to copy
                 }
@@ -571,13 +592,13 @@ namespace ClashRoyaleWarTracker.Infrastructure.Repositories
 
                 var result = await _context.Database.SqlQueryRaw<RosterAssignmentDTO>(sql, seasonId, weekIndex).ToListAsync();
 
-                _logger.LogDebug("Retrieved {Count} roster assignments for Season {SeasonId}, Week {WeekIndex}", 
+                _logger.LogDebug("Retrieved {Count} roster assignments for Season {SeasonId}, Week {WeekIndex}",
                     result.Count, seasonId, weekIndex);
                 return result;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Failed to retrieve roster assignments for Season {SeasonId}, Week {WeekIndex}", 
+                _logger.LogError(ex, "Failed to retrieve roster assignments for Season {SeasonId}, Week {WeekIndex}",
                     seasonId, weekIndex);
                 throw;
             }
@@ -587,7 +608,7 @@ namespace ClashRoyaleWarTracker.Infrastructure.Repositories
         {
             try
             {
-                _logger.LogDebug("Updating roster assignment {RosterAssignmentId} to ClanID {ClanId}", 
+                _logger.LogDebug("Updating roster assignment {RosterAssignmentId} to ClanID {ClanId}",
                     rosterAssignmentId, clanId);
 
                 var rosterAssignment = await _context.RosterAssignments
@@ -606,13 +627,13 @@ namespace ClashRoyaleWarTracker.Infrastructure.Repositories
                 _context.RosterAssignments.Update(rosterAssignment);
                 await _context.SaveChangesAsync();
 
-                _logger.LogInformation("Successfully updated roster assignment {RosterAssignmentId} to ClanID {ClanId}", 
+                _logger.LogInformation("Successfully updated roster assignment {RosterAssignmentId} to ClanID {ClanId}",
                     rosterAssignmentId, clanId);
                 return true;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Failed to update roster assignment {RosterAssignmentId} to ClanID {ClanId}", 
+                _logger.LogError(ex, "Failed to update roster assignment {RosterAssignmentId} to ClanID {ClanId}",
                     rosterAssignmentId, clanId);
                 return false;
             }

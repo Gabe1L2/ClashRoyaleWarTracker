@@ -12,11 +12,9 @@ namespace ClashRoyaleWarTracker.Web.Pages
     [Authorize]
     public class UserManagementModel : BasePageModel
     {
-        private readonly ILogger<UserManagementModel> _logger;
 
-        public UserManagementModel(ILogger<UserManagementModel> logger, IUserRoleService userRoleService) : base(userRoleService)
+        public UserManagementModel(IUserRoleService userRoleService, IApplicationService applicationService, ILogger<UserManagementModel> logger) : base(userRoleService, applicationService, logger)
         {
-            _logger = logger;
         }
 
         public IList<UserWithRoles> Users { get; set; } = new List<UserWithRoles>();

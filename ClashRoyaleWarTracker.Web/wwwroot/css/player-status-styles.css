@@ -1,0 +1,93 @@
+/* Shared Player Status Styling */
+
+/* Inactive players - Light red background */
+.inactive-player {
+    background-color: #fff1f3 !important;
+}
+
+.inactive-player:hover {
+    background-color: #ffeaed !important;
+}
+
+/* L2W (Left 2 Weeks) players - Light yellow background */
+.l2w-player {
+    background-color: #fff9c4 !important;
+}
+
+.l2w-player:hover {
+    background-color: #fff176 !important;
+}
+
+/* Active players hover effect (default) */
+.active-player:hover {
+    background-color: #e3f2fd !important;
+}
+
+/* Ensure consistent hover behavior */
+tr.player-row:hover {
+    cursor: pointer;
+}
+
+/* For sticky columns in tables (like Index page) */
+.inactive-player td[style*="position: sticky"] {
+    background-color: #fff1f3 !important;
+}
+
+.inactive-player:hover td[style*="position: sticky"] {
+    background-color: #ffeaed !important;
+}
+
+.l2w-player td[style*="position: sticky"] {
+    background-color: #fff9c4 !important;
+}
+
+.l2w-player:hover td[style*="position: sticky"] {
+    background-color: #fff176 !important;
+}
+
+/* For tables with striping (ensure status colors override) */
+.inactive-player td {
+    background-color: #fff1f3 !important;
+}
+
+.inactive-player:hover td {
+    background-color: #ffeaed !important;
+}
+
+.l2w-player td {
+    background-color: #fff9c4 !important;
+}
+
+.l2w-player:hover td {
+    background-color: #fff176 !important;
+}
+
+/* Player Note Icon Styling (shared across all pages) */
+.player-note {
+    cursor: help; /* indicates additional info / tooltip */
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+    vertical-align: middle;
+}
+
+.player-note i {
+    color: #f59e0b; /* amber (stands out) */
+    background: rgba(245, 158, 11, 0.10); /* subtle amber halo */
+    border-radius: 4px;
+    padding: 2px 4px;
+    font-size: 0.95em;
+    transition: color .12s ease, transform .12s ease, box-shadow .12s ease;
+    box-shadow: 0 0 0 rgba(0,0,0,0); /* for smooth transition */
+}
+
+/* Hover / focus to make it more prominent and accessible */
+.player-note:hover i,
+.player-note:focus i,
+.player-note:active i {
+    color: #d97706; /* darker amber */
+    transform: scale(1.08);
+    box-shadow: 0 2px 6px rgba(217,119,6,0.12);
+    outline: none;
+}

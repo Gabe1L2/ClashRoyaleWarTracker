@@ -11,13 +11,9 @@ namespace ClashRoyaleWarTracker.Web.Pages
     [Authorize]
     public class IndexModel : BasePageModel
     {
-        private readonly IApplicationService _applicationService;
-        private readonly ILogger<IndexModel> _logger;
 
-        public IndexModel(IApplicationService applicationService, ILogger<IndexModel> logger, IUserRoleService userRoleService) : base(userRoleService)
+        public IndexModel(IUserRoleService userRoleService, IApplicationService applicationService, ILogger<IndexModel> logger) : base(userRoleService, applicationService, logger)
         {
-            _applicationService = applicationService;
-            _logger = logger;
         }
 
         public List<GroupedPlayerWarHistoryDTO> GroupedPlayerWarHistories { get; set; } = new();
@@ -220,105 +216,6 @@ namespace ClashRoyaleWarTracker.Web.Pages
                 .ToList();
         }
 
-        public async Task<IActionResult> OnPostUpdatePlayerStatusAsync(int playerId, string status)
-        {
-            try
-            {
-                await LoadUserPermissionsAsync();
-                if (!CanModifyPlayerData)
-                {
-                    _logger.LogWarning("User {UserName} attempted to update player status without proper permissions", User.Identity?.Name);
-                    return Forbid();
-                }
-
-                var result = await _applicationService.UpdatePlayerStatusAsync(playerId, status);
-                if (result.Success)
-                {
-                    TempData["SuccessMessage"] = result.Message;
-                }
-                else
-                {
-                    TempData["ErrorMessage"] = result.Message;
-                }
-
-                return RedirectToPage("Index");
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error updating player status");
-                TempData["ErrorMessage"] = "An error occurred while updating player status.";
-                return RedirectToPage("Index", new { is5k = Is5kTrophies });
-            }
-        }
-
-        public async Task<JsonResult> OnGetPlayerWarHistoriesAsync(int playerId)
-        {
-            try
-            {
-                await LoadUserPermissionsAsync();
-                if (!CanViewWarHistory)
-                {
-                    return new JsonResult(new { success = false, message = "Access denied" }) { StatusCode = 403 };
-                }
-
-                var result = await _applicationService.GetPlayerWarHistoriesByPlayerIdAsync(playerId);
-                if (result.Success)
-                {
-                    return new JsonResult(new { success = true, data = result.Data });
-                }
-                else
-                {
-                    return new JsonResult(new { success = false, message = result.Message });
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error retrieving player war histories");
-                return new JsonResult(new { success = false, message = "An error occurred while retrieving war histories." });
-            }
-        }
-
-        public async Task<JsonResult> OnPostUpdateWarHistoryAsync(int warHistoryId, int fame, int decksUsed, int boatAttacks)
-        {
-            try
-            {
-                await LoadUserPermissionsAsync();
-                if (!CanModifyPlayerData)
-                {
-                    return new JsonResult(new { success = false, message = "Access denied" }) { StatusCode = 403 };
-                }
-
-                var updateResult = await _applicationService.UpdatePlayerWarHistoryAsync(warHistoryId, fame, decksUsed, boatAttacks);
-                if (!updateResult.Success)
-                {
-                    return new JsonResult(new { success = false, message = updateResult.Message });
-                }
-
-                var playerIdResult = await _applicationService.GetPlayerIdFromWarHistoryAsync(warHistoryId);
-                if (!playerIdResult.Success)
-                {
-                    return new JsonResult(new { success = false, message = playerIdResult.Message });
-                }
-
-                var updateAveragesResult = await _applicationService.UpdatePlayerAverageAsync(playerIdResult.Data, 4);
-                if (!updateAveragesResult.Success)
-                {
-                    _logger.LogWarning("Failed to update player averages after war history update: {Message}", updateAveragesResult.Message);
-                }
-                else
-                {
-                    _logger.LogInformation("Updated war history and recalculated player averages for PlayerID {PlayerId}", playerIdResult.Data);
-                }
-
-                return new JsonResult(new { success = updateAveragesResult.Success, message = updateAveragesResult.Message });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error updating war history and player averages");
-                return new JsonResult(new { success = false, message = "An error occurred while updating war history." });
-            }
-        }
-
         public async Task<IActionResult> OnPostWeeklyUpdateAsync()
         {
             try
@@ -489,38 +386,6 @@ namespace ClashRoyaleWarTracker.Web.Pages
             }
 
             return RedirectToPage("Index", new { is5k = Is5kTrophies });
-        }
-
-        public async Task<JsonResult> OnPostUpdatePlayerNotesAsync(int playerId, string? notes)
-        {
-            try
-            {
-                await LoadUserPermissionsAsync();
-                if (!CanModifyPlayerData)
-                {
-                    return new JsonResult(new { success = false, message = "Access denied" }) { StatusCode = 403 };
-                }
-
-                if (!string.IsNullOrEmpty(notes) && notes.Length > 100)
-                {
-                    return new JsonResult(new { success = false, message = "Notes must be 100 characters or fewer." });
-                }
-
-                var result = await _applicationService.UpdatePlayerNotesAsync(playerId, notes);
-                if (result.Success)
-                {
-                    return new JsonResult(new { success = true, message = result.Message });
-                }
-                else
-                {
-                    return new JsonResult(new { success = false, message = result.Message });
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error updating player notes for PlayerID {PlayerId}", playerId);
-                return new JsonResult(new { success = false, message = "An unexpected error occurred while updating notes." });
-            }
         }
     }
 

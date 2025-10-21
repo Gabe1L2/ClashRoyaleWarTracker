@@ -198,7 +198,7 @@
                         data-status="@(row.Status ?? "Inactive")"
                         data-original-index="@rowNumber"
                         data-player-id="@row.PlayerID"
-                        onclick="selectPlayer(@row.PlayerID, '@Html.Raw(Html.Encode(row.PlayerName))', '@row.PlayerTag')"
+                        onclick="selectPlayer(@row.PlayerID, '@Html.Raw(Html.Encode(row.PlayerName))', '@row.PlayerTag', '@Html.Raw(Html.Encode(row.Status ?? "Active"))', '@Html.Raw(Html.Encode(row.Notes ?? ""))')"
                         style="cursor: pointer;"
                         class="@(string.Equals(row.Status, "L2W", System.StringComparison.OrdinalIgnoreCase) ? "l2w-player" : (!string.Equals(row.Status, "Active", System.StringComparison.OrdinalIgnoreCase) ? "inactive-player" : ""))">
 
@@ -286,125 +286,6 @@ else
         <p class="text-muted">Run a data update to populate war history information.</p>
     </div>
 }
-
-<!-- Player Actions Modal -->
-<div class="modal fade" id="playerActionsModal" tabindex="-1">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Player Actions</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <h6 id="selectedPlayerName">Player Name</h6>
-                <p class="text-muted" id="selectedPlayerTag">
-                    <span>Tag: </span>
-                    <a id="playerTagLink" href="#" target="_blank" class="text-decoration-none">
-                        <span id="playerTagText"></span>
-                        <i class="fas fa-external-link-alt ms-1" style="font-size: 0.8em;"></i>
-                    </a>
-                </p>
-
-                <!-- Tab Navigation -->
-                <ul class="nav nav-tabs mb-3" id="playerActionTabs" role="tablist">
-                    <li class="nav-item" role="presentation">
-                        <button class="nav-link active" id="status-tab" data-bs-toggle="tab" data-bs-target="#status-pane" type="button" role="tab">
-                            <i class="fas fa-user-check me-2"></i>Status
-                        </button>
-                    </li>
-                    <li class="nav-item" role="presentation">
-                        <button class="nav-link" id="notes-tab" data-bs-toggle="tab" data-bs-target="#notes-pane" type="button" role="tab">
-                            <i class="fas fa-sticky-note me-2"></i>Notes
-                        </button>
-                    </li>
-                    <li class="nav-item" role="presentation">
-                        <button class="nav-link" id="history-tab" data-bs-toggle="tab" data-bs-target="#history-pane" type="button" role="tab" onclick="loadPlayerWarHistories()">
-                            <i class="fas fa-history me-2"></i>War History
-                        </button>
-                    </li>
-                </ul>
-
-                <!-- Tab Content -->
-                <div class="tab-content" id="playerActionTabContent">
-                    <!-- Status Tab -->
-                    <div class="tab-pane fade show active" id="status-pane" role="tabpanel">
-                        @if (Model.CanModifyPlayerData)
-                        {
-                            <div class="row g-3">
-                                <div class="col-md-6">
-                                    <label class="form-label">Player Status</label>
-                                    <select id="playerStatusSelect" class="form-select">
-                                        <option value="Active">Active</option>
-                                        <option value="Inactive">Inactive</option>
-                                        <option value="L2W">L2W</option>
-                                    </select>
-                                </div>
-                                <div class="col-md-6 d-flex align-items-end">
-                                    <button class="btn btn-primary w-100" onclick="updatePlayerStatus()">
-                                        <i class="fas fa-save"></i> Update Status
-                                    </button>
-                                </div>
-                            </div>
-                        }
-                        else
-                        {
-                            <div class="alert alert-warning">
-                                <i class="fas fa-exclamation-triangle me-2"></i>
-                                You don't have permission to modify player data.
-                            </div>
-                        }
-                    </div>
-
-                    <!-- Notes Tab -->
-                    <div class="tab-pane fade" id="notes-pane" role="tabpanel">
-                        <div id="playerNotesContainer" class="mb-3">
-                            <h6>Notes</h6>
-                            <p id="playerNotesDisplay" class="text-muted">No notes available.</p>
-                        </div>
-
-                        @if (Model.CanModifyPlayerData)
-                        {
-                            <div id="playerNotesEditContainer" class="d-none">
-                                <label for="playerNotesTextarea" class="form-label">Edit Notes (max 100 chars)</label>
-                                <textarea id="playerNotesTextarea" class="form-control" maxlength="100" rows="3" placeholder="Enter notes (max 100 characters)"></textarea>
-                                <div class="d-flex gap-2 mt-2">
-                                    <button id="savePlayerNotesBtn" class="btn btn-primary" type="button" onclick="savePlayerNotes()">
-                                        <i class="fas fa-save me-1"></i> Save
-                                    </button>
-                                    <button id="cancelPlayerNotesBtn" class="btn btn-secondary" type="button" onclick="cancelEditPlayerNotes()">
-                                        Cancel
-                                    </button>
-                                    <small id="notesCharCount" class="text-muted align-self-center ms-2">0 / 100</small>
-                                </div>
-                                <div id="playerNotesError" class="text-danger mt-2 d-none"></div>
-                            </div>
-
-                            <div id="playerNotesViewControls" class="mt-2">
-                                <button id="editPlayerNotesBtn" class="btn btn-outline-secondary" type="button" onclick="startEditPlayerNotes()">
-                                    <i class="fas fa-edit me-1"></i> Edit Notes
-                                </button>
-                            </div>
-                        }
-                        else
-                        {
-                            <div class="text-muted small">You do not have permission to edit notes.</div>
-                        }
-                    </div>
-
-                    <!-- War History Tab -->
-                    <div class="tab-pane fade" id="history-pane" role="tabpanel">
-                        <div id="warHistoryLoading" class="text-center py-3 d-none">
-                            <i class="fas fa-spinner fa-spin"></i> Loading war histories...
-                        </div>
-                        <div id="warHistoryContent">
-                            <!-- War history will be loaded dynamically -->
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
 
 <div class="modal fade" id="editWarHistoryModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog">
@@ -657,307 +538,18 @@ else
     </div>
 </div>
 
+<partial name="_PlayerActionsModal" />
+
 @section Scripts {
+    <!-- Include shared modal scripts and styles -->
+    <link rel="stylesheet" href="~/css/player-actions-modal.css" />
+    <link rel="stylesheet" href="~/css/player-status-styles.css" />
+    <script src="~/js/player-actions-modal.js"></script>
+
     <script>
         let sortDirection = {};
         let selectedStatuses = new Set();
         let selectedClans = new Set();
-        let selectedPlayerId = null;
-        let selectedPlayerName = '';
-        let selectedPlayerTag = '';
-        let warHistoryWasEdited = false;
-
-        // User permissions
-        const canModifyPlayerData = @Model.CanModifyPlayerData.ToString().ToLower();
-
-        function selectPlayer(playerId, playerName, playerTag) {
-            selectedPlayerId = playerId;
-            selectedPlayerName = playerName;
-            selectedPlayerTag = playerTag;
-
-            warHistoryWasEdited = false;
-
-            document.getElementById('selectedPlayerName').textContent = playerName;
-            document.getElementById('playerTagText').textContent = `#${playerTag}`;
-            document.getElementById('playerTagLink').href = `https://royaleapi.com/player/${playerTag}`;
-
-            const clickedRow = document.querySelector(`tr[data-player-id="${playerId}"]`);
-            const currentStatus = clickedRow ? clickedRow.getAttribute('data-status') : 'Active';
-
-            // Set the status dropdown to the current player's status
-            const statusSelect = document.getElementById('playerStatusSelect');
-            if (statusSelect) {
-                // Normalize the status value to match the option values
-                let normalizedStatus = currentStatus;
-                if (currentStatus === 'Inactive') {
-                    normalizedStatus = 'Inactive';
-                } else if (currentStatus === 'L2W') {
-                    normalizedStatus = 'L2W';
-                } else {
-                    normalizedStatus = 'Active'; // Default fallback
-                }
-                statusSelect.value = normalizedStatus;
-            }
-
-            // Populate notes display (use data attribute on row)
-            const notesDisplay = document.getElementById('playerNotesDisplay');
-            const notesEditContainer = document.getElementById('playerNotesEditContainer');
-            const notesViewControls = document.getElementById('playerNotesViewControls');
-            const notes = clickedRow ? (clickedRow.getAttribute('data-player-notes') || '') : '';
-            if (notesDisplay) notesDisplay.textContent = notes || 'No notes available.';
-            // Ensure edit UI is hidden and view controls are visible when opening modal
-            if (notesEditContainer) notesEditContainer.classList.add('d-none');
-            if (notesViewControls) notesViewControls.classList.remove('d-none');
-
-            // Reset tabs: clear active on all tabs/panes, then activate status tab/pane
-            const tabButtons = document.querySelectorAll('#playerActionTabs .nav-link');
-            tabButtons.forEach(btn => {
-                btn.classList.remove('active');
-                btn.setAttribute('aria-selected', 'false');
-            });
-
-            const tabPanes = document.querySelectorAll('#playerActionTabContent .tab-pane');
-            tabPanes.forEach(p => {
-                p.classList.remove('show', 'active');
-            });
-
-            const statusTab = document.getElementById('status-tab');
-            const statusPane = document.getElementById('status-pane');
-            if (statusTab) {
-                statusTab.classList.add('active');
-                statusTab.setAttribute('aria-selected', 'true');
-            }
-            if (statusPane) {
-                statusPane.classList.add('show', 'active');
-            }
-
-            // Ensure war history tab is not active and its pane hidden
-            const historyTab = document.getElementById('history-tab');
-            const historyPane = document.getElementById('history-pane');
-            if (historyTab) {
-                historyTab.classList.remove('active');
-                historyTab.setAttribute('aria-selected', 'false');
-            }
-            if (historyPane) {
-                historyPane.classList.remove('show', 'active');
-            }
-
-            // Also ensure notes tab/pane are not left active
-            const notesTab = document.getElementById('notes-tab');
-            const notesPane = document.getElementById('notes-pane');
-            if (notesTab) {
-                notesTab.classList.remove('active');
-                notesTab.setAttribute('aria-selected', 'false');
-            }
-            if (notesPane) {
-                notesPane.classList.remove('show', 'active');
-            }
-
-            var modal = new bootstrap.Modal(document.getElementById('playerActionsModal'));
-            modal.show();
-        }
-
-        async function updatePlayerStatus() {
-            const status = document.getElementById('playerStatusSelect').value;
-
-            try {
-                const response = await fetch('/?handler=UpdatePlayerStatus', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/x-www-form-urlencoded',
-                        'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]').value
-                    },
-                    body: `playerId=${selectedPlayerId}&status=${encodeURIComponent(status)}`
-                });
-
-                if (response.ok) {
-                    location.reload(); // Reload to show updated status
-                } else {
-                    alert('Error updating player status');
-                }
-            } catch (error) {
-                console.error('Error:', error);
-                alert('Error updating player status');
-            }
-        }
-
-        async function loadPlayerWarHistories() {
-            const loadingDiv = document.getElementById('warHistoryLoading');
-            const contentDiv = document.getElementById('warHistoryContent');
-
-            loadingDiv.classList.remove('d-none');
-            contentDiv.innerHTML = '';
-
-            try {
-                const response = await fetch(`/?handler=PlayerWarHistories&playerId=${selectedPlayerId}`);
-                const result = await response.json();
-
-                if (result.success) {
-                    displayWarHistories(result.data);
-                } else {
-                    contentDiv.innerHTML = `<div class="alert alert-danger">${result.message}</div>`;
-                }
-            } catch (error) {
-                console.error('Error:', error);
-                contentDiv.innerHTML = '<div class="alert alert-danger">Error loading war histories</div>';
-            } finally {
-                loadingDiv.classList.add('d-none');
-            }
-        }
-
-        function displayWarHistories(warHistories) {
-            const contentDiv = document.getElementById('warHistoryContent');
-
-            if (!warHistories || warHistories.length === 0) {
-                contentDiv.innerHTML = '<div class="alert alert-info">No war history found for this player.</div>';
-                return;
-            }
-
-            let html = `
-                <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
-                    <table class="table table-sm table-striped">
-                        <thead class="table-dark sticky-top">
-                            <tr>
-                                <th>Season</th>
-                                <th>Week</th>
-                                <th>Clan</th>
-                                <th>Fame</th>
-                                <th>Attacks</th>
-                                <th>Boat Attacks</th>
-                                <th>Fame/Attack</th>
-                                ${canModifyPlayerData ? '<th>Actions</th>' : ''}
-                            </tr>
-                        </thead>
-                        <tbody>
-            `;
-
-            warHistories.forEach(history => {
-                const ratio = history.decksUsed > 0 ? (history.fame / history.decksUsed).toFixed(1) : '0.0';
-                const ratioColor = ratio >= 200 ? 'success' : ratio >= 175 ? 'warning' : 'danger';
-
-                html += `
-                    <tr data-war-history-id="${history.id}">
-                        <td>${history.seasonID}</td>
-                        <td>${history.weekIndex}</td>
-                        <td>${history.clanName}</td>
-                        <td><span class="fw-bold">${history.fame}</span></td>
-                        <td><span class="fw-bold">${history.decksUsed}</span></td>
-                        <td><span class="fw-bold">${history.boatAttacks}</span></td>
-                        <td><span class="badge bg-${ratioColor}">${ratio}</span></td>
-                        ${canModifyPlayerData ? `<td><button class="btn btn-sm btn-outline-primary" onclick="editWarHistory(${history.id}, ${history.fame}, ${history.decksUsed}, ${history.boatAttacks}, ${history.seasonID}, ${history.weekIndex})"><i class="fas fa-edit"></i></button></td>` : ''}
-                    </tr>
-                `;
-            });
-
-            html += `
-                        </tbody>
-                    </table>
-                </div>
-            `;
-
-            contentDiv.innerHTML = html;
-        }
-
-        function editWarHistory(warHistoryId, currentFame, currentDecks, currentBoats, seasonID, weekIndex) {
-            // Prefill modal fields
-            document.getElementById('editWarHistoryId').value = warHistoryId;
-            document.getElementById('editFame').value = Number(currentFame) ?? 0;
-            document.getElementById('editDecksUsed').value = Number(currentDecks) ?? 0;
-            document.getElementById('editBoatAttacks').value = Number(currentBoats) ?? 0;
-            document.getElementById('editWarHistoryError').classList.add('d-none');
-            document.getElementById('editWarHistoryError').textContent = '';
-
-            const modalTitle = document.querySelector('#editWarHistoryModal .modal-title');
-            modalTitle.textContent = `Edit War History - ${seasonID}-${weekIndex}`;
-
-            const playerActionsEl = document.getElementById('playerActionsModal');
-            const editEl = document.getElementById('editWarHistoryModal');
-
-            // Fade the Player Actions modal
-            if (playerActionsEl) {
-                playerActionsEl.classList.add('faded-behind');
-            }
-
-            // Create edit modal instance with no backdrop so page isn't dimmed
-            const editModal = new bootstrap.Modal(editEl, { backdrop: false, keyboard: true });
-            editModal.show();
-
-            // When edit modal hides, remove faded class from player actions modal
-            const onHidden = () => {
-                if (playerActionsEl) {
-                    playerActionsEl.classList.remove('faded-behind');
-                }
-                editEl.removeEventListener('hidden.bs.modal', onHidden);
-            };
-            editEl.addEventListener('hidden.bs.modal', onHidden);
-        }
-
-        async function saveWarHistoryFromModal() {
-            const saveBtn = document.getElementById('saveWarHistoryBtn');
-            const errorEl = document.getElementById('editWarHistoryError');
-
-            const warHistoryId = parseInt(document.getElementById('editWarHistoryId').value, 10);
-            const fame = parseInt(document.getElementById('editFame').value, 10);
-            const decksUsed = parseInt(document.getElementById('editDecksUsed').value, 10);
-            const boatAttacks = parseInt(document.getElementById('editBoatAttacks').value, 10);
-
-            // Basic client validation (adjust ranges as needed)
-            if (Number.isNaN(fame) || fame < 0 || fame > 3600) {
-                showEditError('Fame must be a between 0 and 3600.');
-                return;
-            }
-            if (Number.isNaN(decksUsed) || decksUsed < 0 || decksUsed > 16) {
-                showEditError('Attacks (Decks Used) must be between 0 and 16.');
-                return;
-            }
-            if (Number.isNaN(boatAttacks) || boatAttacks < 0 || boatAttacks > 16) {
-                showEditError('Boat Attacks must be a non-negative integer.');
-                return;
-            }
-
-            saveBtn.disabled = true;
-            const originalHtml = saveBtn.innerHTML;
-            saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
-
-            try {
-                const tokenInput = document.querySelector('input[name="__RequestVerificationToken"]');
-                const token = tokenInput ? tokenInput.value : '';
-
-                const body = `warHistoryId=${encodeURIComponent(warHistoryId)}&fame=${encodeURIComponent(fame)}&decksUsed=${encodeURIComponent(decksUsed)}&boatAttacks=${encodeURIComponent(boatAttacks)}`;
-
-                const response = await fetch('/?handler=UpdateWarHistory', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/x-www-form-urlencoded',
-                        'RequestVerificationToken': token
-                    },
-                    body
-                });
-
-                const result = await response.json();
-
-                if (response.ok && result.success) {
-                    warHistoryWasEdited = true;
-                    // close edit modal (bootstrap modal instance created by editWarHistory)
-                    const modalEl = document.getElementById('editWarHistoryModal');
-                    const bsModal = bootstrap.Modal.getInstance(modalEl);
-                    if (bsModal) bsModal.hide();
-
-                    // refresh the war history list inside the Player Actions modal
-                    if (typeof loadPlayerWarHistories === 'function') {
-                        loadPlayerWarHistories();
-                    }
-                } else {
-                    showEditError(result?.message ?? 'Failed to update war history.');
-                }
-            } catch (err) {
-                console.error(err);
-                showEditError('An error occurred while updating the war history.');
-            } finally {
-                saveBtn.disabled = false;
-                saveBtn.innerHTML = originalHtml;
-            }
-        }
 
         function showUpdateDataModal()
         {
@@ -1064,12 +656,6 @@ else
             }
 
             return isValid;
-        }
-
-        function showEditError(message) {
-            const errorEl = document.getElementById('editWarHistoryError');
-            errorEl.textContent = message;
-            errorEl.classList.remove('d-none');
         }
 
         function refreshData() {
@@ -1351,162 +937,15 @@ else
             updateStatusFilterText();
         }
 
-        function startEditPlayerNotes() {
-            const display = document.getElementById('playerNotesDisplay');
-            const editContainer = document.getElementById('playerNotesEditContainer');
-            const viewControls = document.getElementById('playerNotesViewControls');
-            const textarea = document.getElementById('playerNotesTextarea');
-            const notes = getSelectedRowNotes();
-            textarea.value = notes ?? '';
-            updateNotesCharCount();
-            display.classList.add('d-none');
-            viewControls.classList.add('d-none');
-            editContainer.classList.remove('d-none');
-            textarea.focus();
-        }
-
-        function cancelEditPlayerNotes() {
-            const display = document.getElementById('playerNotesDisplay');
-            const editContainer = document.getElementById('playerNotesEditContainer');
-            const viewControls = document.getElementById('playerNotesViewControls');
-            const error = document.getElementById('playerNotesError');
-            error.classList.add('d-none');
-            editContainer.classList.add('d-none');
-            display.classList.remove('d-none');
-            viewControls.classList.remove('d-none');
-        }
-
-        function updateNotesCharCount() {
-            const textarea = document.getElementById('playerNotesTextarea');
-            const counter = document.getElementById('notesCharCount');
-            const len = textarea ? textarea.value.length : 0;
-            if (counter) counter.textContent = `${len} / 100`;
-        }
-
-        function getSelectedRowNotes() {
-            if (!selectedPlayerId) return '';
-            const row = document.querySelector(`tr[data-player-id="${selectedPlayerId}"]`);
-            if (!row) return '';
-            return row.getAttribute('data-player-notes') || '';
-        }
-
-        async function savePlayerNotes() {
-            const textarea = document.getElementById('playerNotesTextarea');
-            const error = document.getElementById('playerNotesError');
-            const saveBtn = document.getElementById('savePlayerNotesBtn');
-
-            const notes = textarea.value.trim();
-            if (notes.length > 100) {
-                error.textContent = 'Notes must be 100 characters or fewer.';
-                error.classList.remove('d-none');
-                return;
-            }
-
-            saveBtn.disabled = true;
-            const original = saveBtn.innerHTML;
-            saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Saving...';
-
-            try {
-                const tokenInput = document.querySelector('input[name="__RequestVerificationToken"]');
-                const token = tokenInput ? tokenInput.value : '';
-
-                const body = `playerId=${encodeURIComponent(selectedPlayerId)}&notes=${encodeURIComponent(notes)}`;
-                const response = await fetch('/?handler=UpdatePlayerNotes', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/x-www-form-urlencoded',
-                        'RequestVerificationToken': token
-                    },
-                    body
-                });
-
-                const result = await response.json();
-                if (response.ok && result.success) {
-                    // Update modal UI
-                    const display = document.getElementById('playerNotesDisplay');
-                    display.textContent = notes || 'No notes available.';
-
-                    // Update row data attribute
-                    const row = document.querySelector(`tr[data-player-id="${selectedPlayerId}"]`);
-                    if (row) {
-                        row.setAttribute('data-player-notes', notes || '');
-
-                        // Update tooltip span in the table (add/remove/update as needed)
-                        const existingNoteSpan = row.querySelector('.player-note');
-
-                        if (notes) {
-                            // Create span if missing
-                            if (!existingNoteSpan) {
-                                const span = document.createElement('span');
-                                span.className = 'ms-1 player-note';
-                                span.setAttribute('data-bs-toggle', 'tooltip');
-                                span.setAttribute('title', notes);
-                                span.setAttribute('role', 'button');
-                                span.setAttribute('tabindex', '0');
-                                span.setAttribute('aria-label', 'Player notes');
-
-                                const icon = document.createElement('i');
-                                icon.className = 'fas fa-sticky-note';
-                                icon.setAttribute('aria-hidden', 'true');
-
-                                span.appendChild(icon);
-
-                                // Insert after the player name <strong> inside the player cell (3rd cell)
-                                const playerCell = row.cells[2];
-                                if (playerCell) {
-                                    const nameStrong = playerCell.querySelector('strong');
-                                    if (nameStrong) {
-                                        nameStrong.insertAdjacentElement('afterend', span);
-                                    } else {
-                                        playerCell.appendChild(span);
-                                    }
-                                } else {
-                                    row.appendChild(span);
-                                }
-
-                                // Initialize tooltip for the new element
-                                new bootstrap.Tooltip(span);
-                            } else {
-                                // Update existing tooltip title
-                                existingNoteSpan.setAttribute('title', notes);
-                                const tip = bootstrap.Tooltip.getInstance(existingNoteSpan);
-                                if (tip) {
-                                    tip.dispose();
-                                }
-                                new bootstrap.Tooltip(existingNoteSpan);
-                            }
-                        } else {
-                            // Notes cleared: remove tooltip element if present
-                            if (existingNoteSpan) {
-                                const tip = bootstrap.Tooltip.getInstance(existingNoteSpan);
-                                if (tip) tip.dispose();
-                                existingNoteSpan.remove();
-                            }
-                        }
-                    }
-
-                    // Close edit UI and show view
-                    cancelEditPlayerNotes();
-
-                    // (No full page reload — DOM updated so UI reflects saved notes)
-                } else {
-                    error.textContent = result?.message ?? 'Failed to save notes.';
-                    error.classList.remove('d-none');
-                }
-            } catch (err) {
-                console.error(err);
-                error.textContent = 'An error occurred while saving notes.';
-                error.classList.remove('d-none');
-            } finally {
-                saveBtn.disabled = false;
-                saveBtn.innerHTML = original;
-            }
-        }
-
         // Initialize when page loads
         document.addEventListener('DOMContentLoaded', function() {
-            initializeFilters();
+            // INITIALIZE THE SHARED MODAL
+            initializePlayerActionsModal({
+                canModifyPlayerData: @(Model.CanModifyPlayerData ? "true" : "false"), // Boolean, not string!
+                handlerPrefix: ''  // Index is at root, so no prefix needed
+            });
 
+            initializeFilters();
             // Set initial sort indicator for Fame/Attack column (descending)
             sortDirection['status'] = 'desc';
             updateSortIndicators('status', false); // false = descending
@@ -1523,115 +962,74 @@ else
                     deleteClanSelect.addEventListener('change', updateDeleteButton);
                 }
         });
-
-        // Add event listener for player modal close
-        const playerActionsModal = document.getElementById('playerActionsModal');
-        if (playerActionsModal) {
-            playerActionsModal.addEventListener('hidden.bs.modal', function () {
-            // Only reload if war history was edited
-            if (warHistoryWasEdited) {
-                location.reload();
-            }});
-        }
-
-        // Keep char count updated
-        document.addEventListener('input', function (e) {
-            if (e.target && e.target.id === 'playerNotesTextarea') {
-                updateNotesCharCount();
-            }
-        });
-
     </script>
 
     <style>
+        /* Index-specific table styles (war history table) */
+        
         /* REMOVE Bootstrap's default striping and create custom full-row striping */
-        #warHistoryTable tbody tr:nth-child(odd) {
+        #warHistoryTable tbody tr:nth-child(odd):not(.inactive-player):not(.l2w-player) {
             background-color: white !important;
         }
 
-        #warHistoryTable tbody tr:nth-child(even) {
+        #warHistoryTable tbody tr:nth-child(even):not(.inactive-player):not(.l2w-player) {
             background-color: #f8f9fa !important; /* Bootstrap's light gray */
         }
 
-        /* Ensure sticky columns inherit the row background AND prevent bleed-through */
-        #warHistoryTable tbody tr:nth-child(odd) td[style*="position: sticky"] {
+        /* Ensure sticky columns inherit the row background AND prevent bleed-through for ACTIVE players */
+        #warHistoryTable tbody tr:nth-child(odd):not(.inactive-player):not(.l2w-player) td[style*="position: sticky"] {
             background-color: white !important;
         }
 
-        #warHistoryTable tbody tr:nth-child(even) td[style*="position: sticky"] {
+        #warHistoryTable tbody tr:nth-child(even):not(.inactive-player):not(.l2w-player) td[style*="position: sticky"] {
             background-color: #f8f9fa !important;
         }
 
-        #warHistoryTable tbody tr.inactive-player {
-            background-color: #fff1f3 !important; /* Light red background */
+        /* Status-based row highlighting - Override striping for Index table */
+        #warHistoryTable tbody tr.inactive-player td {
+            background-color: #fff1f3 !important;
         }
 
-            #warHistoryTable tbody tr.inactive-player:hover {
-                background-color: #ffeaed !important; /* Slightly darker red on hover */
-            }
-
-            /* Ensure inactive sticky columns also get the red background */
-            #warHistoryTable tbody tr.inactive-player td[style*="position: sticky"] {
-                background-color: #fff1f3 !important;
-            }
-
-            /* Also ensure ALL cells in inactive rows get the red background */
-            #warHistoryTable tbody tr.inactive-player td {
-                background-color: #fff1f3 !important;
-            }
-
-            #warHistoryTable tbody tr.inactive-player:hover td {
-                background-color: #ffeaed !important;
-            }
-
-        /* L2W */
-        #warHistoryTable tbody tr.l2w-player {
-            background-color: #fff9c4 !important; /* Light yellow background */
+        #warHistoryTable tbody tr.inactive-player:hover td {
+            background-color: #ffeaed !important;
         }
 
-            #warHistoryTable tbody tr.l2w-player:hover {
-                background-color: #fff176 !important; /* Slightly darker yellow on hover */
-            }
-
-            /* Ensure L2W sticky columns also get the yellow background */
-            #warHistoryTable tbody tr.l2w-player td[style*="position: sticky"] {
-                background-color: #fff9c4 !important;
-            }
-
-            /* Also ensure ALL cells in L2W rows get the yellow background */
-            #warHistoryTable tbody tr.l2w-player td {
-                background-color: #fff9c4 !important;
-            }
-
-            #warHistoryTable tbody tr.l2w-player:hover td {
-                background-color: #fff176 !important;
-            }
-
-        /* Update the general hover effect to respect status-specific backgrounds */
-        #warHistoryTable tbody tr:not(.inactive-player):not(.l2w-player):hover td {
-            background-color: #e9ecef !important; /* Same hover color for ACTIVE players only */
+        #warHistoryTable tbody tr.l2w-player td {
+            background-color: #fff9c4 !important;
         }
 
-        /* Override the general hover for all rows to be more specific */
-        #warHistoryTable tbody tr:hover {
-            background-color: unset !important; /* Remove general hover, let specific classes handle it */
+        #warHistoryTable tbody tr.l2w-player:hover td {
+            background-color: #fff176 !important;
         }
 
-            #warHistoryTable tbody tr:hover td {
-                background-color: unset !important; /* Remove general hover, let specific classes handle it */
-            }
+        /* Ensure sticky columns match status colors */
+        #warHistoryTable tbody tr.inactive-player td[style*="position: sticky"] {
+            background-color: #fff1f3 !important;
+        }
+
+        #warHistoryTable tbody tr.inactive-player:hover td[style*="position: sticky"] {
+            background-color: #ffeaed !important;
+        }
+
+        #warHistoryTable tbody tr.l2w-player td[style*="position: sticky"] {
+            background-color: #fff9c4 !important;
+        }
+
+        #warHistoryTable tbody tr.l2w-player:hover td[style*="position: sticky"] {
+            background-color: #fff176 !important;
+        }
 
         /* Active players hover effect */
-        #warHistoryTable tbody tr:not(.inactive-player):not(.l2w-player):hover {
+        #warHistoryTable tbody tr:not(.inactive-player):not(.l2w-player):hover td {
             background-color: #e3f2fd !important;
         }
 
-            #warHistoryTable tbody tr:not(.inactive-player):not(.l2w-player):hover td {
-                background-color: #e3f2fd !important;
-            }
+        /* Active players hover effect - specifically for sticky columns */
+        #warHistoryTable tbody tr:not(.inactive-player):not(.l2w-player):hover td[style*="position: sticky"] {
+            background-color: #e3f2fd !important;
+        }
 
-
-
+        /* War cell styling */
         .war-cell {
             font-family: 'Courier New', monospace;
             font-size: 0.9em;

@@ -67,7 +67,7 @@ namespace ClashRoyaleWarTracker.Infrastructure
                 .WithMany()
                 .HasForeignKey(pa => pa.ClanID)
                 .HasPrincipalKey(c => c.ID)
-                .OnDelete(DeleteBehavior.SetNull);
+                .OnDelete(DeleteBehavior.Cascade); // Changed from SetNull to Cascade
 
             modelBuilder.Entity<PlayerWarHistory>()
                 .HasOne<Player>()

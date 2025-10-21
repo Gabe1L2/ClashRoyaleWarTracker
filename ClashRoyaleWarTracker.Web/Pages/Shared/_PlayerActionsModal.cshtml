@@ -1,0 +1,159 @@
+<!-- Player Actions Modal -->
+<div class="modal fade" id="playerActionsModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Player Actions</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <h6 id="selectedPlayerName">Player Name</h6>
+                <p class="text-muted" id="selectedPlayerTag">
+                    <span>Tag: </span>
+                    <a id="playerTagLink" href="#" target="_blank" class="text-decoration-none">
+                        <span id="playerTagText"></span>
+                        <i class="fas fa-external-link-alt ms-1" style="font-size: 0.8em;"></i>
+                    </a>
+                </p>
+
+                <!-- Tab Navigation -->
+                <ul class="nav nav-tabs mb-3" id="playerActionTabs" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active" id="status-tab" data-bs-toggle="tab" data-bs-target="#status-pane" type="button" role="tab">
+                            <i class="fas fa-user-check me-2"></i>Status
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="notes-tab" data-bs-toggle="tab" data-bs-target="#notes-pane" type="button" role="tab">
+                            <i class="fas fa-sticky-note me-2"></i>Notes
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="history-tab" data-bs-toggle="tab" data-bs-target="#history-pane" type="button" role="tab" onclick="loadPlayerWarHistories()">
+                            <i class="fas fa-history me-2"></i>War History
+                        </button>
+                    </li>
+                </ul>
+
+                <!-- Tab Content -->
+                <div class="tab-content" id="playerActionTabContent">
+                    <!-- Status Tab -->
+                    <div class="tab-pane fade show active" id="status-pane" role="tabpanel">
+                        @if (Model.CanModifyPlayerData)
+                        {
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label class="form-label">Player Status</label>
+                                    <select id="playerStatusSelect" class="form-select">
+                                        <option value="Active">Active</option>
+                                        <option value="Inactive">Inactive</option>
+                                        <option value="L2W">L2W</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-6 d-flex align-items-end">
+                                    <button class="btn btn-primary w-100" onclick="updatePlayerStatus()">
+                                        <i class="fas fa-save"></i> Update Status
+                                    </button>
+                                </div>
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="alert alert-warning">
+                                <i class="fas fa-exclamation-triangle me-2"></i>
+                                You don't have permission to modify player data.
+                            </div>
+                        }
+                    </div>
+
+                    <!-- Notes Tab -->
+                    <div class="tab-pane fade" id="notes-pane" role="tabpanel">
+                        <div id="playerNotesContainer" class="mb-3">
+                            <h6>Notes</h6>
+                            <p id="playerNotesDisplay" class="text-muted">No notes available.</p>
+                        </div>
+
+                        @if (Model.CanModifyPlayerData)
+                        {
+                            <div id="playerNotesEditContainer" class="d-none">
+                                <label for="playerNotesTextarea" class="form-label">Edit Notes (max 100 chars)</label>
+                                <textarea id="playerNotesTextarea" class="form-control" maxlength="100" rows="3" placeholder="Enter notes (max 100 characters)"></textarea>
+                                <div class="d-flex gap-2 mt-2">
+                                    <button id="savePlayerNotesBtn" class="btn btn-primary" type="button" onclick="savePlayerNotes()">
+                                        <i class="fas fa-save me-1"></i> Save
+                                    </button>
+                                    <button id="cancelPlayerNotesBtn" class="btn btn-secondary" type="button" onclick="cancelEditPlayerNotes()">
+                                        Cancel
+                                    </button>
+                                    <small id="notesCharCount" class="text-muted align-self-center ms-2">0 / 100</small>
+                                </div>
+                                <div id="playerNotesError" class="text-danger mt-2 d-none"></div>
+                            </div>
+
+                            <div id="playerNotesViewControls" class="mt-2">
+                                <button id="editPlayerNotesBtn" class="btn btn-outline-secondary" type="button" onclick="startEditPlayerNotes()">
+                                    <i class="fas fa-edit me-1"></i> Edit Notes
+                                </button>
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="text-muted small">You do not have permission to edit notes.</div>
+                        }
+                    </div>
+
+                    <!-- War History Tab -->
+                    <div class="tab-pane fade" id="history-pane" role="tabpanel">
+                        <div id="warHistoryLoading" class="text-center py-3 d-none">
+                            <i class="fas fa-spinner fa-spin"></i> Loading war histories...
+                        </div>
+                        <div id="warHistoryContent">
+                            <!-- War history will be loaded dynamically -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Edit War History Modal -->
+<div class="modal fade" id="editWarHistoryModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form id="editWarHistoryForm" onsubmit="return false;">
+                <div class="modal-header">
+                    <h5 class="modal-title">Edit War History</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="editWarHistoryId" />
+
+                    <div class="mb-3">
+                        <label for="editFame" class="form-label">Fame</label>
+                        <input type="number" id="editFame" class="form-control" min="0" max="3600" step="1" required />
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="editDecksUsed" class="form-label">Attacks (Decks Used)</label>
+                        <input type="number" id="editDecksUsed" class="form-control" min="0" max="16" step="1" required />
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="editBoatAttacks" class="form-label">Boat Attacks</label>
+                        <input type="number" id="editBoatAttacks" class="form-control" min="0" max="3600" step="1" required />
+                    </div>
+
+                    <div id="editWarHistoryError" class="alert alert-danger d-none" role="alert"></div>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button id="saveWarHistoryBtn" type="button" class="btn btn-primary" onclick="saveWarHistoryFromModal()">
+                        <i class="fas fa-save"></i> Save
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,63 @@
+/* Shared Player Status Styling */
+
+/* Inactive players - Light red background */
+.inactive-player {
+    background-color: #fff1f3 !important;
+}
+
+.inactive-player:hover {
+    background-color: #ffeaed !important;
+}
+
+/* L2W (Left 2 Weeks) players - Light yellow background */
+.l2w-player {
+    background-color: #fff9c4 !important;
+}
+
+.l2w-player:hover {
+    background-color: #fff176 !important;
+}
+
+/* Active players hover effect (default) */
+.active-player:hover {
+    background-color: #e3f2fd !important;
+}
+
+/* Ensure consistent hover behavior */
+tr.player-row:hover {
+    cursor: pointer;
+}
+
+/* For sticky columns in tables (like Index page) */
+.inactive-player td[style*="position: sticky"] {
+    background-color: #fff1f3 !important;
+}
+
+.inactive-player:hover td[style*="position: sticky"] {
+    background-color: #ffeaed !important;
+}
+
+.l2w-player td[style*="position: sticky"] {
+    background-color: #fff9c4 !important;
+}
+
+.l2w-player:hover td[style*="position: sticky"] {
+    background-color: #fff176 !important;
+}
+
+/* For tables with striping (ensure status colors override) */
+.inactive-player td {
+    background-color: #fff1f3 !important;
+}
+
+.inactive-player:hover td {
+    background-color: #ffeaed !important;
+}
+
+.l2w-player td {
+    background-color: #fff9c4 !important;
+}
+
+.l2w-player:hover td {
+    background-color: #fff176 !important;
+}

@@ -10,13 +10,9 @@ namespace ClashRoyaleWarTracker.Web.Pages
     [Authorize]
     public class RostersModel : BasePageModel
     {
-        private readonly IApplicationService _applicationService;
-        private readonly ILogger<RostersModel> _logger;
 
-        public RostersModel(IApplicationService applicationService, ILogger<RostersModel> logger, IUserRoleService userRoleService) : base(userRoleService)
+        public RostersModel(IUserRoleService userRoleService, IApplicationService applicationService, ILogger<RostersModel> logger) : base(userRoleService, applicationService, logger)
         {
-            _applicationService = applicationService;
-            _logger = logger;
         }
 
         public List<RosterAssignmentDTO> RosterAssignments { get; set; } = new();

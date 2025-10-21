@@ -415,10 +415,7 @@ async function savePlayerNotes() {
 
             cancelEditPlayerNotes();
 
-            // Optional: notify page to update notes display
-            if (window.updatePlayerNotesInTable) {
-                window.updatePlayerNotesInTable(selectedPlayerId, notes);
-            }
+            updatePlayerNotesInTable(selectedPlayerId, notes);
         } else {
             error.textContent = result?.message ?? 'Failed to save notes.';
             error.classList.remove('d-none');
@@ -431,6 +428,80 @@ async function savePlayerNotes() {
         saveBtn.disabled = false;
         saveBtn.innerHTML = original;
     }
+}
+
+/**
+ * Update player notes in the table without refreshing the page
+ */
+function updatePlayerNotesInTable(playerId, notes) {
+    const row = document.querySelector(`tr[data-player-id="${playerId}"]`);
+    if (!row) {
+        console.warn('Could not find row for playerId:', playerId);
+        return;
+    }
+
+    // Update the data attribute
+    row.setAttribute('data-player-notes', notes || '');
+
+    // Find the player name cell
+    // For both Index and Rosters pages: cells[2] (both have row number column at index 0)
+    const playerNameCell = row.cells[2];
+    if (!playerNameCell) {
+        console.warn('Could not find player name cell');
+        return;
+    }
+
+    // Find existing note icon if present
+    let existingNoteSpan = playerNameCell.querySelector('.player-note');
+
+    if (notes && notes.trim()) {
+        // Notes exist - create or update the icon
+        if (!existingNoteSpan) {
+            // Create new note icon
+            existingNoteSpan = document.createElement('span');
+            existingNoteSpan.className = 'ms-1 player-note';
+            existingNoteSpan.setAttribute('data-bs-toggle', 'tooltip');
+            existingNoteSpan.setAttribute('role', 'button');
+            existingNoteSpan.setAttribute('tabindex', '0');
+            existingNoteSpan.setAttribute('aria-label', 'Player notes');
+
+            const icon = document.createElement('i');
+            icon.className = 'fas fa-sticky-note';
+            icon.setAttribute('aria-hidden', 'true');
+
+            existingNoteSpan.appendChild(icon);
+
+            // Insert after the player name <strong>
+            const nameStrong = playerNameCell.querySelector('strong');
+            if (nameStrong) {
+                nameStrong.insertAdjacentElement('afterend', existingNoteSpan);
+            } else {
+                playerNameCell.appendChild(existingNoteSpan);
+            }
+        }
+
+        // Update tooltip title
+        existingNoteSpan.setAttribute('title', notes);
+        existingNoteSpan.setAttribute('data-bs-original-title', notes);
+
+        // Dispose and reinitialize the tooltip
+        const existingTooltip = bootstrap.Tooltip.getInstance(existingNoteSpan);
+        if (existingTooltip) {
+            existingTooltip.dispose();
+        }
+        new bootstrap.Tooltip(existingNoteSpan);
+    } else {
+        // Notes cleared - remove the icon if it exists
+        if (existingNoteSpan) {
+            const tooltip = bootstrap.Tooltip.getInstance(existingNoteSpan);
+            if (tooltip) {
+                tooltip.dispose();
+            }
+            existingNoteSpan.remove();
+        }
+    }
+
+    console.log('Updated notes for playerId:', playerId);
 }
 
 /**

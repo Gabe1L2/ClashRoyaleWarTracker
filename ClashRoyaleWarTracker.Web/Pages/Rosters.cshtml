@@ -145,6 +145,7 @@
                                     data-player-notes="@Html.Raw(Html.Encode(roster.Notes ?? ""))"
                                     data-in-clan="@roster.IsInClan.ToString().ToLower()"
                                     data-fame-avg="@((roster.FameAttackAverage ?? 0).ToString("F1"))"
+                                    data-current-clan-key="@groupKey"
                                     class="player-row @statusClass"
                                     onclick="handleRowClick(event, @roster.PlayerID, '@Html.Raw(Html.Encode(roster.PlayerName))', '@roster.PlayerTag', '@Html.Raw(Html.Encode(roster.Status ?? "Active"))', '@Html.Raw(Html.Encode(roster.Notes ?? ""))')"
                                     style="cursor: pointer;">
@@ -155,7 +156,15 @@
                                             <i class="fas fa-external-link-alt ms-1" style="font-size: 0.7em;"></i>
                                         </a>
                                     </td>
-                                    <td>@roster.PlayerName</td>
+                                    <td>
+                                        @roster.PlayerName
+                                        @if (!string.IsNullOrWhiteSpace(roster.Notes))
+                                        {
+                                            <span class="ms-1 player-note" data-bs-toggle="tooltip" title="@Html.Raw(Html.Encode(roster.Notes))" role="button" tabindex="0" aria-label="Player notes">
+                                                <i class="fas fa-sticky-note" aria-hidden="true"></i>
+                                            </span>
+                                        }
+                                    </td>
                                     <td onclick="event.stopPropagation();">
                                         <select class="form-select form-select-sm assigned-clan" 
                                                 data-roster-id="@roster.ID" 
@@ -400,13 +409,11 @@
 
         async function updateClanAssignment(rosterId, clanId) {
             const selectElement = document.querySelector(`select.assigned-clan[data-roster-id="${rosterId}"]`);
-            const originalValue = selectElement.getAttribute('data-original-value') || selectElement.value;
+            const playerRow = selectElement.closest('tr');
+            
+            // Get the ACTUAL clan section the row is currently in, not what the dropdown says
+            const originalValue = playerRow.getAttribute('data-current-clan-key');
         
-            // Store original value for rollback if needed
-            if (!selectElement.hasAttribute('data-original-value')) {
-                selectElement.setAttribute('data-original-value', originalValue);
-            }
-
             // Show loading state
             selectElement.disabled = true;
             selectElement.style.opacity = '0.6';
@@ -426,22 +433,21 @@
                 const json = await resp.json();
             
                 if (resp.ok && json.success) {
-                    // Update successful - update the original value
-                    selectElement.setAttribute('data-original-value', clanId);
-                
                     // Show brief success indication
                     selectElement.style.borderColor = '#28a745';
                     setTimeout(() => {
                         selectElement.style.borderColor = '';
                     }, 1000);
                 
-                    // Reload page to reflect changes (including InClan status, player movement between clans, etc.)
-                    setTimeout(() => {
-                        location.reload();
-                    }, 500);
+                    // Update the UI without full page reload
+                    movePlayerToNewClan(rosterId, clanId, originalValue);
+                    
+                    // Update the row's current clan key to the new clan
+                    const newClanKey = (clanId === '' || clanId === null || clanId === undefined) ? 'unassigned' : clanId.toString();
+                    playerRow.setAttribute('data-current-clan-key', newClanKey);
                 } else {
                     // Revert to original value on failure
-                    selectElement.value = originalValue;
+                    selectElement.value = originalValue === 'unassigned' ? '' : originalValue;
                     selectElement.style.borderColor = '#dc3545';
                     alert(json?.message ?? 'Failed to update clan assignment');
                 
@@ -452,7 +458,7 @@
             } catch (err) {
                 console.error(err);
                 // Revert to original value on error
-                selectElement.value = originalValue;
+                selectElement.value = originalValue === 'unassigned' ? '' : originalValue;
                 selectElement.style.borderColor = '#dc3545';
                 alert('Error updating clan assignment');
             
@@ -462,6 +468,107 @@
             } finally {
                 selectElement.disabled = false;
                 selectElement.style.opacity = '1';
+            }
+        }
+
+        /**
+         * Move a player row to a different clan section without page refresh
+         */
+        function movePlayerToNewClan(rosterId, newClanId, oldClanId) {
+            // Find the player row
+            const playerRow = document.querySelector(`tr[data-roster-id="${rosterId}"]`);
+            if (!playerRow) {
+                console.warn('Could not find player row for rosterId:', rosterId);
+                return;
+            }
+
+            // Determine the old and new clan keys
+            // Important: The groupKey in Razor is either the ClanID.ToString() or "unassigned"
+            // When newClanId is empty string "" from the select, it should be "unassigned"
+            // When newClanId is a number string like "5", it should be "5"
+            const oldClanKey = (oldClanId === '' || oldClanId === null || oldClanId === undefined) ? 'unassigned' : oldClanId.toString();
+            const newClanKey = (newClanId === '' || newClanId === null || newClanId === undefined) ? 'unassigned' : newClanId.toString();
+
+            // If same clan, no need to move (just update the select value)
+            if (oldClanKey === newClanKey) {
+                return;
+            }
+
+            // Find the old and new clan tables
+            const oldTable = document.querySelector(`.roster-table[data-clan-key="${oldClanKey}"]`);
+            const newTable = document.querySelector(`.roster-table[data-clan-key="${newClanKey}"]`);
+
+            if (!oldTable) {
+                location.reload(); // Fallback to page reload if tables not found
+                return;
+            }
+
+            if (!newTable) {
+                location.reload(); // Fallback to page reload if tables not found
+                return;
+            }
+
+            // Get player data for sorting
+            const fameAvg = parseFloat(playerRow.getAttribute('data-fame-avg')) || 0;
+
+            // Remove from old table
+            playerRow.remove();
+
+            // Insert into new table (sorted by fame average descending)
+            const newTableBody = newTable.querySelector('tbody');
+            const newTableRows = Array.from(newTableBody.querySelectorAll('tr'));
+
+            let inserted = false;
+            for (let i = 0; i < newTableRows.length; i++) {
+                const rowFameAvg = parseFloat(newTableRows[i].getAttribute('data-fame-avg')) || 0;
+                if (fameAvg > rowFameAvg) {
+                    newTableBody.insertBefore(playerRow, newTableRows[i]);
+                    inserted = true;
+                    break;
+                }
+            }
+
+            // If not inserted (lowest fame or empty table), append to end
+            if (!inserted) {
+                newTableBody.appendChild(playerRow);
+            }
+
+            // Update badge counts for both clans
+            updateClanBadgeCount(oldClanKey);
+            updateClanBadgeCount(newClanKey);
+
+            // Update row numbers for both tables
+            updateRowNumbers(oldClanKey);
+            updateRowNumbers(newClanKey);
+
+            // Reinitialize tooltips for the moved row
+            const tooltips = playerRow.querySelectorAll('[data-bs-toggle="tooltip"]');
+            tooltips.forEach(el => {
+                const existingTooltip = bootstrap.Tooltip.getInstance(el);
+                if (existingTooltip) {
+                    existingTooltip.dispose();
+                }
+                new bootstrap.Tooltip(el);
+            });
+
+            console.log(`Successfully moved player from clan ${oldClanKey} to ${newClanKey}`);
+        }
+
+        /**
+         * Update the badge count for a specific clan
+         */
+        function updateClanBadgeCount(clanKey) {
+            const table = document.querySelector(`.roster-table[data-clan-key="${clanKey}"]`);
+            if (!table) return;
+
+            const rowCount = table.querySelectorAll('tbody tr').length;
+
+            // Find the badge in the card header
+            const cardHeader = table.closest('.card').querySelector('.card-header');
+            const badge = cardHeader.querySelector('.badge.bg-primary');
+            
+            if (badge) {
+                badge.textContent = rowCount;
             }
         }
 
@@ -507,6 +614,12 @@
                     // Update the sort indicator to show descending
                     updateSortIndicators(clanKey, 'fame', true); // true = descending
                 }
+            });
+
+            // Initialize Bootstrap tooltips for player notes
+            const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+            const tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+                return new bootstrap.Tooltip(tooltipTriggerEl);
             });
         });
     </script>

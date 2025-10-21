@@ -40,12 +40,13 @@ namespace ClashRoyaleWarTracker.Infrastructure.Repositories
             }
         }
 
-        public async Task<int> AddPlayerAsync(Player player)
+        public async Task<int> AddPlayerAsync(Player player, string? updatedBy = null)
         {
             try
             {
                 _logger.LogDebug("Adding new player {PlayerName} with tag {PlayerTag} to database", player.Name, player.Tag);
                 player.LastUpdated = _timeZoneService.Now;
+                player.UpdatedBy = updatedBy;
                 await _context.Players.AddAsync(player);
                 await _context.SaveChangesAsync();
 
@@ -194,7 +195,7 @@ namespace ClashRoyaleWarTracker.Infrastructure.Repositories
             }
         }
 
-        public async Task<bool> UpdatePlayerStatusAsync(int playerId, string status)
+        public async Task<bool> UpdatePlayerStatusAsync(int playerId, string status, string? updatedBy = null)
         {
             try
             {
@@ -208,6 +209,7 @@ namespace ClashRoyaleWarTracker.Infrastructure.Repositories
                 }
 
                 player.Status = status;
+                player.UpdatedBy = updatedBy;
                 player.LastUpdated = _timeZoneService.Now;
 
                 await _context.SaveChangesAsync();
@@ -222,7 +224,7 @@ namespace ClashRoyaleWarTracker.Infrastructure.Repositories
             }
         }
 
-        public async Task<bool> UpdatePlayerNotesAsync(int playerId, string? notes)
+        public async Task<bool> UpdatePlayerNotesAsync(int playerId, string? notes, string? updatedBy = null)
         {
             try
             {
@@ -242,6 +244,7 @@ namespace ClashRoyaleWarTracker.Infrastructure.Repositories
                 }
 
                 player.Notes = trimmed;
+                player.UpdatedBy = updatedBy;
                 player.LastUpdated = _timeZoneService.Now;
 
                 _context.Players.Update(player);
@@ -352,7 +355,7 @@ namespace ClashRoyaleWarTracker.Infrastructure.Repositories
             }
         }
 
-        public async Task<bool> BulkUpsertRosterAssignmentsAsync(List<RosterAssignment> rosterAssignments)
+        public async Task<bool> BulkUpsertRosterAssignmentsAsync(List<RosterAssignment> rosterAssignments, string? updatedBy = null)
         {
             try
             {
@@ -366,6 +369,7 @@ namespace ClashRoyaleWarTracker.Infrastructure.Repositories
                 foreach (var assignment in rosterAssignments)
                 {
                     assignment.LastUpdated = _timeZoneService.Now;
+                    assignment.UpdatedBy = updatedBy;
                     await _context.RosterAssignments.AddAsync(assignment);
                 }
 
@@ -604,7 +608,7 @@ namespace ClashRoyaleWarTracker.Infrastructure.Repositories
             }
         }
 
-        public async Task<bool> UpdateRosterAssignmentClanAsync(int rosterAssignmentId, int? clanId)
+        public async Task<bool> UpdateRosterAssignmentClanAsync(int rosterAssignmentId, int? clanId, string? updatedBy = null)
         {
             try
             {
@@ -622,7 +626,7 @@ namespace ClashRoyaleWarTracker.Infrastructure.Repositories
 
                 rosterAssignment.ClanID = clanId;
                 rosterAssignment.LastUpdated = _timeZoneService.Now;
-                rosterAssignment.UpdatedBy = "ManualUpdate";
+                rosterAssignment.UpdatedBy = updatedBy;
 
                 _context.RosterAssignments.Update(rosterAssignment);
                 await _context.SaveChangesAsync();

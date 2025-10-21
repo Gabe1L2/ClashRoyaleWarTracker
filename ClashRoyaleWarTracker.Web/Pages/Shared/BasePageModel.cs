@@ -18,6 +18,7 @@ namespace ClashRoyaleWarTracker.Web.Pages.Shared
             _logger = logger;
         }
 
+        protected string Username => User.Identity?.Name ?? "Unknown";
         public UserRole CurrentUserRole { get; set; }
         public bool CanManageUsers => RolePermissions.HasPermission(CurrentUserRole, Permissions.ManageUsers);
         public bool CanManageClans => RolePermissions.HasPermission(CurrentUserRole, Permissions.ManageClans);
@@ -97,7 +98,7 @@ namespace ClashRoyaleWarTracker.Web.Pages.Shared
                 _logger.LogInformation("Updating player {PlayerId} status to {Status} by user {UserName}",
                     playerId, status, User.Identity?.Name);
 
-                var result = await _applicationService.UpdatePlayerStatusAsync(playerId, status);
+                var result = await _applicationService.UpdatePlayerStatusAsync(playerId, status, Username);
 
                 if (result.Success)
                 {
@@ -130,7 +131,7 @@ namespace ClashRoyaleWarTracker.Web.Pages.Shared
 
                 _logger.LogInformation("Updating notes for player {PlayerId} by user {UserName}", playerId, User.Identity?.Name);
 
-                var result = await _applicationService.UpdatePlayerNotesAsync(playerId, notes);
+                var result = await _applicationService.UpdatePlayerNotesAsync(playerId, notes, Username);
 
                 if (result.Success)
                 {
@@ -164,7 +165,7 @@ namespace ClashRoyaleWarTracker.Web.Pages.Shared
                 _logger.LogInformation("Updating war history {WarHistoryId} by user {UserName}",
                     warHistoryId, User.Identity?.Name);
 
-                var result = await _applicationService.UpdatePlayerWarHistoryAsync(warHistoryId, fame, decksUsed, boatAttacks);
+                var result = await _applicationService.UpdatePlayerWarHistoryAsync(warHistoryId, fame, decksUsed, boatAttacks, Username);
 
                 if (result.Success)
                 {

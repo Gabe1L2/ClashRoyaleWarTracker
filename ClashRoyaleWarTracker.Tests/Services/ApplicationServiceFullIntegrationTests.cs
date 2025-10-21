@@ -305,7 +305,7 @@ namespace ClashRoyaleWarTracker.Tests.Services
                 Assert.False(getClanResult.Success);
                 return;
             }
-            var result = await _applicationService.PopulatePlayerWarHistories(getClanResult.Data, 10);
+            var result = await _applicationService.PopulatePlayerWarHistories(getClanResult.Data, "system", 10);
             // Assert
             if (result.Success)
             {

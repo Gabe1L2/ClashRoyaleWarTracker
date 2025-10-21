@@ -246,7 +246,7 @@ namespace ClashRoyaleWarTracker.Web.Pages
                 _logger.LogInformation("Updating roster assignment {Id} to clan {ClanId} by user {UserName}", 
                     model.Id, model.AssignedClanId, User.Identity?.Name);
 
-                var result = await _applicationService.UpdateRosterAssignmentAsync(model.Id, model.AssignedClanId);
+                var result = await _applicationService.UpdateRosterAssignmentAsync(model.Id, model.AssignedClanId, Username);
                 
                 if (result.Success)
                 {
@@ -262,116 +262,6 @@ namespace ClashRoyaleWarTracker.Web.Pages
             catch (Exception ex)
             {
                 _logger.LogError(ex, "An unexpected error occurred while updating roster row {Id}", model?.Id);
-                return new JsonResult(new { success = false, message = "An unexpected error occurred" }) { StatusCode = 500 };
-            }
-        }
-
-        public async Task<JsonResult> OnPostSaveAllAsync([FromBody] List<RosterUpdateModel> updates)
-        {
-            try
-            {
-                await LoadUserPermissionsAsync();
-                if (!CanModifyPlayerData)
-                {
-                    _logger.LogWarning("User {UserName} attempted to save all roster updates without proper permissions", User.Identity?.Name);
-                    return new JsonResult(new { success = false, message = "Access denied" }) { StatusCode = 403 };
-                }
-
-                if (updates == null)
-                {
-                    _logger.LogWarning("Received null updates list for SaveAll request");
-                    return new JsonResult(new { success = false, message = "Invalid request data" }) { StatusCode = 400 };
-                }
-
-                _logger.LogInformation("Received SaveAll for {Count} updates (not persisted yet)", updates.Count);
-
-                // TODO: Implement bulk upsert
-                return new JsonResult(new { success = false, message = "Not implemented: server-side roster persistence" }) { StatusCode = 501 };
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "An unexpected error occurred while saving all roster updates");
-                return new JsonResult(new { success = false, message = "An unexpected error occurred" }) { StatusCode = 500 };
-            }
-        }
-
-        public async Task<JsonResult> OnPostBulkAssignAsync([FromBody] BulkAssignModel model)
-        {
-            try
-            {
-                await LoadUserPermissionsAsync();
-                if (!CanModifyPlayerData)
-                {
-                    _logger.LogWarning("User {UserName} attempted to bulk assign without proper permissions", User.Identity?.Name);
-                    return new JsonResult(new { success = false, message = "Access denied" }) { StatusCode = 403 };
-                }
-
-                if (model == null || model.RosterIds == null)
-                {
-                    _logger.LogWarning("Received invalid model for BulkAssign request");
-                    return new JsonResult(new { success = false, message = "Invalid request data" }) { StatusCode = 400 };
-                }
-
-                _logger.LogInformation("Received BulkAssign for {Count} roster ids to clan {ClanId} (not persisted)", model.RosterIds.Count, model.AssignedClanId);
-
-                // TODO: Implement bulk assign
-                return new JsonResult(new { success = false, message = "Not implemented: server-side roster persistence" }) { StatusCode = 501 };
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "An unexpected error occurred while bulk assigning roster entries");
-                return new JsonResult(new { success = false, message = "An unexpected error occurred" }) { StatusCode = 500 };
-            }
-        }
-
-        public async Task<JsonResult> OnPostBulkToggleInClanAsync([FromBody] List<int> rosterIds)
-        {
-            try
-            {
-                await LoadUserPermissionsAsync();
-                if (!CanModifyPlayerData)
-                {
-                    _logger.LogWarning("User {UserName} attempted to bulk toggle in-clan without proper permissions", User.Identity?.Name);
-                    return new JsonResult(new { success = false, message = "Access denied" }) { StatusCode = 403 };
-                }
-
-                if (rosterIds == null)
-                {
-                    _logger.LogWarning("Received null roster IDs list for BulkToggleInClan request");
-                    return new JsonResult(new { success = false, message = "Invalid request data" }) { StatusCode = 400 };
-                }
-
-                _logger.LogInformation("Received BulkToggleInClan for {Count} roster ids (not persisted)", rosterIds.Count);
-
-                // TODO: Implement bulk toggle
-                return new JsonResult(new { success = false, message = "Not implemented: server-side roster persistence" }) { StatusCode = 501 };
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "An unexpected error occurred while bulk toggling in-clan status");
-                return new JsonResult(new { success = false, message = "An unexpected error occurred" }) { StatusCode = 500 };
-            }
-        }
-
-        public async Task<JsonResult> OnPostCopyPreviousWeekAsync()
-        {
-            try
-            {
-                await LoadUserPermissionsAsync();
-                if (!CanModifyPlayerData)
-                {
-                    _logger.LogWarning("User {UserName} attempted to copy previous week without proper permissions", User.Identity?.Name);
-                    return new JsonResult(new { success = false, message = "Access denied" }) { StatusCode = 403 };
-                }
-
-                _logger.LogInformation("Received CopyPreviousWeek request (not implemented)");
-
-                // TODO: Implement copy logic using roster history/assignments
-                return new JsonResult(new { success = false, message = "Not implemented: copy previous week" }) { StatusCode = 501 };
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "An unexpected error occurred while copying previous week roster");
                 return new JsonResult(new { success = false, message = "An unexpected error occurred" }) { StatusCode = 500 };
             }
         }

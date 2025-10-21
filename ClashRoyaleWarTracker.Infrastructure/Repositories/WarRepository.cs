@@ -19,7 +19,7 @@ namespace ClashRoyaleWarTracker.Infrastructure.Repositories
             _timeZoneService = timeZoneService;
         }
 
-        public async Task<bool> AddPlayerWarHistoriesAsync(List<PlayerWarHistory> playerWarHistories)
+        public async Task<bool> AddPlayerWarHistoriesAsync(List<PlayerWarHistory> playerWarHistories, string? updatedBy)
         {
             try
             {
@@ -34,6 +34,7 @@ namespace ClashRoyaleWarTracker.Infrastructure.Repositories
                     if (!exists)
                     {
                         playerWarHistory.LastUpdated = _timeZoneService.Now;
+                        playerWarHistory.UpdatedBy = updatedBy;
                         _logger.LogDebug($"Adding player war history for PlayerID {playerWarHistory.PlayerID} and ClanHistoryID {playerWarHistory.ClanHistoryID}");
                         await _context.PlayerWarHistories.AddAsync(playerWarHistory);
                         successCount++;
@@ -209,7 +210,7 @@ namespace ClashRoyaleWarTracker.Infrastructure.Repositories
             }
         }
 
-        public async Task<bool> UpdatePlayerWarHistoryAsync(int warHistoryId, int fame, int decksUsed, int boatAttacks)
+        public async Task<bool> UpdatePlayerWarHistoryAsync(int warHistoryId, int fame, int decksUsed, int boatAttacks, string? updatedBy)
         {
             try
             {
@@ -227,7 +228,7 @@ namespace ClashRoyaleWarTracker.Infrastructure.Repositories
                 warHistory.BoatAttacks = boatAttacks;
                 warHistory.LastUpdated = _timeZoneService.Now;
                 warHistory.IsModified = true;
-                warHistory.UpdatedBy = "Admin"; // Ideally, this should be set to the current user's name
+                warHistory.UpdatedBy = updatedBy;
 
                 await _context.SaveChangesAsync();
 

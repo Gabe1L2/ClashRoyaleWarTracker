@@ -24,12 +24,12 @@ namespace ClashRoyaleWarTracker.Application.Services
             _logger = logger;
         }
 
-        public async Task<ServiceResult> WeeklyUpdateAsync(int numWeeksForPlayerAverages = 4)
+        public async Task<ServiceResult> WeeklyUpdateAsync(int numWeeksForPlayerAverages = 4, string? updatedBy = "system")
         {
-            return await DataUpdateAsync(1, numWeeksForPlayerAverages);
+            return await DataUpdateAsync(1, numWeeksForPlayerAverages, updatedBy);
         }
         
-        public async Task<ServiceResult> DataUpdateAsync(int numWeeksWarHistory, int numWeeksPlayerAverages = 4)
+        public async Task<ServiceResult> DataUpdateAsync(int numWeeksWarHistory, int numWeeksPlayerAverages = 4, string? updatedBy = null)
         {
             try
             {
@@ -84,7 +84,7 @@ namespace ClashRoyaleWarTracker.Application.Services
                     }
 
                     // Populate new player war histories
-                    var warHistoryResult = await PopulatePlayerWarHistories(clan, numWeeksWarHistory);
+                    var warHistoryResult = await PopulatePlayerWarHistories(clan, updatedBy, numWeeksWarHistory);
                     if (warHistoryResult.Success)
                     {
                         successfulWarHistoryUpdates++;
@@ -405,7 +405,7 @@ namespace ClashRoyaleWarTracker.Application.Services
             }
         }
 
-        public async Task<ServiceResult> PopulatePlayerWarHistories(Clan clan, int numOfRiverRaces = 1) // Looks at every river race past
+        public async Task<ServiceResult> PopulatePlayerWarHistories(Clan clan, string? updatedBy, int numOfRiverRaces = 1) // Looks at every river race past
         {
             try
             {
@@ -451,8 +451,7 @@ namespace ClashRoyaleWarTracker.Application.Services
                                         Status = "Active",
                                     };
 
-                                    playerID = await _playerRepository.AddPlayerAsync(newPlayer);
-
+                                    playerID = await _playerRepository.AddPlayerAsync(newPlayer, updatedBy);
                                 }
                                 else
                                 {
@@ -466,7 +465,7 @@ namespace ClashRoyaleWarTracker.Application.Services
                                     DecksUsed = participant.DecksUsed,
                                     BoatAttacks = participant.BoatAttacks,
                                     IsModified = false,
-                                    UpdatedBy = "System"
+                                    UpdatedBy = "system"
                                 };
                                 playerWarHistories.Add(playerWarHistory);
                             }
@@ -474,7 +473,7 @@ namespace ClashRoyaleWarTracker.Application.Services
                     }
                 }
 
-                if (await _warRepository.AddPlayerWarHistoriesAsync(playerWarHistories))
+                if (await _warRepository.AddPlayerWarHistoriesAsync(playerWarHistories, updatedBy))
                 {
                     _logger.LogInformation("Successfully populated raw war history for {ClanName}", clan.Name);
                     return ServiceResult.Successful($"{clan.Name} raw war history successfully populated!");
@@ -693,13 +692,13 @@ namespace ClashRoyaleWarTracker.Application.Services
             }
         }
 
-        public async Task<ServiceResult> UpdatePlayerStatusAsync(int playerId, string status)
+        public async Task<ServiceResult> UpdatePlayerStatusAsync(int playerId, string status, string? updatedBy)
         {
             try
             {
                 _logger.LogInformation("Updating player status: PlayerID {PlayerId} to {Status}", playerId, status);
 
-                var success = await _playerRepository.UpdatePlayerStatusAsync(playerId, status);
+                var success = await _playerRepository.UpdatePlayerStatusAsync(playerId, status, updatedBy);
                 if (!success)
                 {
                     return ServiceResult.Failure($"Player with ID {playerId} not found");
@@ -731,7 +730,7 @@ namespace ClashRoyaleWarTracker.Application.Services
             }
         }
 
-        public async Task<ServiceResult> UpdatePlayerWarHistoryAsync(int warHistoryId, int fame, int decksUsed, int boatAttacks)
+        public async Task<ServiceResult> UpdatePlayerWarHistoryAsync(int warHistoryId, int fame, int decksUsed, int boatAttacks, string? updatedBy)
         {
             try
             {
@@ -748,7 +747,7 @@ namespace ClashRoyaleWarTracker.Application.Services
                     return ServiceResult.Failure("Invalid input for decksUsed, fame, or boatAttacks");
                 }
 
-                var updateSuccess = await _warRepository.UpdatePlayerWarHistoryAsync(warHistoryId, fame, decksUsed, boatAttacks);
+                var updateSuccess = await _warRepository.UpdatePlayerWarHistoryAsync(warHistoryId, fame, decksUsed, boatAttacks, updatedBy);
                 if (!updateSuccess)
                 {
                     return ServiceResult.Failure($"War history with ID {warHistoryId} not found");
@@ -763,7 +762,7 @@ namespace ClashRoyaleWarTracker.Application.Services
             }
         }
 
-        public async Task<ServiceResult> AddClanClanHistoryPlayerHistoryAsync(string clanTag, int numWeeksWarHistory)
+        public async Task<ServiceResult> AddClanClanHistoryPlayerHistoryAsync(string clanTag, int numWeeksWarHistory, string? updatedBy)
         {
             try
             {
@@ -785,7 +784,7 @@ namespace ClashRoyaleWarTracker.Application.Services
                     return ServiceResult.Failure($"Failed to populate clan history: {populateClanHistoryResult.Message}");
                 }
 
-                var populatePlayerWarHistoriesResult = await PopulatePlayerWarHistories(getClanResult.Data, numWeeksWarHistory);
+                var populatePlayerWarHistoriesResult = await PopulatePlayerWarHistories(getClanResult.Data, "system", numWeeksWarHistory);
                 if (!populatePlayerWarHistoriesResult.Success)
                 {
                     return ServiceResult.Failure($"Failed to populate player war histories: {populatePlayerWarHistoriesResult.Message}");
@@ -821,7 +820,7 @@ namespace ClashRoyaleWarTracker.Application.Services
             }
         }
 
-        public async Task<ServiceResult> UpdatePlayerNotesAsync(int playerId, string? notes)
+        public async Task<ServiceResult> UpdatePlayerNotesAsync(int playerId, string? notes, string? updatedBy)
         {
             try
             {
@@ -834,7 +833,7 @@ namespace ClashRoyaleWarTracker.Application.Services
                     return ServiceResult.Failure("Notes must be 100 characters or fewer.");
                 }
 
-                var success = await _playerRepository.UpdatePlayerNotesAsync(playerId, notes);
+                var success = await _playerRepository.UpdatePlayerNotesAsync(playerId, notes, updatedBy);
                 if (!success)
                 {
                     return ServiceResult.Failure($"Player with ID {playerId} not found");
@@ -1015,7 +1014,7 @@ namespace ClashRoyaleWarTracker.Application.Services
                         l2wPlayer.ID);
                 }
 
-                var bulkUpsertResult = await _playerRepository.BulkUpsertRosterAssignmentsAsync(rosterAssignments);
+                var bulkUpsertResult = await _playerRepository.BulkUpsertRosterAssignmentsAsync(rosterAssignments, "system");
                 if (!bulkUpsertResult)
                 {
                     return ServiceResult.Failure("Failed to save roster assignments to database");
@@ -1042,14 +1041,14 @@ namespace ClashRoyaleWarTracker.Application.Services
             }
         }
 
-        public async Task<ServiceResult> UpdateRosterAssignmentAsync(int rosterAssignmentId, int? assignedClanId)
+        public async Task<ServiceResult> UpdateRosterAssignmentAsync(int rosterAssignmentId, int? assignedClanId, string? updatedBy)
         {
             try
             {
                 _logger.LogInformation("Updating roster assignment {Id} to ClanID {ClanId}", rosterAssignmentId, assignedClanId);
 
                 // Update the roster assignment directly by ID
-                var success = await _playerRepository.UpdateRosterAssignmentClanAsync(rosterAssignmentId, assignedClanId);
+                var success = await _playerRepository.UpdateRosterAssignmentClanAsync(rosterAssignmentId, assignedClanId, updatedBy);
 
                 if (success)
                 {

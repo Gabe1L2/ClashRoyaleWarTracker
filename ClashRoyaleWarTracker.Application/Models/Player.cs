@@ -17,6 +17,8 @@ namespace ClashRoyaleWarTracker.Application.Models
         public string? Notes { get; set; }
 
         public DateTime LastUpdated { get; set; }
+        [MaxLength(100)]
+        public string? UpdatedBy { get; set; }
     }
 
     public class PlayerAverage

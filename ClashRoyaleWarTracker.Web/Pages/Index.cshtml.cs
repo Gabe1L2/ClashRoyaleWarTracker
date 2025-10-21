@@ -298,7 +298,7 @@ namespace ClashRoyaleWarTracker.Web.Pages
                     return RedirectToPage();
                 }
 
-                var addResult = await _applicationService.AddClanClanHistoryPlayerHistoryAsync(ClanTag ?? string.Empty, WeeksToFetch);
+                var addResult = await _applicationService.AddClanClanHistoryPlayerHistoryAsync(ClanTag ?? string.Empty, WeeksToFetch, Username);
                 if (!addResult.Success)
                 {
                     TempData["ErrorMessage"] = addResult.Message;

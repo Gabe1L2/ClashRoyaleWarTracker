@@ -10,6 +10,7 @@ namespace ClashRoyaleWarTracker.Application.Interfaces
         Task<Player?> GetPlayerByIdAsync(int playerId);
         Task<int> AddPlayerAsync(Player player);
         Task<List<Player>> GetAllActivePlayersAsync();
+        Task<List<Player>> GetL2WPlayersAsync();
         Task<bool> UpdatePlayerStatusAsync(int playerId, string status);
         Task UpsertPlayerAverageAsync(PlayerAverage playerAverage);
         Task<List<PlayerAverageDTO>> GetAllPlayerAverageDTOsAsync();

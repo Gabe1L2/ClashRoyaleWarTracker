@@ -108,7 +108,6 @@ namespace ClashRoyaleWarTracker.Web.Pages
             return Page();
         }
 
-        // Handler stubs - not yet implemented server-side persistence
         public class RosterUpdateModel
         {
             public int Id { get; set; }

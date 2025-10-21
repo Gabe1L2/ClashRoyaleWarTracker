@@ -3,24 +3,44 @@
 @inject UserManager<IdentityUser> UserManager
 
 <ul class="navbar-nav">
-@if (SignInManager.IsSignedIn(User))
-{
-    <li class="nav-item">
-        <a  class="nav-link text-dark" asp-area="Identity" asp-page="/Account/Manage/Index" title="Manage">Hello @User.Identity?.Name!</a>
-    </li>
-    <li class="nav-item">
-        <form class="form-inline" asp-area="Identity" asp-page="/Account/Logout" asp-route-returnUrl="@Url.Page("/Index", new { area = "" })">
-            <button  type="submit" class="nav-link btn btn-link text-dark">Logout</button>
-        </form>
-    </li>
-}
-else
-{
-    <li class="nav-item">
-        <a class="nav-link text-dark" asp-area="Identity" asp-page="/Account/Register">Register</a>
-    </li>
-    <li class="nav-item">
-        <a class="nav-link text-dark" asp-area="Identity" asp-page="/Account/Login">Login</a>
-    </li>
-}
+    @if (SignInManager.IsSignedIn(User))
+    {
+        <li class="nav-item">
+            <a class="nav-link text-dark user-action-link" asp-area="Identity" asp-page="/Account/Manage/ChangePassword">Settings</a>
+        </li>
+        <li class="nav-item">
+            <form class="d-inline" asp-area="Identity" asp-page="/Account/Logout" asp-route-returnUrl="@Url.Page("/Index", new { area = "" })">
+                <button type="submit" class="nav-link btn btn-link text-dark user-action-link p-0">Logout</button>
+            </form>
+        </li>
+    }
+    else
+    {
+        <li class="nav-item">
+            <a class="nav-link text-dark" asp-area="Identity" asp-page="/Account/Register">Register</a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link text-dark" asp-area="Identity" asp-page="/Account/Login">Login</a>
+        </li>
+    }
 </ul>
+
+<style>
+    .user-action-link:hover {
+        text-decoration: underline !important;
+    }
+
+    /* Remove all default spacing from logout form and button */
+    .navbar-nav .d-inline {
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+
+    /* Force logout button to match nav-link styling exactly */
+    .navbar-nav .btn-link.nav-link {
+        padding: 0.5rem 1rem !important;
+        border: none !important;
+        line-height: 1.5 !important;
+        display: inline-block !important;
+    }
+</style>

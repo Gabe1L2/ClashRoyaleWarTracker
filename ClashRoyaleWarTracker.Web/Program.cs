@@ -68,6 +68,31 @@ namespace ClashRoyaleWarTracker.Web
             app.UseAuthentication(); // Enable authentication
             app.UseAuthorization();  // Enable authorization
 
+            app.Use(async (context, next) =>
+            {
+                var path = context.Request.Path.Value?.ToLower();
+
+                // Block all Identity/Account/Manage pages except ChangePassword
+                if (path?.StartsWith("/identity/account/manage") == true &&
+                    !path.Contains("/changepassword"))
+                {
+                    context.Response.StatusCode = 404;
+                    return;
+                }
+
+                // Block Guest user from accessing password change page
+                if (path?.Contains("/changepassword") == true &&
+                    context.User?.Identity?.IsAuthenticated == true &&
+                    context.User?.Identity?.Name == "Guest")
+                {
+                    context.Response.StatusCode = 403; // Forbidden
+                    await context.Response.WriteAsync("Guest account cannot change their password.");
+                    return;
+                }
+
+                await next();
+            });
+
             app.MapRazorPages();
 
             await app.RunAsync();

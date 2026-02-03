@@ -6,7 +6,7 @@ A comprehensive .NET 8 Razor Pages application for automatically tracking and ma
 
 This project demonstrates full-stack .NET development expertise, showcasing modern web application patterns, clean architecture, and production deployment. The application automatically tracks Clash Royale clan(s) war statistics, providing updated data and comprehensive analytics for clan management and performance tracking.
 
-**🌐 Live Demo**: [crwartracker.com](https://crwartracker.com) - Guest access available inside the application for demonstration purposes.
+**🌐 Live Demo**: I took down my live demo to make room for another project I'm working on :)
 
 ## 🚀 Current Status
 
@@ -242,7 +242,6 @@ Configure external automation with security keys:
 ## 🚀 Deployment & Production
 
 ### **Hosting Stack**
-- **Live Website**: [crwartracker.com](https://crwartracker.com) with guest access available
 - **MonsterASP.NET**: Professional Windows-based ASP.NET hosting
 - **SQL Server**: Fully managed database hosting with automated backups
 - **SSL/TLS**: Secure HTTPS encryption with custom domain
